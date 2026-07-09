@@ -1,0 +1,19 @@
+# GitHub Actions 用の AppConfig。ワークフローが config/app.yaml へコピーして使う。
+# 運用中のローカル config/app.yaml と差分がないか、設定変更時はこちらも更新すること。
+strategy:
+  window_l: 60
+  k_factors: 3
+  lambda_reg: 0.9
+  quantile_q: 0.3
+  operation_mode: production
+paper_like:
+  name: paper_like
+  sample_start: "2018-07-01"
+  sample_end: "2025-12-31"
+  pretrain_end: "2021-12-31"
+daily:
+  name: daily
+  sample_start: "2018-07-01"
+  sample_end:
+  pretrain_end: "2021-12-31"
+output_dir: outputs

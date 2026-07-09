@@ -1,0 +1,54 @@
+# Whitelist strategy: ignore everything first, then explicitly allow tracked source files.
+*
+
+# Root-level tracked files
+!.gitignore
+!README.md
+!pyproject.toml
+!uv.lock
+!lead_lag_strategy.py
+!config/
+!config/**/*.example.yaml
+!config/app.ci.yaml
+
+# Tracked directories
+!docs/
+!docs/**
+!scripts/
+!scripts/**
+!tests/
+!tests/**
+!.github/
+!.github/**
+
+# src: allow directories for traversal, but only track Python files
+!src/
+!src/**/
+!src/**/*.py
+
+# Daily research batch artifacts (committed audit data)
+!data/
+!data/**/
+!data/**/*.json
+!data/**/*.jsonl
+
+# Always ignore generated / local artifacts
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+.venv/
+.pytest_cache/
+.ruff_cache/
+outputs/
+_site/
+*.csv
+.DS_Store
+# Logs
+*.log
+logs/
+
+# Committed daily data CSV extracts (overrides *.csv above)
+!data/**/*.csv
+# Re-derivable bulk external data stays out of git (factors/actions full CSVs)
+data/external/

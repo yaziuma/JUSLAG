@@ -1,0 +1,181 @@
+name: daily-juslag
+
+on:
+  schedule:
+    # 平日 JST 8:00 = UTC 23:00（前日）。UTC曜日は日〜木 = 0-4
+    - cron: "0 23 * * 0-4"
+  workflow_dispatch:
+    inputs:
+      skip_llm:
+        description: "LLM要約をスキップ"
+        type: boolean
+        default: false
+      skip_slack:
+        description: "Slack通知をスキップ"
+        type: boolean
+        default: false
+      dry_run:
+        description: "commit/pushしない（動作確認用）"
+        type: boolean
+        default: false
+
+concurrency:
+  group: daily-juslag
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      llm_status: ${{ steps.batch.outputs.llm_status }}
+      slack_status: ${{ steps.batch.outputs.slack_status }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Install agy (Antigravity CLI)
+        if: ${{ !inputs.skip_llm }}
+        run: |
+          curl -fsSL https://antigravity.google/cli/install.sh | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Restore agy OAuth credentials
+        if: ${{ !inputs.skip_llm }}
+        env:
+          GEMINI_OAUTH_CREDS: ${{ secrets.GEMINI_OAUTH_CREDS }}
+        run: |
+          mkdir -p ~/.gemini
+          printf '%s' "$GEMINI_OAUTH_CREDS" > ~/.gemini/oauth_creds.json
+          printf '%s' '{"selectedAuthType":"oauth-personal"}' > ~/.gemini/settings.json
+
+      - name: Prepare app config
+        run: cp config/app.ci.yaml config/app.yaml
+
+      - name: Restore price cache DB
+        uses: actions/cache@v4
+        with:
+          path: ~/.juslag/prices.db
+          key: juslag-prices-v1-${{ github.run_id }}
+          restore-keys: |
+            juslag-prices-v1-
+
+      - name: Run daily research batch
+        id: batch
+        env:
+          JUSLAG_SLACK_WEBHOOK: ${{ secrets.JUSLAG_SLACK_WEBHOOK }}
+          JUSLAG_BACKTEST_SETTINGS_JSON: ${{ vars.JUSLAG_BACKTEST_SETTINGS }}
+          SKIP_LLM: ${{ inputs.skip_llm && '1' || '0' }}
+          SKIP_SLACK: ${{ inputs.skip_slack && '1' || '0' }}
+        run: bash scripts/ops/daily_research.sh
+
+      - name: Commit and push results
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git add data/
+          if git diff --cached --quiet; then
+            echo "nothing to commit"
+            exit 0
+          fi
+          JST_DATE=$(TZ=Asia/Tokyo date +%F)
+          git -c user.name="juslag-bot" -c user.email="actions@users.noreply.github.com" \
+            commit -m "chore(data): daily research ${JST_DATE} [skip ci]"
+          git pull --rebase
+          git push
+
+      - name: Notify failure to Slack
+        if: ${{ failure() }}
+        env:
+          JUSLAG_SLACK_WEBHOOK: ${{ secrets.JUSLAG_SLACK_WEBHOOK }}
+        run: |
+          if [ -n "$JUSLAG_SLACK_WEBHOOK" ]; then
+            RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            TEXT=$(printf '*JUSLAG 日次リサーチ失敗* (%s)\nGitHub Actions の実行が失敗しました: %s' \
+              "$(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M JST')" "$RUN_URL")
+            jq -n --arg text "$TEXT" '{text: $text}' \
+              | curl -fsS --max-time 15 -H 'Content-Type: application/json' -d @- "$JUSLAG_SLACK_WEBHOOK" || true
+          fi
+
+      - name: Fail run when Slack notification failed
+        if: ${{ steps.batch.outputs.slack_status == 'failed' }}
+        run: |
+          echo "Slack notification failed (data was still committed)"
+          exit 1
+
+  site:
+    # 閲覧用静的サイトのデプロイ（初期OFF。有効化: gh variable set ENABLE_SITE_DEPLOY --body true）
+    # デプロイ先は GitHub Pages。StatiCrypt でHTML単位にパスワード保護してから公開する
+    # （secrets.SITE_PASSWORD を設定すること）。
+    if: ${{ vars.ENABLE_SITE_DEPLOY == 'true' }}
+    needs: research
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Pull latest data commit
+        run: git pull --ff-only
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Render static site
+        run: uv run python scripts/ops/render_pages.py --out _site
+
+      - name: Password-protect site (StatiCrypt)
+        env:
+          SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
+        run: |
+          test -n "$SITE_PASSWORD" || { echo "::error::secrets.SITE_PASSWORD is not set"; exit 1; }
+          npx --yes staticrypt --recursive _site -d _site_protected -p "$SITE_PASSWORD" \
+            --short --remember 30 --template-title "JUSLAG Research"
+
+          # staticrypt -r _site -d _site_protected mirrors the input under _site_protected/_site/
+          protected_dir="_site_protected/_site"
+          test -d "$protected_dir" || { echo "::error::expected output dir $protected_dir not found"; exit 1; }
+
+          src_count=$(find _site -name '*.html' | wc -l)
+          dst_count=$(find "$protected_dir" -name '*.html' | wc -l)
+          if [ "$src_count" != "$dst_count" ]; then
+            echo "::error::html file count mismatch: src=$src_count protected=$dst_count"
+            exit 1
+          fi
+
+          # 全HTMLがStatiCryptのパスワードフォームでラップされていることを確認する
+          while IFS= read -r f; do
+            if ! grep -q 'staticrypt' "$f"; then
+              echo "::error::$f was not encrypted by staticrypt"
+              exit 1
+            fi
+          done < <(find "$protected_dir" -name '*.html')
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site_protected/_site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
