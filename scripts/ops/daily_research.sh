@@ -99,12 +99,22 @@ EOF
     # shellcheck disable=SC2206
     LLM_ARGS=(${LLM_EXTRA_ARGS} "${LLM_ARGS[@]}")
   fi
-  if LLM_OUT=$(timeout "$LLM_TIMEOUT" "$LLM_CMD" "${LLM_ARGS[@]}" 2>/dev/null) && [ -n "${LLM_OUT// /}" ]; then
-    SUMMARY="$LLM_OUT"
-    LLM_STATUS="ok"
-  else
-    echo "[llm] summarization failed; falling back to raw report text" >&2
+  if ! command -v "$LLM_CMD" > /dev/null 2>&1; then
+    echo "[llm] command not found: $LLM_CMD" >&2
     LLM_STATUS="failed"
+  else
+    LLM_ERR_FILE=$(mktemp "${RUNNER_TEMP:-/tmp}/juslag_llm_err.XXXXXX")
+    if LLM_OUT=$(timeout "$LLM_TIMEOUT" "$LLM_CMD" "${LLM_ARGS[@]}" 2>"$LLM_ERR_FILE") \
+        && [ -n "${LLM_OUT// /}" ]; then
+      SUMMARY="$LLM_OUT"
+      LLM_STATUS="ok"
+    else
+      echo "[llm] summarization failed (exit=$?); falling back to raw report text" >&2
+      echo "[llm] stderr (last 30 lines):" >&2
+      tail -n 30 "$LLM_ERR_FILE" >&2 || true
+      LLM_STATUS="failed"
+    fi
+    rm -f "$LLM_ERR_FILE"
   fi
   rm -f "$PROMPT_FILE"
 fi
