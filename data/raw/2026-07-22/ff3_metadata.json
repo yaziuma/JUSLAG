@@ -1,0 +1,25 @@
+{
+  "updated_at": "2026-07-21T23:52:56.695311+00:00",
+  "source": "Kenneth French Data Library",
+  "ff3_url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/Japan_3_Factors_Daily_CSV.zip",
+  "wml_url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/Japan_Mom_Factor_Daily_CSV.zip",
+  "ff3_rows": 9370,
+  "ff3_start": "1990-07-02",
+  "ff3_end": "2026-05-29",
+  "carhart4_rows": 9282,
+  "carhart4_start": "1990-11-01",
+  "carhart4_end": "2026-05-29",
+  "columns_ff3": [
+    "mkt_rf",
+    "smb",
+    "hml",
+    "rf"
+  ],
+  "columns_carhart4": [
+    "mkt_rf",
+    "smb",
+    "hml",
+    "rf",
+    "wml"
+  ]
+}
