@@ -134,6 +134,14 @@ def test_render_site_produces_index_and_report_pages(tmp_path: Path) -> None:
     assert "執行のみ" in index_html
     assert "見送りのみ" in index_html
 
+    # 運用ダッシュボード（本日・履歴・分析）と履歴の段階表示
+    assert "本日の執行判断" in index_html
+    assert "tab === 'today'" in index_html
+    assert "tab === 'history'" in index_html
+    assert "tab === 'analysis'" in index_html
+    assert "visibleCount: 20" in index_html
+    assert "さらに表示" in index_html
+
     # CDNアセット（B-FADスタック: Bootstrap 5 + Alpine.js, ビルド不要）
     assert "cdn.jsdelivr.net/npm/bootstrap@" in index_html
     assert "cdn.jsdelivr.net/npm/alpinejs@" in index_html

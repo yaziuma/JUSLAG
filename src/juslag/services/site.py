@@ -66,43 +66,100 @@ _FAVICON = (
 
 _EXTRA_STYLE = """
 :root {
-  --bg-page: #0b1220;
-  --bg-surface: #141c2e;
-  --text-heading: #f1f5f9;
-  --text-default: #cbd5e1;
-  --text-muted: #8a97ac;
-  --border-default: #2a3550;
-  --accent: #3b82f6;
+  --bg-page: #0d1117;
+  --bg-surface: #151b23;
+  --bg-raised: #1c2430;
+  --text-heading: #f0f3f6;
+  --text-default: #c9d1d9;
+  --text-muted: #8b949e;
+  --border-default: #30363d;
+  --accent: #58a6ff;
+  --positive: #3fb950;
+  --negative: #f85149;
+  --warning: #d29922;
 }
 body {
   background: var(--bg-page);
   color: var(--text-default);
   font-family: -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  font-size: 14px;
+  letter-spacing: 0;
 }
-.navbar { background: var(--bg-surface); border-bottom: 1px solid var(--border-default) !important; }
+[x-cloak] { display: none !important; }
+.app-shell { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+.navbar { background: rgba(13,17,23,.96); border-bottom: 1px solid var(--border-default) !important; }
+.navbar-brand { font-size: 15px; letter-spacing: 0; }
 .surface-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-default);
-  border-radius: 12px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .4);
+  border-radius: 8px;
 }
 .text-heading { color: var(--text-heading); }
 .text-muted-soft { color: var(--text-muted); }
 a { color: var(--accent); }
 .table { color: var(--text-default); }
 .table > :not(caption) > * > * { border-color: var(--border-default); }
+.section-label { color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.dashboard-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border-default); }
+.dashboard-tab {
+  border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--text-muted);
+  min-width: 88px; padding: 12px 16px 10px; font-weight: 600;
+}
+.dashboard-tab:hover { color: var(--text-heading); }
+.dashboard-tab.active { color: var(--text-heading); border-bottom-color: var(--accent); }
+.decision-band { border-left: 4px solid var(--warning); }
+.decision-band.execute { border-left-color: var(--positive); }
+.decision-word { font-size: 28px; font-weight: 750; line-height: 1; color: var(--text-heading); }
+.metric-value { color: var(--text-heading); font-size: 22px; font-weight: 700; line-height: 1.1; }
+.regime-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.regime-pill { background: var(--bg-raised); border: 1px solid var(--border-default); border-radius: 999px; padding: 5px 10px; }
+.plan-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border-default); border: 1px solid var(--border-default); border-radius: 8px; overflow: hidden; }
+.plan-column { background: var(--bg-surface); padding: 18px; min-width: 0; }
+.plan-list { display: grid; gap: 8px; }
+.plan-item { display: flex; justify-content: space-between; gap: 12px; padding-top: 8px; border-top: 1px solid var(--border-default); }
+.plan-item:first-child { border-top: 0; padding-top: 0; }
+.plan-long { color: #56d364; }
+.plan-short { color: #ff7b72; }
+.history-toolbar { display: grid; grid-template-columns: minmax(220px, 1fr) auto; gap: 12px; }
+.history-search { background: var(--bg-surface); border-color: var(--border-default); color: var(--text-heading); }
+.history-search:focus { background: var(--bg-surface); color: var(--text-heading); border-color: var(--accent); box-shadow: none; }
+.history-list { border-top: 1px solid var(--border-default); }
+.history-row { display: grid; grid-template-columns: 105px 140px minmax(160px, 1fr) 92px 28px; gap: 16px; align-items: center; padding: 13px 4px; border-bottom: 1px solid var(--border-default); color: inherit; text-decoration: none; }
+.history-row:hover { background: rgba(255,255,255,.025); color: inherit; }
+.history-date { color: var(--text-heading); font-variant-numeric: tabular-nums; font-weight: 650; }
+.history-plan { min-width: 0; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 7px; background: var(--warning); }
+.status-dot.execute { background: var(--positive); }
+.score-track { height: 6px; background: var(--bg-raised); border-radius: 3px; overflow: hidden; }
+.score-fill { height: 100%; background: var(--accent); }
+.analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.trend-list { display: grid; gap: 10px; }
+.trend-row { display: grid; grid-template-columns: 88px 1fr 36px; align-items: center; gap: 10px; }
+.summary-viewport { max-height: 320px; overflow: auto; padding-right: 8px; scrollbar-color: var(--border-default) transparent; }
 pre.summary {
-  white-space: pre-wrap; background: rgba(255,255,255,.03); border: 1px solid var(--border-default);
-  border-radius: 6px; padding: 14px; font-size: .9rem; line-height: 1.6; color: var(--text-default);
+  white-space: pre-wrap; background: transparent; border: 0; margin: 0;
+  padding: 0; font-family: inherit; font-size: 14px; line-height: 1.7; color: var(--text-default);
 }
 pre.raw {
   background: rgba(255,255,255,.03); border: 1px solid var(--border-default); overflow-x: auto;
   padding: 12px; font-size: .75rem; color: var(--text-default);
 }
 details > summary { cursor: pointer; margin: 8px 0; color: var(--text-muted); }
-.regime-strip { display: flex; flex-wrap: wrap; gap: 3px; }
-.regime-cell { width: 14px; height: 28px; border-radius: 3px; flex-shrink: 0; }
+.regime-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(8px, 1fr)); gap: 3px; }
+.regime-cell { width: 100%; height: 34px; border-radius: 2px; }
 .btn-group .btn.active { color: #fff; }
+@media (max-width: 767px) {
+  body { font-size: 14px; }
+  .app-shell { padding: 0 14px; }
+  .dashboard-tab { min-width: 0; flex: 1; padding-inline: 8px; }
+  .decision-word { font-size: 24px; }
+  .plan-grid, .analysis-grid { grid-template-columns: 1fr; }
+  .history-toolbar { grid-template-columns: 1fr; }
+  .history-row { grid-template-columns: 92px 1fr 24px; gap: 10px; }
+  .history-row .history-plan, .history-row .history-regime { display: none; }
+  .metric-value { font-size: 19px; }
+  .surface-card { border-radius: 6px; }
+}
 """
 
 
@@ -185,12 +242,12 @@ def _page(title: str, body: str, home_href: str) -> str:
         f"<style>{_EXTRA_STYLE}</style>\n"
         "</head><body>\n"
         '<nav class="navbar sticky-top">\n'
-        '  <div class="container py-2 d-flex justify-content-between align-items-center">\n'
+        '  <div class="app-shell w-100 py-2 d-flex justify-content-between align-items-center">\n'
         f'    <a class="navbar-brand mb-0 h1 fw-semibold text-heading text-decoration-none" href="{_esc(home_href)}">'
         "JUSLAG 日次リサーチ</a>\n"
         "  </div>\n"
         "</nav>\n"
-        f'<main class="container py-4">\n{body}\n</main>\n'
+        f'<main class="app-shell py-3">\n{body}\n</main>\n'
         "</body></html>\n"
     )
 
@@ -218,6 +275,7 @@ def _index_rows(reports: list[dict]) -> list[dict]:
                 "short": _plan_summary(plan.get("short")),
                 "judge_score": judge.get("overall_score"),
                 "judge_decision": judge.get("overall_decision"),
+                "judge_summary": judge.get("summary"),
             }
         )
     return rows
@@ -240,118 +298,187 @@ def _regime_strip(reports: list[dict]) -> str:
 
 
 def _render_index(history: list[dict], reports: list[dict]) -> str:
-    parts: list[str] = []
-
-    # 最新サマリー
-    if history:
-        latest = history[-1]
-        status = _esc(latest.get("llm_status"))
-        parts.append(
-            '<div class="surface-card p-4 mb-4">\n'
-            '  <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">\n'
-            '    <h2 class="h5 text-heading mb-0">最新サマリー</h2>\n'
-            '    <span class="text-muted-soft small">'
-            f'{_esc(latest.get("jst_date"))} '
-            f'<span class="badge text-bg-secondary ms-1">LLM: {status}</span></span>\n'
-            "  </div>\n"
-            f'  <pre class="summary mb-0">{_esc(latest.get("summary"))}</pre>\n'
-            "</div>\n"
-        )
-    else:
-        parts.append('<div class="surface-card p-4 mb-4"><p class="mb-0">まだサマリー履歴がありません。</p></div>\n')
-
-    # 日次履歴テーブル（Alpine）
     rows = _index_rows(reports)
-    data_json = _json_embed({"rows": rows})
-    parts.append(f"<script>window.__DATA__ = {data_json};</script>\n")
-    parts.append(
-        """
-<script>
-function historyTable() {
-  return {
-    filter: 'all',
-    rows: (window.__DATA__ && window.__DATA__.rows) || [],
-    get filteredRows() {
-      if (this.filter === 'executed') return this.rows.filter(function (r) { return r.tradeable; });
-      if (this.filter === 'skipped') return this.rows.filter(function (r) { return !r.tradeable; });
-      return this.rows;
-    }
-  };
-}
-</script>
-"""
-    )
-    parts.append(
-        '<div class="surface-card p-4 mb-4" x-data="historyTable()">\n'
-        '  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">\n'
-        '    <h2 class="h5 text-heading mb-0">日次履歴</h2>\n'
-        '    <div class="btn-group btn-group-sm" role="group" aria-label="フィルタ">\n'
-        '      <button type="button" class="btn btn-outline-secondary" '
-        "@click=\"filter = 'all'\" :class=\"{active: filter === 'all'}\">全て</button>\n"
-        '      <button type="button" class="btn btn-outline-secondary" '
-        "@click=\"filter = 'executed'\" :class=\"{active: filter === 'executed'}\">執行のみ</button>\n"
-        '      <button type="button" class="btn btn-outline-secondary" '
-        "@click=\"filter = 'skipped'\" :class=\"{active: filter === 'skipped'}\">見送りのみ</button>\n"
-        "    </div>\n"
-        "  </div>\n"
-        '  <div class="table-responsive">\n'
-        '    <table class="table table-sm table-hover align-middle mb-0">\n'
-        "      <thead><tr><th>日付</th><th>判定</th><th>レジーム</th><th>LONG</th>"
-        "<th>SHORT</th><th>Judgeスコア</th><th>リンク</th></tr></thead>\n"
-        "      <tbody>\n"
-        '        <template x-for="row in filteredRows" :key="row.date">\n'
-        "          <tr>\n"
-        '            <td x-text="row.date"></td>\n'
-        "            <td>\n"
-        '              <span class="badge" :class="row.tradeable ? \'text-bg-success\' : \'text-bg-warning\'" '
-        "x-text=\"row.tradeable ? '執行' : '見送り'\"></span>\n"
-        '              <span class="badge ms-1" x-show="!row.tradeable" '
-        ":class=\"'text-bg-' + row.classification_variant\" x-text=\"row.classification_label\"></span>\n"
-        "            </td>\n"
-        "            <td>\n"
-        '              <span class="badge text-bg-light me-1" x-text="row.trend_regime || \'-\'"></span>\n'
-        '              <span class="badge text-bg-light me-1" x-text="row.vol_regime || \'-\'"></span>\n'
-        '              <span class="badge text-bg-light" x-text="row.rotation_regime || \'-\'"></span>\n'
-        "            </td>\n"
-        "            <td x-text=\"row.long || '-'\"></td>\n"
-        "            <td x-text=\"row.short || '-'\"></td>\n"
-        "            <td x-text=\"row.judge_score != null ? (row.judge_score + '（' + "
-        "(row.judge_decision || '-') + '）') : '-'\"></td>\n"
-        '            <td><a :href="row.href">詳細</a></td>\n'
-        "          </tr>\n"
-        "        </template>\n"
-        "      </tbody>\n"
-        "    </table>\n"
-        "  </div>\n"
-        '  <p class="small text-muted-soft mt-2 mb-0" x-show="filteredRows.length === 0">'
-        "該当する日次データがありません。</p>\n"
-        "</div>\n"
-    )
+    latest_report = max(reports, key=lambda r: r.get("date") or "") if reports else {}
+    latest_ds = latest_report.get("daily_signal") or {}
+    latest_judge = (latest_report.get("backtest") or {}).get("judge") or {}
+    latest_plan = latest_ds.get("execution_plan") or {}
+    latest_history = history[-1] if history else {}
+    tradeable = bool(latest_ds.get("tradeable"))
+    decision_text = "執行" if tradeable else "見送り"
+    decision_class = "execute" if tradeable else ""
+    classification = _cls_label(latest_ds.get("no_trade_classification"))
+    score = latest_judge.get("overall_score")
+    score_pct = max(0, min(100, score)) if isinstance(score, (int, float)) else 0
 
-    # レジーム推移
-    parts.append(
-        '<div class="surface-card p-4 mb-4">\n'
-        '  <h2 class="h5 text-heading mb-2">レジーム推移</h2>\n'
-        '  <p class="small text-muted-soft">セルにカーソルを合わせると日付とtrend/vol/rotationを表示します'
-        "（緑=uptrend / 赤=downtrend / グレー=range・不明）。</p>\n"
-        f"  {_regime_strip(reports)}\n"
-        "</div>\n"
-    )
-
-    # 過去サマリー
-    if len(history) > 1:
-        parts.append('<div class="surface-card p-4 mb-4">\n  <h2 class="h5 text-heading mb-3">過去サマリー</h2>\n')
-        for entry in reversed(history[:-1]):
-            parts.append(
-                "  <details>\n"
-                f'    <summary>{_esc(entry.get("jst_date"))}'
-                f'（LLM: {_esc(entry.get("llm_status"))}）</summary>\n'
-                f'    <pre class="summary">{_esc(entry.get("summary"))}</pre>\n'
-                "  </details>\n"
+    def plan_items(entries: list[dict] | None, side: str) -> str:
+        if not entries:
+            return '<p class="text-muted-soft mb-0">対象なし</p>'
+        items = []
+        for entry in entries:
+            weight = entry.get("weight")
+            weight_text = f"{weight:g}%" if isinstance(weight, (int, float)) else "-"
+            items.append(
+                '<div class="plan-item">'
+                f'<div><strong class="text-heading">{_esc(entry.get("sector") or "-")}</strong>'
+                f'<div class="text-muted-soft small">{_esc(entry.get("ticker") or "-")}</div></div>'
+                f'<strong class="plan-{side}">{weight_text}</strong></div>'
             )
-        parts.append("</div>\n")
+        return '<div class="plan-list">' + "".join(items) + "</div>"
 
-    return _page("JUSLAG 日次リサーチ", "".join(parts), "index.html")
+    data_json = _json_embed({"rows": rows})
+    summary = latest_history.get("summary") or latest_report.get("slack_fallback_text") or "サマリーはありません。"
+    report_href = f'reports/{_esc(latest_report.get("date"))}.html' if latest_report else "#"
+
+    body = f"""
+<script>window.__DATA__ = {data_json};</script>
+<script>
+function dashboard() {{
+  return {{
+    tab: 'today', filter: 'all', query: '', visibleCount: 20,
+    rows: (window.__DATA__ && window.__DATA__.rows) || [],
+    get filteredRows() {{
+      const q = this.query.trim().toLowerCase();
+      return this.rows.filter((row) => {{
+        const matchesFilter = this.filter === 'all' ||
+          (this.filter === 'executed' && row.tradeable) ||
+          (this.filter === 'skipped' && !row.tradeable);
+        const haystack = [row.date, row.long, row.short, row.trend_regime,
+          row.vol_regime, row.rotation_regime].join(' ').toLowerCase();
+        return matchesFilter && (!q || haystack.includes(q));
+      }});
+    }},
+    get displayedRows() {{
+      return this.filteredRows.slice(0, this.visibleCount);
+    }}
+  }};
+}}
+</script>
+<div x-data="dashboard()">
+  <div class="d-flex justify-content-between align-items-end gap-3 mb-2">
+    <div>
+      <div class="section-label mb-1">Operations dashboard</div>
+      <h1 class="h4 text-heading mb-0">日次リサーチ</h1>
+    </div>
+    <div class="text-end small text-muted-soft">
+      <div>最終更新</div><strong class="text-heading">{_esc(latest_report.get("date") or "-")}</strong>
+    </div>
+  </div>
+
+  <div class="dashboard-tabs mb-4" role="tablist">
+    <button class="dashboard-tab" :class="{{active: tab === 'today'}}" @click="tab = 'today'">本日</button>
+    <button class="dashboard-tab" :class="{{active: tab === 'history'}}" @click="tab = 'history'">履歴</button>
+    <button class="dashboard-tab" :class="{{active: tab === 'analysis'}}" @click="tab = 'analysis'">分析</button>
+  </div>
+
+  <section x-show="tab === 'today'" x-cloak>
+    <div class="surface-card decision-band {decision_class} p-3 p-md-4 mb-3">
+      <div class="row align-items-center g-3">
+        <div class="col-md-5">
+          <div class="section-label mb-2">本日の執行判断</div>
+          <div class="d-flex align-items-center gap-3">
+            <div class="decision-word">{decision_text}</div>
+            <span class="text-muted-soft">{_esc(classification if not tradeable else "執行条件を充足")}</span>
+          </div>
+        </div>
+        <div class="col-6 col-md-2">
+          <div class="section-label mb-1">Judge</div>
+          <div class="metric-value">{_esc(score if score is not None else "-")}<small class="fs-6 text-muted-soft"> / 100</small></div>
+        </div>
+        <div class="col-6 col-md-2">
+          <div class="section-label mb-1">判定</div>
+          <div class="metric-value fs-5">{_esc((latest_judge.get("overall_decision") or "-").upper())}</div>
+        </div>
+        <div class="col-md-3 text-md-end">
+          <a class="btn btn-sm btn-outline-light" href="{report_href}">詳細レポート</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="regime-list mb-3">
+      <span class="regime-pill"><span class="text-muted-soft">Trend</span> <strong>{_esc(latest_ds.get("trend_regime") or "-")}</strong></span>
+      <span class="regime-pill"><span class="text-muted-soft">Vol</span> <strong>{_esc(latest_ds.get("vol_regime") or "-")}</strong></span>
+      <span class="regime-pill"><span class="text-muted-soft">Rotation</span> <strong>{_esc(_rotation_regime(latest_ds) or "-")}</strong></span>
+      <span class="regime-pill"><span class="text-muted-soft">対象日</span> <strong>{_esc(latest_ds.get("execution_target_jp_date") or "-")}</strong></span>
+    </div>
+
+    <div class="plan-grid mb-3">
+      <div class="plan-column">
+        <div class="section-label plan-long mb-3">Long</div>
+        {plan_items(latest_plan.get("long"), "long")}
+      </div>
+      <div class="plan-column">
+        <div class="section-label plan-short mb-3">Short</div>
+        {plan_items(latest_plan.get("short"), "short")}
+      </div>
+    </div>
+
+    <div class="surface-card p-3 p-md-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="section-label">Latest summary</div>
+        <span class="small text-muted-soft">LLM: {_esc(latest_history.get("llm_status") or "-")}</span>
+      </div>
+      <div class="summary-viewport"><pre class="summary">{_esc(summary)}</pre></div>
+    </div>
+  </section>
+
+  <section x-show="tab === 'history'" x-cloak>
+    <div class="history-toolbar mb-3">
+      <input class="form-control form-control-sm history-search" x-model="query" placeholder="日付・銘柄・レジームで検索" aria-label="履歴検索">
+      <div class="btn-group btn-group-sm" role="group" aria-label="判定フィルタ">
+        <button class="btn btn-outline-secondary" :class="{{active: filter === 'all'}}" @click="filter = 'all'">全て</button>
+        <button class="btn btn-outline-secondary" :class="{{active: filter === 'executed'}}" @click="filter = 'executed'">執行のみ</button>
+        <button class="btn btn-outline-secondary" :class="{{active: filter === 'skipped'}}" @click="filter = 'skipped'">見送りのみ</button>
+      </div>
+    </div>
+    <div class="history-list">
+      <template x-for="row in displayedRows" :key="row.date">
+        <a class="history-row" :href="row.href">
+          <div class="history-date" x-text="row.date"></div>
+          <div><span class="status-dot" :class="{{execute: row.tradeable}}"></span><span x-text="row.tradeable ? '執行' : '見送り'"></span></div>
+          <div class="history-plan" x-text="'L: ' + (row.long || '-') + '  /  S: ' + (row.short || '-')"></div>
+          <div class="history-regime text-muted-soft" x-text="row.trend_regime || '-'"></div>
+          <div class="text-end text-muted-soft">›</div>
+        </a>
+      </template>
+    </div>
+    <p class="text-muted-soft py-4" x-show="filteredRows.length === 0">該当する履歴はありません。</p>
+    <div class="text-center py-3" x-show="displayedRows.length < filteredRows.length">
+      <button class="btn btn-sm btn-outline-secondary" @click="visibleCount += 20">さらに表示</button>
+    </div>
+  </section>
+
+  <section x-show="tab === 'analysis'" x-cloak>
+    <div class="analysis-grid mb-3">
+      <div class="surface-card p-3 p-md-4">
+        <div class="section-label mb-3">Judge score trend</div>
+        <div class="trend-list">
+          <template x-for="row in rows.slice(0, 12)" :key="row.date">
+            <div class="trend-row">
+              <span class="small" x-text="row.date.slice(5)"></span>
+              <div class="score-track"><div class="score-fill" :style="'width:' + (row.judge_score || 0) + '%'"></div></div>
+              <strong class="text-end" x-text="row.judge_score == null ? '-' : row.judge_score"></strong>
+            </div>
+          </template>
+        </div>
+      </div>
+      <div class="surface-card p-3 p-md-4">
+        <div class="section-label mb-3">Current assessment</div>
+        <div class="metric-value mb-3">{_esc(score if score is not None else "-")} / 100</div>
+        <div class="score-track mb-3"><div class="score-fill" style="width:{score_pct}%"></div></div>
+        <p class="mb-0">{_esc(latest_judge.get("summary") or "判定情報はありません。")}</p>
+      </div>
+    </div>
+    <div class="surface-card p-3 p-md-4">
+      <div class="section-label mb-2">Regime timeline</div>
+      <p class="small text-muted-soft mb-3">緑: 上昇 / 赤: 下落 / グレー: レンジ・不明</p>
+      {_regime_strip(reports)}
+    </div>
+  </section>
+</div>
+"""
+
+    return _page("JUSLAG 日次リサーチ", body, "index.html")
 
 
 def _summary_table(report: dict) -> str:
