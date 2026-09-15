@@ -21,6 +21,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+  "playwright>=1.55",
+  "python-dotenv>=1.0",
   "pytest>=8.0",
   "ruff>=0.6",
 ]

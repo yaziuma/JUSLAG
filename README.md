@@ -26,6 +26,7 @@
 - 最低限テスト（prior / model / portfolio / metrics など）
 
 日次バッチの全体設計は `docs/daily_research_batch_architecture.md` を参照してください。
+GitHub Pagesの公開・簡易認証の運用は `docs/github_pages_operations.md` を参照してください。
 
 ## 4. 未実装・注意点
 
@@ -117,6 +118,20 @@ GitHub Actions 側で必要な Secrets / Variables:
 uv run python scripts/ops/render_pages.py --out _site
 python3 -m http.server -d _site 8080  # http://localhost:8080
 ```
+
+公開サイトの認証確認（初回のみChromiumをインストール）:
+
+```bash
+cp .env.local.example .env.local
+chmod 600 .env.local
+# .env.local の JUSLAG_SITE_PASSWORD に GitHub Secret と同じ値を設定
+uv sync --extra dev
+uv run playwright install chromium
+uv run python scripts/ops/check_pages_auth.py
+```
+
+`.env.local` はGit管理対象外です。パスワードをコマンド引数やログへ出さず、
+GitHub Actionsの `SITE_PASSWORD` を変更した場合はローカル側も同じ値へ更新してください。
 
 ## 8. 論文との対応関係（現時点）
 
