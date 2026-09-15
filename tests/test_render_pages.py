@@ -131,11 +131,15 @@ def test_render_site_produces_index_and_report_pages(tmp_path: Path) -> None:
     assert "window.__DATA__" in index_html
 
     # フィルタUI（Alpine制御の全て/執行のみ/見送りのみ）
-    assert "執行のみ" in index_html
+    assert "発注候補" in index_html
     assert "見送りのみ" in index_html
 
     # 運用ダッシュボード（本日・履歴・分析）と履歴の段階表示
-    assert "本日の執行判断" in index_html
+    assert "最終運用判断" in index_html
+    assert "モデル作成条件" in index_html
+    assert "当日シグナル判定" in index_html
+    assert "モデル審査基準" in index_html
+    assert "参考注文案" in index_html
     assert "tab === 'today'" in index_html
     assert "tab === 'history'" in index_html
     assert "tab === 'analysis'" in index_html

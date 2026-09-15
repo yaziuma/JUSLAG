@@ -109,6 +109,7 @@ a { color: var(--accent); }
 .dashboard-tab.active { color: var(--text-heading); border-bottom-color: var(--accent); }
 .decision-band { border-left: 4px solid var(--warning); }
 .decision-band.execute { border-left-color: var(--positive); }
+.decision-band.blocked { border-left-color: var(--negative); }
 .decision-word { font-size: 28px; font-weight: 750; line-height: 1; color: var(--text-heading); }
 .metric-value { color: var(--text-heading); font-size: 22px; font-weight: 700; line-height: 1.1; }
 .regime-list { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -120,6 +121,15 @@ a { color: var(--accent); }
 .plan-item:first-child { border-top: 0; padding-top: 0; }
 .plan-long { color: #56d364; }
 .plan-short { color: #ff7b72; }
+.explain-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border-default); border: 1px solid var(--border-default); border-radius: 8px; overflow: hidden; }
+.explain-panel { background: var(--bg-surface); padding: 18px; }
+.fact-list { display: grid; gap: 9px; }
+.fact-row { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border-default); padding-bottom: 8px; }
+.fact-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.order-list { border-top: 1px solid var(--border-default); }
+.order-row { display: grid; grid-template-columns: 90px minmax(170px, 1fr) 80px 110px 110px; gap: 14px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-default); }
+.order-side { font-size: 12px; font-weight: 750; }
+.warning-note { background: rgba(210,153,34,.08); border-left: 3px solid var(--warning); padding: 10px 12px; }
 .history-toolbar { display: grid; grid-template-columns: minmax(220px, 1fr) auto; gap: 12px; }
 .history-search { background: var(--bg-surface); border-color: var(--border-default); color: var(--text-heading); }
 .history-search:focus { background: var(--bg-surface); color: var(--text-heading); border-color: var(--accent); box-shadow: none; }
@@ -153,12 +163,14 @@ details > summary { cursor: pointer; margin: 8px 0; color: var(--text-muted); }
   .app-shell { padding: 0 14px; }
   .dashboard-tab { min-width: 0; flex: 1; padding-inline: 8px; }
   .decision-word { font-size: 24px; }
-  .plan-grid, .analysis-grid { grid-template-columns: 1fr; }
+  .plan-grid, .analysis-grid, .explain-grid { grid-template-columns: 1fr; }
   .history-toolbar { grid-template-columns: 1fr; }
   .history-row { grid-template-columns: 92px 1fr 24px; gap: 10px; }
   .history-row .history-plan, .history-row .history-regime { display: none; }
   .metric-value { font-size: 19px; }
   .surface-card { border-radius: 6px; }
+  .order-row { grid-template-columns: 74px 1fr auto; gap: 8px; }
+  .order-row .order-price, .order-row .order-method { display: none; }
 }
 """
 
@@ -215,6 +227,20 @@ def _decision_variant(decision: str | None) -> str:
     return _DECISION_VARIANTS.get(decision or "", "secondary")
 
 
+def _final_actionable(report: dict) -> bool:
+    ds = report.get("daily_signal") or {}
+    judge = (report.get("backtest") or {}).get("judge") or {}
+    return bool(ds.get("tradeable")) and judge.get("overall_decision") == "pass"
+
+
+def _money(value: object) -> str:
+    return f"¥{value:,.0f}" if isinstance(value, (int, float)) else "-"
+
+
+def _percent(value: object, digits: int = 2) -> str:
+    return f"{value:.{digits}f}%" if isinstance(value, (int, float)) else "-"
+
+
 def _plan_summary(entries: list[dict] | None) -> str:
     if not entries:
         return "-"
@@ -260,12 +286,14 @@ def _index_rows(reports: list[dict]) -> list[dict]:
         judge = (r.get("backtest") or {}).get("judge") or {}
         plan = ds.get("execution_plan") or {}
         tradeable = bool(ds.get("tradeable"))
+        final_actionable = _final_actionable(r)
         cls = ds.get("no_trade_classification")
         rows.append(
             {
                 "date": date,
                 "href": f"reports/{date}.html",
                 "tradeable": tradeable,
+                "final_actionable": final_actionable,
                 "classification_label": _cls_label(cls) if not tradeable else "",
                 "classification_variant": _cls_variant(cls),
                 "trend_regime": ds.get("trend_regime"),
@@ -305,26 +333,64 @@ def _render_index(history: list[dict], reports: list[dict]) -> str:
     latest_plan = latest_ds.get("execution_plan") or {}
     latest_history = history[-1] if history else {}
     tradeable = bool(latest_ds.get("tradeable"))
-    decision_text = "執行" if tradeable else "見送り"
-    decision_class = "execute" if tradeable else ""
-    classification = _cls_label(latest_ds.get("no_trade_classification"))
+    final_actionable = _final_actionable(latest_report)
+    judge_decision = latest_judge.get("overall_decision")
+    decision_text = "発注候補" if final_actionable else "見送り"
+    decision_class = "execute" if final_actionable else "blocked"
+    if not tradeable:
+        decision_reason = _cls_label(latest_ds.get("no_trade_classification"))
+    elif judge_decision == "reject":
+        decision_reason = "注文候補は生成済み / モデル審査で却下"
+    elif judge_decision == "pass":
+        decision_reason = "シグナル条件・モデル審査ともに通過"
+    else:
+        decision_reason = "注文候補は生成済み / モデル審査は要確認"
     score = latest_judge.get("overall_score")
     score_pct = max(0, min(100, score)) if isinstance(score, (int, float)) else 0
+    backtest = latest_report.get("backtest") or {}
+    params = backtest.get("params") or {}
+    metrics = latest_judge.get("metrics_snapshot") or {}
+    strategy = latest_ds.get("strategy_decision") or {}
+    context = latest_ds.get("strategy_context") or {}
 
-    def plan_items(entries: list[dict] | None, side: str) -> str:
+    def order_items(entries: list[dict] | None, side: str) -> str:
         if not entries:
-            return '<p class="text-muted-soft mb-0">対象なし</p>'
+            return ""
         items = []
         for entry in entries:
-            weight = entry.get("weight")
-            weight_text = f"{weight:g}%" if isinstance(weight, (int, float)) else "-"
+            is_long = side == "long"
+            side_label = "現物買い" if is_long else "信用新規売り"
+            side_class = "plan-long" if is_long else "plan-short"
+            lots = entry.get("normalized_lots")
+            lots_text = f"{lots:,}口" if isinstance(lots, int) else "-"
             items.append(
-                '<div class="plan-item">'
-                f'<div><strong class="text-heading">{_esc(entry.get("sector") or "-")}</strong>'
-                f'<div class="text-muted-soft small">{_esc(entry.get("ticker") or "-")}</div></div>'
-                f'<strong class="plan-{side}">{weight_text}</strong></div>'
+                '<div class="order-row">'
+                f'<div class="order-side {side_class}">{side_label}</div>'
+                f'<div><strong class="text-heading">{_esc(entry.get("ticker") or "-")} '
+                f'{_esc(entry.get("sector") or "-")}</strong></div>'
+                f'<strong>{lots_text}</strong>'
+                f'<div class="order-price text-end">{_money(entry.get("normalized_purchase_jpy"))}</div>'
+                '<div class="order-method text-end text-muted-soft">寄成・当日</div></div>'
             )
-        return '<div class="plan-list">' + "".join(items) + "</div>"
+        return "".join(items)
+
+    orders_html = order_items(latest_plan.get("long"), "long") + order_items(
+        latest_plan.get("short"), "short"
+    )
+    candidate_quantity = sum(
+        entry.get("normalized_lots") or 0
+        for entry in (latest_plan.get("long") or []) + (latest_plan.get("short") or [])
+    )
+    if final_actionable:
+        order_gate_html = (
+            f"<strong>発注候補: 合計{candidate_quantity:,}口</strong><br>"
+            '<span class="small">モデル審査まで通過。執行前チェック後に注文します。</span>'
+        )
+    else:
+        order_gate_html = (
+            "<strong>本日の発注数量: 0口</strong><br>"
+            f'<span class="small">{_esc(decision_reason)}のため、以下は発注しない参考値です。</span>'
+        )
 
     data_json = _json_embed({"rows": rows})
     summary = latest_history.get("summary") or latest_report.get("slack_fallback_text") or "サマリーはありません。"
@@ -341,8 +407,8 @@ function dashboard() {{
       const q = this.query.trim().toLowerCase();
       return this.rows.filter((row) => {{
         const matchesFilter = this.filter === 'all' ||
-          (this.filter === 'executed' && row.tradeable) ||
-          (this.filter === 'skipped' && !row.tradeable);
+          (this.filter === 'executed' && row.final_actionable) ||
+          (this.filter === 'skipped' && !row.final_actionable);
         const haystack = [row.date, row.long, row.short, row.trend_regime,
           row.vol_regime, row.rotation_regime].join(' ').toLowerCase();
         return matchesFilter && (!q || haystack.includes(q));
@@ -375,10 +441,10 @@ function dashboard() {{
     <div class="surface-card decision-band {decision_class} p-3 p-md-4 mb-3">
       <div class="row align-items-center g-3">
         <div class="col-md-5">
-          <div class="section-label mb-2">本日の執行判断</div>
+          <div class="section-label mb-2">最終運用判断</div>
           <div class="d-flex align-items-center gap-3">
             <div class="decision-word">{decision_text}</div>
-            <span class="text-muted-soft">{_esc(classification if not tradeable else "執行条件を充足")}</span>
+            <span class="text-muted-soft">{_esc(decision_reason)}</span>
           </div>
         </div>
         <div class="col-6 col-md-2">
@@ -386,8 +452,8 @@ function dashboard() {{
           <div class="metric-value">{_esc(score if score is not None else "-")}<small class="fs-6 text-muted-soft"> / 100</small></div>
         </div>
         <div class="col-6 col-md-2">
-          <div class="section-label mb-1">判定</div>
-          <div class="metric-value fs-5">{_esc((latest_judge.get("overall_decision") or "-").upper())}</div>
+          <div class="section-label mb-1">モデル審査</div>
+          <div class="metric-value fs-5">{_esc((judge_decision or "-").upper())}</div>
         </div>
         <div class="col-md-3 text-md-end">
           <a class="btn btn-sm btn-outline-light" href="{report_href}">詳細レポート</a>
@@ -395,22 +461,47 @@ function dashboard() {{
       </div>
     </div>
 
-    <div class="regime-list mb-3">
-      <span class="regime-pill"><span class="text-muted-soft">Trend</span> <strong>{_esc(latest_ds.get("trend_regime") or "-")}</strong></span>
-      <span class="regime-pill"><span class="text-muted-soft">Vol</span> <strong>{_esc(latest_ds.get("vol_regime") or "-")}</strong></span>
-      <span class="regime-pill"><span class="text-muted-soft">Rotation</span> <strong>{_esc(_rotation_regime(latest_ds) or "-")}</strong></span>
-      <span class="regime-pill"><span class="text-muted-soft">対象日</span> <strong>{_esc(latest_ds.get("execution_target_jp_date") or "-")}</strong></span>
+    <div class="explain-grid mb-3">
+      <div class="explain-panel">
+        <div class="section-label mb-3">1. モデル作成条件</div>
+        <div class="fact-list small">
+          <div class="fact-row"><span class="text-muted-soft">モデル</span><strong>部分空間正則化PCA</strong></div>
+          <div class="fact-row"><span class="text-muted-soft">標本期間</span><strong>{_esc(params.get("sample_start") or "-")} ～ { _esc(params.get("sample_end") or "-")}</strong></div>
+          <div class="fact-row"><span class="text-muted-soft">学習窓</span><strong>{_esc(params.get("window_l") or "-")}営業日</strong></div>
+          <div class="fact-row"><span class="text-muted-soft">因子数 / 正則化</span><strong>{_esc(params.get("k_factors") or "-")} / {_esc(params.get("lambda_reg") or "-")}</strong></div>
+          <div class="fact-row"><span class="text-muted-soft">選別</span><strong>上下{_percent((params.get("quantile_q") or 0) * 100, 0)}</strong></div>
+        </div>
+      </div>
+      <div class="explain-panel">
+        <div class="section-label mb-3">2. 当日シグナル判定</div>
+        <div class="fact-list small">
+          <div class="fact-row"><span class="text-muted-soft">適用ルール</span><strong>{_esc(strategy.get("rule_id") or "-")}</strong></div>
+          <div class="fact-row"><span class="text-muted-soft">寄りgap</span><strong>{_percent((context.get("open_gap") or 0) * 100)} / 上限1.50%</strong></div>
+          <div class="fact-row"><span class="text-muted-soft">Rotation</span><strong>{_esc(context.get("rotation_regime") or "-")} / weak以外</strong></div>
+          <div class="fact-row"><span class="text-muted-soft">ルール結果</span><strong>{_esc((strategy.get("action") or "-").upper())}</strong></div>
+          <div class="fact-row"><span class="text-muted-soft">対象日</span><strong>{_esc(latest_ds.get("execution_target_jp_date") or "-")}</strong></div>
+        </div>
+      </div>
+      <div class="explain-panel">
+        <div class="section-label mb-3">3. モデル審査基準</div>
+        <div class="fact-list small">
+          <div class="fact-row"><span class="text-muted-soft">税引後年率 ≥ 3%</span><strong>{_percent(metrics.get("net_after_tax_ar_pct"))}</strong></div>
+          <div class="fact-row"><span class="text-muted-soft">R/R ≥ 0.30</span><strong>{_esc(metrics.get("net_after_tax_rr") if metrics.get("net_after_tax_rr") is not None else "-")}</strong></div>
+          <div class="fact-row"><span class="text-muted-soft">MDD ≥ -25%</span><strong>{_percent(metrics.get("net_after_tax_mdd_pct"))}</strong></div>
+          <div class="fact-row"><span class="text-muted-soft">コスト低下幅 &lt; 3%</span><strong>{_percent(metrics.get("cost_drag_pct"))}</strong></div>
+          <div class="fact-row"><span class="text-muted-soft">審査結果</span><strong>{_esc((judge_decision or "-").upper())}</strong></div>
+        </div>
+      </div>
     </div>
 
-    <div class="plan-grid mb-3">
-      <div class="plan-column">
-        <div class="section-label plan-long mb-3">Long</div>
-        {plan_items(latest_plan.get("long"), "long")}
+    <div class="surface-card p-3 p-md-4 mb-3">
+      <div class="d-flex justify-content-between align-items-end mb-3 gap-3">
+        <div><div class="section-label mb-1">参考注文案</div><h2 class="h6 text-heading mb-0">Judgeゲート前のシグナル注文</h2></div>
+        <span class="text-muted-soft small">基準価格ベース</span>
       </div>
-      <div class="plan-column">
-        <div class="section-label plan-short mb-3">Short</div>
-        {plan_items(latest_plan.get("short"), "short")}
-      </div>
+      <div class="warning-note mb-3">{order_gate_html}</div>
+      <div class="order-list">{orders_html or '<p class="text-muted-soft py-3 mb-0">注文候補はありません。</p>'}</div>
+      <p class="small text-muted-soft mt-3 mb-0">数量は均等化した参考口数、金額は直近価格 × 口数の概算です。実注文前に売買単位、価格、信用売建可否、余力を証券会社画面で確認してください。</p>
     </div>
 
     <div class="surface-card p-3 p-md-4">
@@ -427,7 +518,7 @@ function dashboard() {{
       <input class="form-control form-control-sm history-search" x-model="query" placeholder="日付・銘柄・レジームで検索" aria-label="履歴検索">
       <div class="btn-group btn-group-sm" role="group" aria-label="判定フィルタ">
         <button class="btn btn-outline-secondary" :class="{{active: filter === 'all'}}" @click="filter = 'all'">全て</button>
-        <button class="btn btn-outline-secondary" :class="{{active: filter === 'executed'}}" @click="filter = 'executed'">執行のみ</button>
+        <button class="btn btn-outline-secondary" :class="{{active: filter === 'executed'}}" @click="filter = 'executed'">発注候補</button>
         <button class="btn btn-outline-secondary" :class="{{active: filter === 'skipped'}}" @click="filter = 'skipped'">見送りのみ</button>
       </div>
     </div>
@@ -435,7 +526,7 @@ function dashboard() {{
       <template x-for="row in displayedRows" :key="row.date">
         <a class="history-row" :href="row.href">
           <div class="history-date" x-text="row.date"></div>
-          <div><span class="status-dot" :class="{{execute: row.tradeable}}"></span><span x-text="row.tradeable ? '執行' : '見送り'"></span></div>
+          <div><span class="status-dot" :class="{{execute: row.final_actionable}}"></span><span x-text="row.final_actionable ? '発注候補' : '見送り'"></span></div>
           <div class="history-plan" x-text="'L: ' + (row.long || '-') + '  /  S: ' + (row.short || '-')"></div>
           <div class="history-regime text-muted-soft" x-text="row.trend_regime || '-'"></div>
           <div class="text-end text-muted-soft">›</div>
