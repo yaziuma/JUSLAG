@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "date": "2026-09-16",
-  "generated_at_utc": "2026-09-16T03:14:27.912662+00:00",
+  "generated_at_utc": "2026-09-16T03:30:59.304605+00:00",
   "backtest": {
-    "settings_name": "本番適用 initial (defaults + rule_406_no_flip)",
+    "settings_name": "本番適用 SBIゼロ革命・日計り信用",
     "judge_strategy_name": "PCA SUB + rule_406_no_flip",
     "params": {
       "sample_start": "2018-07-01",
@@ -17,9 +17,9 @@
       "max_short_signal": 0.0,
       "fill_policy": "strict",
       "price_mode": "raw",
-      "commission_bps_per_side": 5.0,
+      "commission_bps_per_side": 0.0,
       "slippage_bps_per_side": 5.0,
-      "short_borrow_rate_annual": 0.015,
+      "short_borrow_rate_annual": 0.0,
       "allow_short": true,
       "short_constraint_mode": "ignore",
       "unshortable_tickers": [],
@@ -79,15 +79,15 @@
         "gross_risk_pct": 14.04,
         "gross_rr": 1.892,
         "gross_mdd_pct": -24.04,
-        "net_pre_tax_ar_pct": -74.23,
-        "net_pre_tax_rr": -5.288,
-        "net_pre_tax_mdd_pct": -89.12,
-        "net_after_tax_ar_pct": -74.23,
+        "net_pre_tax_ar_pct": -23.1,
+        "net_pre_tax_rr": -1.646,
+        "net_pre_tax_mdd_pct": -54.29,
+        "net_after_tax_ar_pct": -23.1,
         "net_after_tax_risk_pct": 14.04,
-        "net_after_tax_rr": -5.288,
-        "net_after_tax_mdd_pct": -89.12,
+        "net_after_tax_rr": -1.646,
+        "net_after_tax_mdd_pct": -54.29,
         "n_days": 725.0,
-        "cost_drag_pct": 100.80000000000001,
+        "cost_drag_pct": 49.67,
         "tax_drag_pct": 0.0,
         "profitability_components": {
           "ar_score": 0,
@@ -131,20 +131,20 @@
       "net_pre_tax": [
         {
           "Strategy": "PCA SUB (Net Pre-Tax)",
-          "AR(%)": -94.05,
+          "AR(%)": -42.17,
           "Risk(%)": 12.71,
-          "R/R": -7.397,
-          "MDD(%)": -98.49,
+          "R/R": -3.317,
+          "MDD(%)": -85.56,
           "N_days": 1104
         }
       ],
       "net_after_tax": [
         {
           "Strategy": "PCA SUB (Net After-Tax)",
-          "AR(%)": -94.05,
+          "AR(%)": -42.17,
           "Risk(%)": 12.71,
-          "R/R": -7.397,
-          "MDD(%)": -98.49,
+          "R/R": -3.317,
+          "MDD(%)": -85.56,
           "N_days": 1104
         }
       ],
@@ -161,28 +161,28 @@
       "meta_rule_net_pre_tax": [
         {
           "Strategy": "PCA SUB + rule_406_no_flip",
-          "AR(%)": -74.23,
+          "AR(%)": -23.1,
           "Risk(%)": 14.04,
-          "R/R": -5.288,
-          "MDD(%)": -89.12,
+          "R/R": -1.646,
+          "MDD(%)": -54.29,
           "N_days": 725
         }
       ],
       "meta_rule_net_after_tax": [
         {
           "Strategy": "PCA SUB + rule_406_no_flip (After-Tax)",
-          "AR(%)": -74.23,
+          "AR(%)": -23.1,
           "Risk(%)": 14.04,
-          "R/R": -5.288,
-          "MDD(%)": -89.12,
+          "R/R": -1.646,
+          "MDD(%)": -54.29,
           "N_days": 725
         }
       ]
     },
     "cost_breakdown": {
-      "commission_total": 2.2070000000000003,
+      "commission_total": 0.0,
       "slippage_total": 2.2070000000000003,
-      "borrow_total": 0.06565476190476191,
+      "borrow_total": 0.0,
       "tax_total": 0.0
     },
     "eval_start": "2022-01-01"
@@ -689,27 +689,27 @@
       "price_raw": {
         "name": "price_raw",
         "status": "ok",
-        "updated_at": 1789528429.9666173
+        "updated_at": 1789529424.294506
       },
       "price_adjusted": {
         "name": "price_adjusted",
         "status": "ok",
-        "updated_at": 1789528433.5168726
+        "updated_at": 1789529428.3178685
       },
       "factors": {
         "name": "factors",
         "status": "ok",
-        "updated_at": 1789528434.9031725
+        "updated_at": 1789529429.5210035
       },
       "actions": {
         "name": "actions",
         "status": "ok",
-        "updated_at": 1789528451.028412
+        "updated_at": 1789529448.9825616
       },
       "data_status_refresh": {
         "name": "data_status_refresh",
         "status": "ok",
-        "updated_at": 1789528451.0518525
+        "updated_at": 1789529448.9992802
       }
     }
   },
@@ -718,7 +718,7 @@
     "cached_date": "2026-09-16",
     "signal_date": "2026-09-15 00:00:00",
     "exec_jp_date": "2026-09-16",
-    "recorded_at": "2026/09/16 12:13:45",
+    "recorded_at": "2026/09/16 12:30:16",
     "operation_mode": "production",
     "exec_jp_date_source": "jpx_calendar",
     "tradeable": true,
@@ -941,5 +941,5 @@
     },
     "order_json": null
   },
-  "slack_fallback_text": "*JUSLAG 朝次実行完了* (2026-09-16 12:13 JST)\n\n*バックテスト（本番適用設定）*\n  Judge: 33点 / reject  |  Net After AR: -94.05%  |  R/R: -7.397  |  MDD: -98.49%\n\n*本日シグナル* (執行日: 2026-09-16  |  US参照: 2026-09-15)\n  ✅ 売買あり\n  LONG:  銀行, 鉄鋼・非鉄\n  SHORT: 運輸・物流, 電力・ガス, 食品, 医薬品\n  Regime: sideways / mid_vol / rotation=strong_rotation\n\n*シグナル詳細*  候補強度: 0.3527  採用強度: 0.3527\n```\nLONG候補上位（閾値: ≥0.0）\n✅ 1. 1625.T  電機・精密  +0.2282  差:+0.2282\n✅ 2. 1631.T  銀行  +0.2017  差:+0.2017\n✅ 3. 1618.T  エネルギー資源  +0.1906  差:+0.1906\n✅ 4. 1629.T  商社・卸売  +0.1815  差:+0.1815\n✅ 5. 1623.T  鉄鋼・非鉄  +0.0520  差:+0.0520\n最大LONG +0.2282 — 閾値まで +0.2282\n\nSHORT候補下位（閾値: ≤0.0）\n✅ 1. 1630.T  小売  -0.2425  差:+0.2425\n✅ 2. 1621.T  医薬品  -0.2335  差:+0.2335\n✅ 3. 1617.T  食品  -0.2167  差:+0.2167\n✅ 4. 1627.T  電力・ガス  -0.1737  差:+0.1737\n✅ 5. 1628.T  運輸・物流  -0.0428  差:+0.0428\n最小SHORT -0.2425 — 閾値まで +0.2425\n\n全17銘柄: 最大 +0.2282 / 中央値 -0.0007 / 最小 -0.2425\n```"
+  "slack_fallback_text": "*JUSLAG 朝次実行完了* (2026-09-16 12:30 JST)\n\n*バックテスト（本番適用設定）*\n  Judge: 33点 / reject  |  Net After AR: -42.17%  |  R/R: -3.317  |  MDD: -85.56%\n\n*本日シグナル* (執行日: 2026-09-16  |  US参照: 2026-09-15)\n  ✅ 売買あり\n  LONG:  銀行, 鉄鋼・非鉄\n  SHORT: 運輸・物流, 電力・ガス, 食品, 医薬品\n  Regime: sideways / mid_vol / rotation=strong_rotation\n\n*シグナル詳細*  候補強度: 0.3527  採用強度: 0.3527\n```\nLONG候補上位（閾値: ≥0.0）\n✅ 1. 1625.T  電機・精密  +0.2282  差:+0.2282\n✅ 2. 1631.T  銀行  +0.2017  差:+0.2017\n✅ 3. 1618.T  エネルギー資源  +0.1906  差:+0.1906\n✅ 4. 1629.T  商社・卸売  +0.1815  差:+0.1815\n✅ 5. 1623.T  鉄鋼・非鉄  +0.0520  差:+0.0520\n最大LONG +0.2282 — 閾値まで +0.2282\n\nSHORT候補下位（閾値: ≤0.0）\n✅ 1. 1630.T  小売  -0.2425  差:+0.2425\n✅ 2. 1621.T  医薬品  -0.2335  差:+0.2335\n✅ 3. 1617.T  食品  -0.2167  差:+0.2167\n✅ 4. 1627.T  電力・ガス  -0.1737  差:+0.1737\n✅ 5. 1628.T  運輸・物流  -0.0428  差:+0.0428\n最小SHORT -0.2425 — 閾値まで +0.2425\n\n全17銘柄: 最大 +0.2282 / 中央値 -0.0007 / 最小 -0.2425\n```"
 }
