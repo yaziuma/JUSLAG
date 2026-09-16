@@ -109,9 +109,9 @@ class ModeConfig:
 
 @dataclass(frozen=True)
 class ExecutionCostConfig:
-    commission_bps_per_side: float = 5.0
+    commission_bps_per_side: float = 0.0
     slippage_bps_per_side: float = 5.0
-    short_borrow_rate_annual: float = 0.015
+    short_borrow_rate_annual: float = 0.0
     allow_short: bool = True
     short_constraint_mode: str = "ignore"
     unshortable_tickers: tuple[str, ...] = ()

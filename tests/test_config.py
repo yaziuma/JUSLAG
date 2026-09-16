@@ -53,8 +53,9 @@ def test_new_configs_default_values() -> None:
     exec_cfg = ExecutionCostConfig()
     tax_cfg = TaxConfig()
 
-    assert exec_cfg.commission_bps_per_side == 5.0
+    assert exec_cfg.commission_bps_per_side == 0.0
     assert exec_cfg.slippage_bps_per_side == 5.0
+    assert exec_cfg.short_borrow_rate_annual == 0.0
     assert exec_cfg.allow_short is True
     assert tax_cfg.tax_rate == 0.20315
     assert tax_cfg.tax_model == "annual_net"
