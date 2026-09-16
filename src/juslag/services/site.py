@@ -407,8 +407,8 @@ function dashboard() {{
       const q = this.query.trim().toLowerCase();
       return this.rows.filter((row) => {{
         const matchesFilter = this.filter === 'all' ||
-          (this.filter === 'executed' && row.final_actionable) ||
-          (this.filter === 'skipped' && !row.final_actionable);
+          (this.filter === 'executed' && row.tradeable) ||
+          (this.filter === 'skipped' && !row.tradeable);
         const haystack = [row.date, row.long, row.short, row.trend_regime,
           row.vol_regime, row.rotation_regime].join(' ').toLowerCase();
         return matchesFilter && (!q || haystack.includes(q));
@@ -518,15 +518,15 @@ function dashboard() {{
       <input class="form-control form-control-sm history-search" x-model="query" placeholder="日付・銘柄・レジームで検索" aria-label="履歴検索">
       <div class="btn-group btn-group-sm" role="group" aria-label="判定フィルタ">
         <button class="btn btn-outline-secondary" :class="{{active: filter === 'all'}}" @click="filter = 'all'">全て</button>
-        <button class="btn btn-outline-secondary" :class="{{active: filter === 'executed'}}" @click="filter = 'executed'">発注候補</button>
-        <button class="btn btn-outline-secondary" :class="{{active: filter === 'skipped'}}" @click="filter = 'skipped'">見送りのみ</button>
+        <button class="btn btn-outline-secondary" :class="{{active: filter === 'executed'}}" @click="filter = 'executed'">候補あり</button>
+        <button class="btn btn-outline-secondary" :class="{{active: filter === 'skipped'}}" @click="filter = 'skipped'">候補なし</button>
       </div>
     </div>
     <div class="history-list">
       <template x-for="row in displayedRows" :key="row.date">
         <a class="history-row" :href="row.href">
           <div class="history-date" x-text="row.date"></div>
-          <div><span class="status-dot" :class="{{execute: row.final_actionable}}"></span><span x-text="row.final_actionable ? '発注候補' : '見送り'"></span></div>
+          <div><span class="status-dot" :class="{{execute: row.tradeable}}"></span><span x-text="row.tradeable ? '候補あり' : '候補なし'"></span><div class="small text-muted-soft" x-text="'Judge ' + (row.judge_decision || '-')"></div></div>
           <div class="history-plan" x-text="'L: ' + (row.long || '-') + '  /  S: ' + (row.short || '-')"></div>
           <div class="history-regime text-muted-soft" x-text="row.trend_regime || '-'"></div>
           <div class="text-end text-muted-soft">›</div>

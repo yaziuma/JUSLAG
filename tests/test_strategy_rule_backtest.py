@@ -119,7 +119,12 @@ class TestBacktestServiceWithStrategyRuleId:
         cache = PriceCache()
         bt = run_backtest_service(BacktestParams(strategy_rule_id="rule_406"), cache)
         assert bt["strategy_rule_id"] == "rule_406"
+        assert bt["judge_strategy_name"] == "PCA SUB + rule_406"
+        assert "meta_rule_gross" in bt["performance_sets"]
         assert "meta_rule_net_pre_tax" in bt["performance_sets"]
+        assert bt["judge"]["metrics_snapshot"]["net_after_tax_ar_pct"] == pytest.approx(
+            bt["performance_sets"]["meta_rule_net_after_tax"][0]["AR(%)"]
+        )
 
     def test_backtest_without_strategy_rule_id_unchanged(self):
         cache = PriceCache()

@@ -42,6 +42,11 @@ JP_TICKERS: dict[str, str] = {
     "1633.T": "不動産",
 }
 
+# 東証の売買単位（口）。TOPIX-17 ETFは原則1口、1629.Tは
+# 2026-03-30の分割に伴い10口へ変更された。
+JP_TRADING_UNITS: dict[str, int] = {ticker: 1 for ticker in JP_TICKERS}
+JP_TRADING_UNITS["1629.T"] = 10
+
 US_CYCLICAL: dict[str, int] = {
     # 論文 Section 4.1 準拠: シクリカル=+1, ディフェンシブ=-1, 未ラベル=0
     "XLB": 1,    # Materials          - Cyclical

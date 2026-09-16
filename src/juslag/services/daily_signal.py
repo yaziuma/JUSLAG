@@ -7,7 +7,14 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 
 from juslag.cache import PriceCache
-from juslag.config import AppConfig, JP_CYCLICAL, JP_TICKERS, US_CYCLICAL, US_TICKERS
+from juslag.config import (
+    AppConfig,
+    JP_CYCLICAL,
+    JP_TICKERS,
+    JP_TRADING_UNITS,
+    US_CYCLICAL,
+    US_TICKERS,
+)
 from juslag.data_loader import build_joint_cc, compute_returns, fetch_data
 from juslag.prior import build_prior_eigenvectors, build_prior_exposure
 from juslag.regime import build_regime_frame, snapshot_from_regime_frame
@@ -29,6 +36,34 @@ from juslag.services.data_status import build_data_status
 
 _JST = ZoneInfo("Asia/Tokyo")
 DEFAULT_ACTIVE_RULE_ID = "rule_406_no_flip"
+
+
+def normalize_execution_plan_lots(
+    long_plan: list[dict[str, object]],
+    short_plan: list[dict[str, object]],
+) -> None:
+    """Equalize notional amounts while respecting each ticker's trading unit."""
+    all_entries = long_plan + short_plan
+    valid_min_purchases = [
+        entry["min_purchase_jpy"]
+        for entry in all_entries
+        if entry.get("min_purchase_jpy") is not None
+    ]
+    if not valid_min_purchases:
+        return
+
+    target_purchase = max(valid_min_purchases)
+    for entry in all_entries:
+        price = entry.get("latest_price_jpy")
+        trading_unit = int(entry.get("min_lot") or 1)
+        if isinstance(price, (int, float)) and price > 0:
+            unit_blocks = max(1, round(target_purchase / (price * trading_unit)))
+            normalized_lots = unit_blocks * trading_unit
+            entry["normalized_lots"] = normalized_lots
+            entry["normalized_purchase_jpy"] = round(normalized_lots * price)
+        else:
+            entry["normalized_lots"] = None
+            entry["normalized_purchase_jpy"] = None
 
 
 def build_daily_execution_checks(
@@ -398,38 +433,27 @@ def run_daily_signal_service(
 
     # 最新終値（最低購入金額の計算用）
     latest_prices = jp_close.iloc[-1] if not jp_close.empty else pd.Series(dtype=float)
-    # TOPIX-17 NEXT FUNDS ETF: 最低売買単位 = 10口
-    _MIN_LOT = 10
-
     def _plan_entry(t: str, row: object, n: int) -> dict[str, object]:
         price = latest_prices.get(t)
-        min_purchase = round(float(price) * _MIN_LOT) if price is not None and not pd.isna(price) else None
+        trading_unit = JP_TRADING_UNITS.get(t, 1)
+        min_purchase = (
+            round(float(price) * trading_unit)
+            if price is not None and not pd.isna(price)
+            else None
+        )
         return {
             "ticker": t,
             "sector": row["sector"],
             "weight": round(1.0 / n * 100, 1),
             "latest_price_jpy": round(float(price)) if price is not None and not pd.isna(price) else None,
-            "min_lot": _MIN_LOT,
+            "min_lot": trading_unit,
             "min_purchase_jpy": min_purchase,
         }
 
     long_plan = [_plan_entry(t, row, n_long) for t, row in long_rows.iterrows()] if n_long > 0 else []
     short_plan = [_plan_entry(t, row, n_short) for t, row in short_rows.iterrows()] if n_short > 0 else []
 
-    # 1番高いセクターの最低購入金額(10口)に金額を合わせた口数を計算
-    all_entries = long_plan + short_plan
-    valid_prices = [e["latest_price_jpy"] for e in all_entries if e["latest_price_jpy"] is not None]
-    if valid_prices:
-        max_lot_price = max(valid_prices)
-        for entry in all_entries:
-            price = entry["latest_price_jpy"]
-            if price is not None and price > 0:
-                norm_lots = max(1, round(max_lot_price / price))
-                entry["normalized_lots"] = norm_lots
-                entry["normalized_purchase_jpy"] = round(norm_lots * price)
-            else:
-                entry["normalized_lots"] = None
-                entry["normalized_purchase_jpy"] = None
+    normalize_execution_plan_lots(long_plan, short_plan)
     quality["reference_date"] = str(reference_date)
     quality["effective_window_days"] = int(min(eff_window_l, len(joint_cc)))
     freshness = build_freshness(

@@ -14,8 +14,12 @@ import pandas as pd
 import pytest
 
 from juslag.cache import PriceCache
-from juslag.config import AppConfig
-from juslag.services.daily_signal import pick_overnight_gap, run_daily_signal_service
+from juslag.config import AppConfig, JP_TRADING_UNITS
+from juslag.services.daily_signal import (
+    normalize_execution_plan_lots,
+    pick_overnight_gap,
+    run_daily_signal_service,
+)
 from juslag.strategies.base import StrategyRule
 from juslag.strategies.context import StrategyContext
 from juslag.strategies.decision import StrategyDecision
@@ -23,6 +27,32 @@ from juslag.strategies.decision import StrategyDecision
 _JST = ZoneInfo("Asia/Tokyo")
 # 実キャッシュ (~/.juslag/prices.db) に収まる過去日付を固定して使う。
 _NOW_JST = datetime(2026, 7, 8, 8, 0, 0, tzinfo=_JST)
+
+
+def test_current_trading_units_match_exchange_rules() -> None:
+    assert JP_TRADING_UNITS["1625.T"] == 1
+    assert JP_TRADING_UNITS["1629.T"] == 10
+
+
+def test_normalized_lots_respect_ticker_trading_units() -> None:
+    long_plan = [{
+        "ticker": "1625.T",
+        "latest_price_jpy": 60_000,
+        "min_lot": 1,
+        "min_purchase_jpy": 60_000,
+    }]
+    short_plan = [{
+        "ticker": "1629.T",
+        "latest_price_jpy": 300,
+        "min_lot": 10,
+        "min_purchase_jpy": 3_000,
+    }]
+
+    normalize_execution_plan_lots(long_plan, short_plan)
+
+    assert long_plan[0]["normalized_lots"] == 1
+    assert short_plan[0]["normalized_lots"] == 200
+    assert short_plan[0]["normalized_purchase_jpy"] == 60_000
 
 
 # ---------------------------------------------------------------------------

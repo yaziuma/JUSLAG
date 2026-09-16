@@ -114,6 +114,8 @@ def run_backtest_service(
     # メタ戦略ルール適用バックテスト（事前計算: exec_cfg の前に変数のみ用意）
     meta_rule_ret: pd.Series | None = None
     meta_rule_name: str | None = None
+    meta_rule_detail: pd.DataFrame | None = None
+    meta_after_tax: pd.Series | None = None
 
     exec_cfg = ExecutionCostConfig(
         commission_bps_per_side=params.commission_bps_per_side,
@@ -174,14 +176,23 @@ def run_backtest_service(
                 max_short_signal=params.max_short_signal,
             )
             meta_rule_ret = ret_meta_detail["net_pre_tax_return"] if not ret_meta_detail.empty else pd.Series(dtype=float)
+            meta_rule_detail = ret_meta_detail
             meta_rule_name = f"PCA SUB + {params.strategy_rule_id}"
         except (ValueError, Exception):
             meta_rule_ret = None
             meta_rule_name = None
 
-    if meta_rule_ret is not None and meta_rule_name:
+    if meta_rule_ret is not None and not meta_rule_ret.empty and meta_rule_name:
         tax_meta = apply_tax_model(meta_rule_ret, tax_cfg)
         meta_after_tax = tax_meta["net_after_tax_return"] if not tax_meta.empty else pd.Series(dtype=float)
+        meta_gross = (
+            meta_rule_detail["gross_return"]
+            if meta_rule_detail is not None and not meta_rule_detail.empty
+            else pd.Series(dtype=float)
+        )
+        performance_sets["meta_rule_gross"] = [
+            compute_performance(meta_gross, f"{meta_rule_name} (Gross)")
+        ]
         performance_sets["meta_rule_net_pre_tax"] = [compute_performance(meta_rule_ret, meta_rule_name)]
         performance_sets["meta_rule_net_after_tax"] = [compute_performance(meta_after_tax, f"{meta_rule_name} (After-Tax)")]
         perf_df = pd.concat([
@@ -221,10 +232,26 @@ def run_backtest_service(
         required_latest_date=joint_cc.index.max().date().isoformat() if not joint_cc.empty else None,
         price_mode=params.price_mode,
     )
+    judge_strategy_name = "PCA SUB"
+    judge_performance_sets = performance_sets
+    if (
+        meta_rule_name
+        and meta_rule_detail is not None
+        and not meta_rule_detail.empty
+        and meta_after_tax is not None
+        and not meta_after_tax.empty
+    ):
+        judge_strategy_name = meta_rule_name
+        judge_performance_sets = {
+            "gross": performance_sets["meta_rule_gross"],
+            "net_pre_tax": performance_sets["meta_rule_net_pre_tax"],
+            "net_after_tax": performance_sets["meta_rule_net_after_tax"],
+        }
+
     judge_result = judge_backtest(
         JudgeInput(
-            strategy_name="PCA SUB",
-            performance_sets=performance_sets,
+            strategy_name=judge_strategy_name,
+            performance_sets=judge_performance_sets,
             cost_breakdown=cost_breakdown,
             data_quality=quality,
             freshness=freshness,
@@ -249,6 +276,7 @@ def run_backtest_service(
         "freshness": freshness,
         "cache_summary": cache_summary,
         "judge": judge_result,
+        "judge_strategy_name": judge_strategy_name,
         "actions_data_available": analysis_status.get("corporate_actions", {}).get("available") if analysis_status else None,
         "adjusted_series_verified": analysis_status.get("adjusted_series_verified") if analysis_status else None,
         "adjusted_series_warning": analysis_status.get("adjusted_series_warning") if analysis_status else None,
