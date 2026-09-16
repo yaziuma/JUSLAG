@@ -2,7 +2,37 @@ from __future__ import annotations
 
 import pandas as pd
 
-from juslag.data_loader import _fetch_group_with_cache, build_joint_cc
+from juslag.data_loader import _fetch_group_with_cache, build_joint_cc, compute_returns, repair_known_bad_prices
+
+
+def test_repair_bad_1629_prices_without_double_adjustment() -> None:
+    dates = pd.to_datetime(["2026-03-27", "2026-03-30", "2026-03-31", "2026-04-01", "2026-04-02"])
+    jp_open = pd.DataFrame({"1629.T": [284.5, 0.566, 0.5738, 287, 290]}, index=dates)
+    jp_close = pd.DataFrame({"1629.T": [288.6, 0.5676, 0.5498, 288.7, 284]}, index=dates)
+    clean_open, clean_close = repair_known_bad_prices(jp_open, jp_close)
+    again_open, again_close = repair_known_bad_prices(clean_open, clean_close)
+    _, jp_oc, jp_cc = compute_returns(pd.DataFrame(index=dates), clean_close, clean_open)
+
+    assert jp_close.loc[dates[1], "1629.T"] == 0.5676
+    assert clean_close.loc[dates[1:3], "1629.T"].tolist() == [283.8, 274.9]
+    assert clean_open.loc[dates[1:3], "1629.T"].tolist() == [283.0, 286.9]
+    pd.testing.assert_frame_equal(clean_open, again_open)
+    pd.testing.assert_frame_equal(clean_close, again_close)
+    assert jp_cc.loc[dates[1:3], "1629.T"].abs().max() < 0.05
+    assert pd.notna(jp_cc.loc[dates[3], "1629.T"])
+    assert pd.notna(jp_cc.loc[dates[4], "1629.T"])
+    assert jp_oc.loc[dates[1:3], "1629.T"].abs().max() < 0.05
+
+
+def test_unrecognized_known_bad_price_is_quarantined() -> None:
+    dates = pd.to_datetime(["2026-03-30"])
+    jp_open = pd.DataFrame({"1629.T": [1.0]}, index=dates)
+    jp_close = pd.DataFrame({"1629.T": [1.1]}, index=dates)
+
+    clean_open, clean_close = repair_known_bad_prices(jp_open, jp_close)
+
+    assert pd.isna(clean_open.at[dates[0], "1629.T"])
+    assert pd.isna(clean_close.at[dates[0], "1629.T"])
 
 
 REQUIRED_KEYS = {

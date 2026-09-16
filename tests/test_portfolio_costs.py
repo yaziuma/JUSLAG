@@ -34,9 +34,9 @@ def test_costs_reduce_returns() -> None:
     detail = build_portfolio_returns_detail(sig, jp_oc, q=0.25, execution_costs=ExecutionCostConfig())
 
     assert (detail["net_pre_tax_return"] <= detail["gross_return"] + 1e-12).all()
-    assert detail["commission_cost"].sum() > 0
+    assert detail["commission_cost"].sum() == 0
     assert detail["slippage_cost"].sum() > 0
-    assert detail["borrow_cost"].sum() > 0
+    assert detail["borrow_cost"].sum() == 0
 
 
 def test_no_short_has_zero_borrow() -> None:

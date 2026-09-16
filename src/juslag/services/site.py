@@ -325,6 +325,60 @@ def _regime_strip(reports: list[dict]) -> str:
     return f'<div class="regime-strip">{"".join(cells)}</div>'
 
 
+def _backtest_comparison(report: dict) -> str:
+    comparison = report.get("backtest_comparison") or {}
+    current = comparison.get("current") or {}
+    paper = comparison.get("paper_aligned") or {}
+    if not current or not paper:
+        return ""
+
+    def _cell(entry: dict, key: str, *, percent: bool = False) -> str:
+        value = (entry.get("metrics") or {}).get(key)
+        return _percent(value) if percent else _esc(value if value is not None else "-")
+
+    def _judge(entry: dict) -> str:
+        judge = entry.get("judge") or {}
+        decision = str(judge.get("overall_decision") or "-").upper()
+        score = judge.get("overall_score")
+        return f"{_esc(decision)} / {_esc(score if score is not None else '-')}点"
+
+    shared = comparison.get("shared_cost_assumptions") or {}
+    rows = [
+        ("戦略", current.get("strategy_name"), paper.get("strategy_name")),
+        ("価格系列", current.get("price_mode"), paper.get("price_mode")),
+        ("論文外ルール", current.get("strategy_rule_id") or "なし", paper.get("strategy_rule_id") or "なし"),
+        ("Gross 年率", _cell(current, "gross_ar_pct", percent=True), _cell(paper, "gross_ar_pct", percent=True)),
+        ("コスト後年率", _cell(current, "net_pre_tax_ar_pct", percent=True), _cell(paper, "net_pre_tax_ar_pct", percent=True)),
+        ("税引後年率", _cell(current, "net_after_tax_ar_pct", percent=True), _cell(paper, "net_after_tax_ar_pct", percent=True)),
+        ("税引後 R/R", _cell(current, "net_after_tax_rr"), _cell(paper, "net_after_tax_rr")),
+        ("税引後 MDD", _cell(current, "net_after_tax_mdd_pct", percent=True), _cell(paper, "net_after_tax_mdd_pct", percent=True)),
+        ("コスト低下幅", _cell(current, "cost_drag_pct", percent=True), _cell(paper, "cost_drag_pct", percent=True)),
+        ("Judge", _judge(current), _judge(paper)),
+    ]
+    body = "".join(
+        f"<tr><th>{_esc(label)}</th><td>{left}</td><td>{right}</td></tr>"
+        for label, left, right in rows
+    )
+    costs = (
+        f"片道手数料 {_esc(shared.get('commission_bps_per_side'))}bps / "
+        f"片道スリッページ {_esc(shared.get('slippage_bps_per_side'))}bps / "
+        f"年率借株料 {_percent((shared.get('short_borrow_rate_annual') or 0) * 100)} / "
+        f"税率 {_percent((shared.get('tax_rate') or 0) * 100)}"
+    )
+    return (
+        '<div class="surface-card p-3 p-md-4 mb-3">'
+        '<div class="section-label mb-1">Backtest comparison</div>'
+        '<h2 class="h6 text-heading mb-2">論文準拠 vs 現行運用</h2>'
+        '<p class="small text-muted-soft mb-3">論文準拠は調整済み価格・PCA SUB単体・上下30%等ウェイト。'
+        '掲載値の転載ではなく、現行と同じ期間・コスト実装で再計算した比較です。</p>'
+        '<div class="table-responsive"><table class="table table-sm align-middle mb-2">'
+        '<thead><tr><th>比較項目</th><th>現行運用</th><th>論文準拠</th></tr></thead>'
+        f'<tbody>{body}</tbody></table></div>'
+        f'<p class="small text-muted-soft mb-0">共通コスト設定: {costs}</p>'
+        '</div>'
+    )
+
+
 def _render_index(history: list[dict], reports: list[dict]) -> str:
     rows = _index_rows(reports)
     latest_report = max(reports, key=lambda r: r.get("date") or "") if reports else {}
@@ -353,6 +407,7 @@ def _render_index(history: list[dict], reports: list[dict]) -> str:
     metrics = latest_judge.get("metrics_snapshot") or {}
     strategy = latest_ds.get("strategy_decision") or {}
     context = latest_ds.get("strategy_context") or {}
+    comparison_html = _backtest_comparison(latest_report)
 
     def order_items(entries: list[dict] | None, side: str) -> str:
         if not entries:
@@ -542,6 +597,7 @@ function dashboard() {{
   </section>
 
   <section x-show="tab === 'analysis'" x-cloak>
+    {comparison_html}
     <div class="analysis-grid mb-3">
       <div class="surface-card p-3 p-md-4">
         <div class="section-label mb-3">Judge score trend</div>
@@ -786,6 +842,7 @@ def _render_report_page(report: dict) -> str:
     )
 
     parts.append(_judge_card(judge))
+    parts.append(_backtest_comparison(report))
     parts.append(_candidate_signal_stats_card(ds))
     parts.append(_signal_rows_table(ds))
 

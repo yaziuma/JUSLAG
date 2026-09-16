@@ -111,6 +111,16 @@ def main(argv: list[str] | None = None) -> None:
     # --- 3. バックテスト（本番適用設定） ---
     params, settings_name = load_production_backtest_params()
     bt = run_backtest_service(params, cache, analysis_status=analysis_status)
+    paper_params = params.model_copy(
+        update={
+            "price_mode": "adjusted",
+            "strategy_rule_id": None,
+            # 論文は分位選択のみで、シグナル符号による追加除外を行わない。
+            "min_long_signal": -1.0e9,
+            "max_short_signal": 1.0e9,
+        }
+    )
+    paper_bt = run_backtest_service(paper_params, cache, analysis_status=analysis_status)
 
     # --- 4. 本日のシグナル ---
     ds = run_daily_signal_service(
@@ -144,6 +154,8 @@ def main(argv: list[str] | None = None) -> None:
         history_entry=history_entry_dict,
         slack_fallback_text=slack_text,
         generated_at_utc=generated_at_utc,
+        paper_bt=paper_bt,
+        paper_params=paper_params,
     )
     report_path = out_dir / "reports" / f"{date_str}.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)

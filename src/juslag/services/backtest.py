@@ -203,12 +203,13 @@ def run_backtest_service(
             ]),
         ], ignore_index=True)
 
-    cost_breakdown = {
+    base_cost_breakdown = {
         "commission_total": float(ret_sub_detail["commission_cost"].sum()) if not ret_sub_detail.empty else 0.0,
         "slippage_total": float(ret_sub_detail["slippage_cost"].sum()) if not ret_sub_detail.empty else 0.0,
         "borrow_total": float(ret_sub_detail["borrow_cost"].sum()) if not ret_sub_detail.empty else 0.0,
         "tax_total": float(tax_detail["tax_paid"].sum()) if not tax_detail.empty else 0.0,
     }
+    cost_breakdown = base_cost_breakdown
 
     timeseries = compute_timeseries_payload(gross, net_pre_tax, net_after_tax) if not ret_sub_detail.empty else {
         "dates": [],
@@ -246,6 +247,12 @@ def run_backtest_service(
             "gross": performance_sets["meta_rule_gross"],
             "net_pre_tax": performance_sets["meta_rule_net_pre_tax"],
             "net_after_tax": performance_sets["meta_rule_net_after_tax"],
+        }
+        cost_breakdown = {
+            "commission_total": float(meta_rule_detail["commission_cost"].sum()),
+            "slippage_total": float(meta_rule_detail["slippage_cost"].sum()),
+            "borrow_total": float(meta_rule_detail["borrow_cost"].sum()),
+            "tax_total": float(tax_meta["tax_paid"].sum()),
         }
 
     judge_result = judge_backtest(

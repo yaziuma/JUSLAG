@@ -131,3 +131,46 @@ def test_build_daily_report_normalizes_nan_to_none_and_is_json_dumpable() -> Non
         return True
 
     assert _no_nan(report)
+
+
+def test_build_daily_report_includes_comparable_paper_backtest() -> None:
+    params = BacktestParams(strategy_rule_id="rule_406_no_flip", price_mode="raw")
+    paper_params = params.model_copy(
+        update={
+            "strategy_rule_id": None,
+            "price_mode": "adjusted",
+            "min_long_signal": -1.0e9,
+            "max_short_signal": 1.0e9,
+        }
+    )
+    paper_bt = {
+        **_fixture_bt(),
+        "judge_strategy_name": "PCA SUB",
+        "judge": {
+            "overall_score": 71,
+            "overall_decision": "warn",
+            "metrics_snapshot": {"net_after_tax_ar_pct": 4.2},
+        },
+    }
+
+    report = build_daily_report(
+        date="2026-07-08",
+        bt=_fixture_bt(),
+        ds=_fixture_ds(),
+        fetch_result=_fixture_fetch_result(),
+        params=params,
+        settings_name="本番適用 test",
+        history_entry=_fixture_history_entry(),
+        slack_fallback_text="fallback text",
+        generated_at_utc="2026-07-08T00:00:00+00:00",
+        paper_bt=paper_bt,
+        paper_params=paper_params,
+    )
+
+    comparison = report["backtest_comparison"]
+    assert comparison["current"]["strategy_name"] == "PCA SUB + rule_406_no_flip"
+    assert comparison["paper_aligned"]["strategy_name"] == "PCA SUB"
+    assert comparison["paper_aligned"]["price_mode"] == "adjusted"
+    assert comparison["paper_aligned"]["strategy_rule_id"] is None
+    assert comparison["paper_aligned"]["metrics"]["net_after_tax_ar_pct"] == 4.2
+    assert comparison["shared_cost_assumptions"]["slippage_bps_per_side"] == params.slippage_bps_per_side

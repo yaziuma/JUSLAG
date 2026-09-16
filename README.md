@@ -136,7 +136,11 @@ GitHub Actionsの `SITE_PASSWORD` を変更した場合はローカル側も同�
 ## 8. 論文との対応関係（現時点）
 
 参照論文: 「部分空間正則化付き主成分分析を用いた日米業種リードラグ投資」  
-（著作権保護のためPDF本体はリポジトリに含めていません。タイトルで検索して入手してください）
+
+- J-STAGE: https://www.jstage.jst.go.jp/article/jsaisigtwo/2026/FIN-036/2026_76/_article/-char/ja/
+- DOI: https://doi.org/10.11517/jsaisigtwo.2026.FIN-036_76
+- ローカルPDF: `papers/SIG-FIN-036-13.pdf`（`papers/` はGit管理対象外）
+- 実装比較: `docs/reports/paper_implementation_review_20260916.md`
 
 - 部分空間正則化付きPCAのコアロジック: 実装済み
 - ベースライン比較: 簡易Momentum / Plain PCAを実装

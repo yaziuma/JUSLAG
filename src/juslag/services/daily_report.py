@@ -60,6 +60,8 @@ def build_daily_report(
     history_entry: dict,
     slack_fallback_text: str,
     generated_at_utc: str,
+    paper_bt: dict | None = None,
+    paper_params: BacktestParams | None = None,
 ) -> dict:
     fetch_steps = {}
     for name, step in (fetch_result.get("steps") or {}).items():
@@ -89,4 +91,47 @@ def build_daily_report(
         "history_entry": history_entry_clean,
         "slack_fallback_text": slack_fallback_text,
     }
+    if paper_bt is not None and paper_params is not None:
+        report["backtest_comparison"] = {
+            "current": _comparison_entry(
+                "現行運用",
+                bt,
+                params,
+                "本番設定。論文外のメタルールとシグナル閾値を含む。",
+            ),
+            "paper_aligned": _comparison_entry(
+                "論文準拠",
+                paper_bt,
+                paper_params,
+                "調整済み価格、PCA SUB単体、上下30%等ウェイト。期間とデータ供給元は実装準拠。",
+            ),
+            "shared_cost_assumptions": {
+                "commission_bps_per_side": params.commission_bps_per_side,
+                "slippage_bps_per_side": params.slippage_bps_per_side,
+                "short_borrow_rate_annual": params.short_borrow_rate_annual,
+                "tax_enabled": params.tax_enabled,
+                "tax_rate": params.tax_rate,
+                "tax_model": params.tax_model,
+            },
+        }
     return _to_jsonable(report)
+
+
+def _comparison_entry(label: str, bt: dict, params: BacktestParams, note: str) -> dict:
+    judge = bt.get("judge") or {}
+    return {
+        "label": label,
+        "strategy_name": bt.get("judge_strategy_name"),
+        "note": note,
+        "price_mode": params.price_mode,
+        "sample_start": params.sample_start,
+        "sample_end": params.sample_end,
+        "eval_start": bt.get("eval_start"),
+        "strategy_rule_id": params.strategy_rule_id,
+        "judge": {
+            "overall_score": judge.get("overall_score"),
+            "overall_decision": judge.get("overall_decision"),
+        },
+        "metrics": judge.get("metrics_snapshot") or {},
+        "cost_breakdown": bt.get("cost_breakdown") or {},
+    }

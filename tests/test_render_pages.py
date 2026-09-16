@@ -38,6 +38,42 @@ def _write_report(reports_dir: Path, date: str, tradeable: bool) -> None:
                 "actions": ["継続モニタリングしてください。"],
             },
         },
+        "backtest_comparison": {
+            "current": {
+                "strategy_name": "PCA SUB + rule_406_no_flip",
+                "price_mode": "raw",
+                "strategy_rule_id": "rule_406_no_flip",
+                "judge": {"overall_score": 33, "overall_decision": "reject"},
+                "metrics": {
+                    "gross_ar_pct": 26.5,
+                    "net_pre_tax_ar_pct": -23.1,
+                    "net_after_tax_ar_pct": -23.1,
+                    "net_after_tax_rr": -1.64,
+                    "net_after_tax_mdd_pct": -54.2,
+                    "cost_drag_pct": 49.6,
+                },
+            },
+            "paper_aligned": {
+                "strategy_name": "PCA SUB",
+                "price_mode": "adjusted",
+                "strategy_rule_id": None,
+                "judge": {"overall_score": 55, "overall_decision": "warn"},
+                "metrics": {
+                    "gross_ar_pct": 20.0,
+                    "net_pre_tax_ar_pct": -25.0,
+                    "net_after_tax_ar_pct": -25.0,
+                    "net_after_tax_rr": -1.8,
+                    "net_after_tax_mdd_pct": -58.0,
+                    "cost_drag_pct": 45.0,
+                },
+            },
+            "shared_cost_assumptions": {
+                "commission_bps_per_side": 0.0,
+                "slippage_bps_per_side": 5.0,
+                "short_borrow_rate_annual": 0.0,
+                "tax_rate": 0.20315,
+            },
+        },
         "daily_signal": {
             "execution_target_jp_date": date,
             "signal_reference_us_date": date,
@@ -147,6 +183,9 @@ def test_render_site_produces_index_and_report_pages(tmp_path: Path) -> None:
     assert "tab === 'analysis'" in index_html
     assert "visibleCount: 20" in index_html
     assert "さらに表示" in index_html
+    assert "論文準拠 vs 現行運用" in index_html
+    assert "共通コスト設定" in index_html
+    assert "adjusted" in index_html
 
     # CDNアセット（B-FADスタック: Bootstrap 5 + Alpine.js, ビルド不要）
     assert "cdn.jsdelivr.net/npm/bootstrap@" in index_html
@@ -161,6 +200,7 @@ def test_render_site_produces_index_and_report_pages(tmp_path: Path) -> None:
     # Judgeスコアと戦略ルールの判定理由
     assert "80" in report_html
     assert "テスト判定理由テキスト" in report_html
+    assert "論文準拠 vs 現行運用" in report_html
 
     # サイト全体にJSONファイルは出力しない（HTML単位でパスワード保護するため）
     assert not any(out_dir.rglob("*.json"))

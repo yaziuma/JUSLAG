@@ -15,6 +15,40 @@ _cache = PriceCache()
 FillPolicy = Literal["strict", "rolling_mean"]
 PriceMode = Literal["adjusted", "raw"]
 
+# 1629.T split 1:500 on 2026-04-01; provider double-adjusted only these two days.
+# Reference adjusted OHLC: https://en.kabutan.com/jp/stocks/1629/historical_prices/daily
+KNOWN_PRICE_REPAIRS: dict[str, dict[str, tuple[float, float]]] = {
+    "1629.T": {
+        "2026-03-30": (283.0, 283.8),
+        "2026-03-31": (286.9, 274.9),
+    },
+}
+
+
+def repair_known_bad_prices(
+    open_df: pd.DataFrame, close_df: pd.DataFrame
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    open_df, close_df = open_df.copy(), close_df.copy()
+    for ticker, prices in KNOWN_PRICE_REPAIRS.items():
+        if ticker not in open_df or ticker not in close_df:
+            continue
+        for date, (expected_open, expected_close) in prices.items():
+            day = pd.Timestamp(date)
+            if day not in open_df.index or day not in close_df.index:
+                continue
+            observed_open = open_df.at[day, ticker]
+            observed_close = close_df.at[day, ticker]
+            if pd.isna(observed_open) or pd.isna(observed_close):
+                continue
+            if abs(observed_open * 500 - expected_open) < 0.02 and abs(observed_close * 500 - expected_close) < 0.02:
+                open_df.at[day, ticker] = expected_open
+                close_df.at[day, ticker] = expected_close
+            elif abs(observed_open - expected_open) > 0.02 or abs(observed_close - expected_close) > 0.02:
+                logger.warning("Unrecognized %s prices on %s; quarantining", ticker, date)
+                open_df.at[day, ticker] = float("nan")
+                close_df.at[day, ticker] = float("nan")
+    return open_df, close_df
+
 
 @dataclass
 class DataQuality:
@@ -131,6 +165,7 @@ def fetch_data(
     us_close = us_close.reindex(columns=us_tickers).dropna(how="all").dropna(axis=1, how="all")
     jp_close = jp_close.reindex(columns=jp_tickers).dropna(how="all").dropna(axis=1, how="all")
     jp_open = jp_open.reindex(columns=jp_tickers).dropna(how="all").dropna(axis=1, how="all")
+    jp_open, jp_close = repair_known_bad_prices(jp_open, jp_close)
 
     logger.info(
         "fetch_data via cache: us_close=%s jp_close=%s jp_open=%s",
@@ -141,9 +176,9 @@ def fetch_data(
 
 def compute_returns(us_close: pd.DataFrame, jp_close: pd.DataFrame, jp_open: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Compute US CTC, JP OTC, and JP CTC returns."""
-    us_cc = us_close.pct_change()
+    us_cc = us_close.pct_change(fill_method=None)
     jp_oc = jp_close / jp_open - 1.0
-    jp_cc = jp_close.pct_change()
+    jp_cc = jp_close.pct_change(fill_method=None)
     logger.info("Computed returns: us_cc=%s jp_oc=%s jp_cc=%s", us_cc.shape, jp_oc.shape, jp_cc.shape)
     return us_cc, jp_oc, jp_cc
 
