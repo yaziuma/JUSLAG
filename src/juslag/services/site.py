@@ -348,6 +348,7 @@ def _render_index(history: list[dict], reports: list[dict]) -> str:
     score = latest_judge.get("overall_score")
     score_pct = max(0, min(100, score)) if isinstance(score, (int, float)) else 0
     backtest = latest_report.get("backtest") or {}
+    judge_strategy_name = backtest.get("judge_strategy_name") or "PCA SUB"
     params = backtest.get("params") or {}
     metrics = latest_judge.get("metrics_snapshot") or {}
     strategy = latest_ds.get("strategy_decision") or {}
@@ -485,6 +486,7 @@ function dashboard() {{
       <div class="explain-panel">
         <div class="section-label mb-3">3. モデル審査基準</div>
         <div class="fact-list small">
+          <div class="fact-row"><span class="text-muted-soft">審査対象</span><strong>{_esc(judge_strategy_name)}</strong></div>
           <div class="fact-row"><span class="text-muted-soft">税引後年率 ≥ 3%</span><strong>{_percent(metrics.get("net_after_tax_ar_pct"))}</strong></div>
           <div class="fact-row"><span class="text-muted-soft">R/R ≥ 0.30</span><strong>{_esc(metrics.get("net_after_tax_rr") if metrics.get("net_after_tax_rr") is not None else "-")}</strong></div>
           <div class="fact-row"><span class="text-muted-soft">MDD ≥ -25%</span><strong>{_percent(metrics.get("net_after_tax_mdd_pct"))}</strong></div>

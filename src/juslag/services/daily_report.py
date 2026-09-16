@@ -73,6 +73,7 @@ def build_daily_report(
         "generated_at_utc": generated_at_utc,
         "backtest": {
             "settings_name": settings_name,
+            "judge_strategy_name": bt.get("judge_strategy_name"),
             "params": params.model_dump(),
             "judge": bt.get("judge"),
             "performance_sets": bt.get("performance_sets"),

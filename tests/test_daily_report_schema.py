@@ -9,6 +9,7 @@ from juslag.services.daily_report import build_daily_report
 
 def _fixture_bt() -> dict:
     return {
+        "judge_strategy_name": "PCA SUB + rule_406_no_flip",
         "judge": {"overall_score": 82, "overall_decision": "pass"},
         "performance_sets": {
             "net_after_tax": [{"AR(%)": 12.3, "R/R": 1.2, "MDD(%)": -8.5}],
@@ -79,6 +80,7 @@ def test_build_daily_report_schema_and_shape() -> None:
     assert report["generated_at_utc"] == "2026-07-08T00:00:00+00:00"
 
     assert report["backtest"]["settings_name"] == "本番適用 test"
+    assert report["backtest"]["judge_strategy_name"] == "PCA SUB + rule_406_no_flip"
     assert report["backtest"]["params"] == params.model_dump()
     assert report["backtest"]["judge"]["overall_score"] == 82
     assert report["backtest"]["performance_sets"]["net_after_tax"][0]["AR(%)"] == 12.3

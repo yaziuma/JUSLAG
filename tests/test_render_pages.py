@@ -13,6 +13,7 @@ def _write_report(reports_dir: Path, date: str, tradeable: bool) -> None:
         "generated_at_utc": f"{date}T00:00:00+00:00",
         "backtest": {
             "settings_name": "本番適用 test",
+            "judge_strategy_name": "PCA SUB + rule_406_no_flip",
             "judge": {
                 "overall_score": 80,
                 "overall_decision": "pass",
@@ -139,6 +140,7 @@ def test_render_site_produces_index_and_report_pages(tmp_path: Path) -> None:
     assert "モデル作成条件" in index_html
     assert "当日シグナル判定" in index_html
     assert "モデル審査基準" in index_html
+    assert "PCA SUB + rule_406_no_flip" in index_html
     assert "参考注文案" in index_html
     assert "tab === 'today'" in index_html
     assert "tab === 'history'" in index_html
