@@ -97,6 +97,15 @@ def test_compute_execution_target_jp_date_from_calendar() -> None:
     assert execution_target == pd.Timestamp("2026-04-14")
 
 
+def test_latest_jp_session_on_us_only_holiday() -> None:
+    assert signal_module.latest_jp_session_on_or_before(pd.Timestamp("2026-05-04")) == pd.Timestamp("2026-05-01")
+
+
+def test_latest_jp_session_fails_closed_without_calendar(monkeypatch) -> None:
+    monkeypatch.setattr(signal_module, "mcal", None)
+    assert signal_module.latest_jp_session_on_or_before(pd.Timestamp("2026-05-04")) is None
+
+
 def test_daily_generation_uses_latest_us_only_session(monkeypatch) -> None:
     dates = pd.bdate_range("2025-01-02", periods=5)
     us_cc = pd.DataFrame({"US": [0.01, 0.02, 0.03, 0.04, 0.50]}, index=dates)

@@ -27,6 +27,7 @@ from juslag.signal import (
     compute_execution_target_jp_date,
     evaluate_daily_tradeability,
     generate_signals,
+    latest_jp_session_on_or_before,
     resolve_thresholds,
     _build_candidate_signal_stats,
 )
@@ -260,11 +261,15 @@ def build_freshness(
     reference_date: str | None,
     price_mode: str,
 ) -> dict[str, object]:
+    jp_required = latest_jp_session_on_or_before(pd.Timestamp(reference_date)) if reference_date else None
+    jp_required_date = jp_required.date().isoformat() if jp_required is not None else reference_date
     us_rep = cache.freshness_report(us_tickers, required_latest_date=reference_date, price_mode=price_mode)
-    jp_rep = cache.freshness_report(jp_tickers, required_latest_date=reference_date, price_mode=price_mode)
+    jp_rep = cache.freshness_report(jp_tickers, required_latest_date=jp_required_date, price_mode=price_mode)
     return {
         "price_mode": price_mode,
         "freshness_ok": bool(us_rep["freshness_ok"] and jp_rep["freshness_ok"]),
+        "required_jp_date": jp_required_date,
+        "jp_calendar_verified": jp_required is not None,
         "latest_us_date": us_rep["latest_date"],
         "latest_jp_date": jp_rep["latest_date"],
         "stale_tickers": sorted(set((us_rep.get("stale_tickers") or []) + (jp_rep.get("stale_tickers") or []))),
@@ -468,6 +473,7 @@ def run_daily_signal_service(
         list(JP_TICKERS.keys()),
         required_latest_date=str(reference_date) if pd.notna(reference_date) else None,
         price_mode="raw",
+        required_latest_jp_date=freshness["required_jp_date"],
     )
     quality.update(freshness)
     execution_plan = {

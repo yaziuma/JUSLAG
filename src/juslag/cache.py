@@ -151,6 +151,7 @@ class PriceCache:
         jp_tickers: list[str] | None = None,
         required_latest_date: str | None = None,
         price_mode: PriceMode = "adjusted",
+        required_latest_jp_date: str | None = None,
     ) -> dict[str, object]:
         """Return aggregate freshness summary for a single price mode."""
         us_tickers = us_tickers or []
@@ -166,7 +167,7 @@ class PriceCache:
                 "jp_latest_max": None,
                 "latest_dates_aligned": False,
                 "missing_tickers": us_tickers + jp_tickers,
-                "stale_tickers": us_tickers + jp_tickers if required_latest_date else [],
+                "stale_tickers": (us_tickers if required_latest_date else []) + (jp_tickers if (required_latest_jp_date or required_latest_date) else []),
                 "daily_signal_ready": False,
             }
 
@@ -183,17 +184,16 @@ class PriceCache:
             if not jp_rows.empty
             else pd.Series(dtype="datetime64[ns]")
         )
-        all_latest = pd.concat([us_latest, jp_latest], axis=0)
         tracked_tickers = us_tickers + jp_tickers
         missing = [t for t in tracked_tickers if t not in by_ticker.index]
         stale_tickers: list[str] = []
-        if required_latest_date:
-            req = pd.Timestamp(required_latest_date)
-            stale_tickers = [
-                t
-                for t in tracked_tickers
-                if t in by_ticker.index and pd.Timestamp(by_ticker.loc[t, "last"]) < req
-            ]
+        for tickers, date in ((us_tickers, required_latest_date), (jp_tickers, required_latest_jp_date or required_latest_date)):
+            if date:
+                req = pd.Timestamp(date)
+                stale_tickers.extend(
+                    t for t in tickers
+                    if t in by_ticker.index and pd.Timestamp(by_ticker.loc[t, "last"]) < req
+                )
         # US と JP の最新日が異なるのは戦略上の正常状態（US クローズ翌朝に JP 市場が開く）
         # 「整合」の定義: US 銘柄同士が揃っている、かつ JP 銘柄同士が揃っていること
         # US と JP の日付が異なること自体はエラーではない

@@ -6,6 +6,7 @@ from pathlib import Path
 import pandas as pd
 
 from juslag.cache import PriceCache
+from juslag.services.daily_signal import build_freshness
 
 
 def test_raw_and_adjusted_are_isolated(tmp_path: Path) -> None:
@@ -41,6 +42,41 @@ def test_summary_and_freshness_are_mode_specific(tmp_path: Path) -> None:
     adjusted_freshness = cache.freshness_report(["SPY", "1306.T"], required_latest_date="2026-04-07", price_mode="adjusted")
     assert adjusted_freshness["freshness_ok"] is False
     assert "1306.T" in adjusted_freshness["missing_tickers"]
+
+
+def test_summary_allows_jp_holiday_but_not_missing_prior_session(tmp_path: Path) -> None:
+    cache = PriceCache(tmp_path / "prices.db")
+    us_date = pd.to_datetime(["2026-05-04"])
+    jp_date = pd.to_datetime(["2026-05-01"])
+    cache.upsert("SPY", pd.Series([100.0], index=us_date), pd.Series([101.0], index=us_date), price_mode="raw")
+    cache.upsert("1306.T", pd.Series([200.0], index=jp_date), pd.Series([201.0], index=jp_date), price_mode="raw")
+
+    summary = cache.summary(["SPY"], ["1306.T"], required_latest_date="2026-05-04", required_latest_jp_date="2026-05-01", price_mode="raw")
+    assert summary["daily_signal_ready"] is True
+    assert summary["stale_tickers"] == []
+
+    stale = cache.summary(["SPY"], ["1306.T"], required_latest_date="2026-05-04", required_latest_jp_date="2026-05-02", price_mode="raw")
+    assert stale["daily_signal_ready"] is False
+    assert stale["stale_tickers"] == ["1306.T"]
+
+
+def test_daily_freshness_uses_last_jpx_session(tmp_path: Path) -> None:
+    cache = PriceCache(tmp_path / "prices.db")
+    us_date = pd.to_datetime(["2026-05-04"])
+    jp_date = pd.to_datetime(["2026-05-01"])
+    cache.upsert("SPY", pd.Series([100.0], index=us_date), pd.Series([101.0], index=us_date), price_mode="raw")
+    cache.upsert("1306.T", pd.Series([200.0], index=jp_date), pd.Series([201.0], index=jp_date), price_mode="raw")
+
+    freshness = build_freshness(cache, ["SPY"], ["1306.T"], "2026-05-04", "raw")
+    assert freshness["required_jp_date"] == "2026-05-01"
+    assert freshness["jp_calendar_verified"] is True
+    assert freshness["freshness_ok"] is True
+
+    cache.upsert("SPY", pd.Series([100.0], index=us_date), pd.Series([101.0], index=us_date), price_mode="adjusted")
+    cache.upsert("1306.T", pd.Series([200.0], index=pd.to_datetime(["2026-04-30"])), pd.Series([201.0], index=pd.to_datetime(["2026-04-30"])), price_mode="adjusted")
+    stale = build_freshness(cache, ["SPY"], ["1306.T"], "2026-05-04", "adjusted")
+    assert stale["freshness_ok"] is False
+    assert "1306.T" in stale["stale_tickers"]
 
 
 def test_legacy_schema_is_rebuilt_safely(tmp_path: Path) -> None:

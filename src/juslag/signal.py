@@ -243,6 +243,18 @@ def compute_execution_target_jp_date(signal_reference_us_date: pd.Timestamp) -> 
     return execution_target_jp_date
 
 
+def latest_jp_session_on_or_before(reference_date: pd.Timestamp) -> pd.Timestamp | None:
+    """Return the latest confirmed JPX session; fail closed without a calendar."""
+    if pd.isna(reference_date) or mcal is None:
+        return None
+    end = pd.Timestamp(reference_date).normalize()
+    calendar = mcal.get_calendar("JPX")
+    schedule = calendar.schedule(start_date=end - pd.Timedelta(days=14), end_date=end)
+    if schedule.empty:
+        return None
+    return pd.Timestamp(schedule.index[-1]).tz_localize(None)
+
+
 def evaluate_daily_tradeability(
     signal_table: pd.DataFrame,
     data_quality: dict[str, object],
