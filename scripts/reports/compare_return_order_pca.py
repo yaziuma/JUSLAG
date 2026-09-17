@@ -50,6 +50,47 @@ def paired_pca_returns(
     return paired.loc[eval_start:].dropna()
 
 
+def paired_execution_returns(
+    close: pd.DataFrame,
+    open_: pd.DataFrame,
+    us: list[str],
+    jp: list[str],
+    pretrain_end: str,
+    eval_start: str,
+) -> tuple[pd.DataFrame, int]:
+    """Use identical market-first signals, varying only the next execution session."""
+    common = close[us[0]].dropna().index.intersection(close[jp[0]].dropna().index)
+    market_cc = pd.concat([
+        close[us].dropna(how="all").pct_change(fill_method=None).reindex(common),
+        close[jp].dropna(how="all").pct_change(fill_method=None).reindex(common),
+    ], axis=1).dropna()
+    common_cc = close.loc[common, us + jp].pct_change(fill_method=None)
+    valid = common_cc.notna().all(axis=1) & market_cc.reindex(common).notna().all(axis=1)
+    common_cc = common_cc.loc[valid]
+    market_cc = market_cc.loc[valid]
+    v0 = build_prior_eigenvectors(us, jp, US_CYCLICAL, JP_CYCLICAL)
+    prior = build_prior_exposure(common_cc.loc[:pretrain_end], v0)
+    signals = generate_signals(market_cc[us], market_cc[jp], prior, l=60, k=3, lam=0.9)
+    jp_days = close[jp].dropna(how="all").index
+    oc = close.loc[jp_days, jp] / open_.loc[jp_days, jp] - 1.0
+
+    def returns(jp_oc: pd.DataFrame) -> pd.Series:
+        detail = build_portfolio_returns_detail(
+            signals, jp_oc, q=0.3, min_long_signal=-1e9, max_short_signal=1e9,
+        )
+        return detail["gross_return"]
+
+    paired = pd.concat({
+        "next_common": returns(oc.loc[common]),
+        "next_jp": returns(oc),
+    }, axis=1).loc[eval_start:].dropna()
+    common_pos = common.searchsorted(paired.index, side="right")
+    jp_pos = jp_days.searchsorted(paired.index, side="right")
+    usable = (common_pos < len(common)) & (jp_pos < len(jp_days))
+    mismatch = int((common[common_pos[usable]] != jp_days[jp_pos[usable]]).sum())
+    return paired, mismatch
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--db", default=DEFAULT_DB_PATH)
@@ -69,6 +110,8 @@ def main() -> None:
     open_, close = repair_known_bad_prices(open_, close)
     paired = paired_pca_returns(close, open_, us, jp, args.pretrain_end, args.eval_start)
     delta = paired["market_first"] - paired["common_first"]
+    execution, mismatch = paired_execution_returns(close, open_, us, jp, args.pretrain_end, args.eval_start)
+    execution_delta = execution["next_jp"] - execution["next_common"]
     cost = 4 * args.slippage_bps / 10_000
     print(json.dumps({
         "evaluation_start": args.eval_start,
@@ -82,6 +125,14 @@ def main() -> None:
         "different_pnl_days": int(delta.abs().gt(1e-10).sum()),
         "mean_abs_daily_pnl_diff_bps": round(float(delta.abs().mean() * 10_000), 3),
         "max_abs_daily_pnl_diff_bps": round(float(delta.abs().max() * 10_000), 3),
+        "execution_calendar": {
+            "paired_signal_days": len(execution),
+            "different_execution_dates": mismatch,
+            "next_common_gross_ar_pct": round(float(execution["next_common"].mean() * 252 * 100), 3),
+            "next_jp_gross_ar_pct": round(float(execution["next_jp"].mean() * 252 * 100), 3),
+            "next_jp_minus_common_ar_points": round(float(execution_delta.mean() * 252 * 100), 3),
+            "different_pnl_days": int(execution_delta.abs().gt(1e-10).sum()),
+        },
     }, indent=2))
 
 

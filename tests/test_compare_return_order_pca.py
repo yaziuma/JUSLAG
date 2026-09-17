@@ -9,6 +9,9 @@ from juslag.config import JP_TICKERS, US_TICKERS
 paired_pca_returns = runpy.run_path(
     str(Path(__file__).resolve().parents[1] / "scripts/reports/compare_return_order_pca.py")
 )["paired_pca_returns"]
+paired_execution_returns = runpy.run_path(
+    str(Path(__file__).resolve().parents[1] / "scripts/reports/compare_return_order_pca.py")
+)["paired_execution_returns"]
 
 
 def test_identical_calendars_produce_identical_pca_pnl() -> None:
@@ -23,3 +26,12 @@ def test_identical_calendars_produce_identical_pca_pnl() -> None:
 
     assert not paired.empty
     pd.testing.assert_series_equal(paired["common_first"], paired["market_first"], check_names=False)
+
+    execution, mismatch = paired_execution_returns(close, open_, us, jp, str(dates[65].date()), str(dates[70].date()))
+    assert mismatch == 0
+    pd.testing.assert_series_equal(execution["next_common"], execution["next_jp"], check_names=False)
+
+    close.loc[dates[75], us] = np.nan
+    execution, mismatch = paired_execution_returns(close, open_, us, jp, str(dates[65].date()), str(dates[70].date()))
+    assert mismatch == 1
+    assert execution.loc[dates[74], "next_common"] != execution.loc[dates[74], "next_jp"]
