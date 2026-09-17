@@ -1,4 +1,13 @@
-# 引き継ぎメモ（2026-09-16）
+# 引き継ぎメモ（2026-09-17更新）
+
+## コンパクト後の再開点
+
+- 作業場所: `/home/quieter/projects/JUSLAG`。`main`の作業ツリーはクリーン。`origin/main`より4コミット先行し、未プッシュ（確認時点）。直近: `b85d539`, `4f0ff47`, `596f58d`, `bc89563`。ユーザーから今回のプッシュ指示はない。
+- `4f0ff47`: レジーム分位点の未来参照を除去。バックテストの次JP寄りgapと日次のgap欠損表示・判定を修正。
+- `596f58d`: シグナル日より後の最初のJP価格行へ損益・gapを対応付ける。gap欠損時に後日の値を代用しない。
+- `bc89563`: 米国だけ開場した最新日のリターンを日次シグナルへ反映。履歴バックテストのシグナル生成は従来通り。
+- 最終検証: `.venv/bin/pytest -q`で224 passed、40 warnings（Pandas4Warning）。`git diff --check`通過。Ruffは既存の`signal.py`引数`l`にE741が2件あるが、`--ignore E741`では変更箇所が通過。
+- 次に着手するなら、JP休場日を許容する鮮度ゲートの設計と、修正後バックテストの再実行を優先。08:00 JSTに当日寄りgapは未知なので、現行ルールをライブ運用可能とみなさない。
 
 ## 現状
 
@@ -22,5 +31,5 @@
 
 - 外部コードを`/tmp/subspace-pca-leadlag`にcloneした場合: `.venv/bin/python scripts/reports/compare_external_pca.py --external-repo /tmp/subspace-pca-leadlag`
 - 保有期間: `.venv/bin/python scripts/reports/validate_signal_horizons.py`
-- 前回修正はコミット `4f0ff47`。2026-09-17の休日対応は検証中。
-- 現時点で発注・実資金投入は不可。Judgeのメタ成績は先読みとギャップ日付不整合のため信頼しない。
+- 2026-09-17の休日対応はコミット・テスト済み。ただし修正後のバックテスト再計算は未実施。
+- 現時点で発注・実資金投入は不可。過去のJudgeメタ成績は先読み・ギャップ日付修正前のため信頼しない。
