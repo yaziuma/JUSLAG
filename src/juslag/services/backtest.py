@@ -13,6 +13,7 @@ from juslag.prior import build_prior_eigenvectors, build_prior_exposure
 from juslag.regime import build_regime_frame
 from juslag.signal import generate_signals
 from juslag.strategies import get_rule
+from juslag.strategies.base import StrategyRule
 
 from juslag.services.daily_signal import build_freshness
 from juslag.services.data_status import build_data_status
@@ -66,7 +67,11 @@ def run_backtest_service(
     params: BacktestParams,
     cache: PriceCache,
     analysis_status: dict | None = None,
+    *,
+    research_rule: StrategyRule | None = None,
 ) -> dict[str, object]:
+    if research_rule is not None and params.strategy_rule_id != research_rule.rule_id:
+        raise ValueError("research_rule.rule_id must match params.strategy_rule_id")
     us_close, jp_close, jp_open = fetch_data(
         list(US_TICKERS.keys()),
         list(JP_TICKERS.keys()),
@@ -160,7 +165,7 @@ def run_backtest_service(
 
     if params.strategy_rule_id:
         try:
-            _meta_rule = get_rule(params.strategy_rule_id)
+            _meta_rule = research_rule or get_rule(params.strategy_rule_id)
             overnight_gap_df = jp_open / jp_close.shift(1) - 1.0
             # regime_df を backtest でも構築
             _regime_df = build_regime_frame(jp_cc, signal_sub)
