@@ -69,6 +69,7 @@ def run_backtest_service(
     analysis_status: dict | None = None,
     *,
     research_rule: StrategyRule | None = None,
+    include_strategy_rule_detail: bool = False,
 ) -> dict[str, object]:
     if research_rule is not None and params.strategy_rule_id != research_rule.rule_id:
         raise ValueError("research_rule.rule_id must match params.strategy_rule_id")
@@ -277,7 +278,7 @@ def run_backtest_service(
         except Exception:
             analysis_status = None
 
-    return {
+    result = {
         "params": params.model_dump(),
         "rows": perf_df.to_dict(orient="records"),
         "performance_sets": performance_sets,
@@ -295,3 +296,15 @@ def run_backtest_service(
         "adjusted_series_verification_reason": analysis_status.get("adjusted_series_verification_reason") if analysis_status else None,
         "strategy_rule_id": params.strategy_rule_id,
     }
+    if include_strategy_rule_detail:
+        result["strategy_rule_daily"] = (
+            [
+                {"date": date.date().isoformat(), **row}
+                for date, row in meta_rule_detail[
+                    ["gross_return", "net_pre_tax_return", "slippage_cost", "n_long", "n_short"]
+                ].to_dict(orient="index").items()
+            ]
+            if meta_rule_detail is not None and not meta_rule_detail.empty
+            else []
+        )
+    return result

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 import pytest
+import runpy
 
 from juslag.cache import PriceCache
 from juslag.portfolio import build_portfolio_with_strategy_rule
@@ -53,3 +54,21 @@ def test_research_rule_id_must_match_params(tmp_path) -> None:
             PriceCache(tmp_path / "prices.db"),
             research_rule=PreopenNoGap(),
         )
+
+
+def test_daily_decomposition_separates_common_and_unique_dates() -> None:
+    decompose = runpy.run_path("scripts/reports/compare_preopen_baseline.py")["decompose_daily_returns"]
+    current = [
+        {"date": "2026-05-01", "gross_return": 0.03, "net_pre_tax_return": 0.02},
+        {"date": "2026-05-07", "gross_return": 0.01, "net_pre_tax_return": 0.00},
+    ]
+    preopen = [
+        {"date": "2026-05-01", "gross_return": 0.01, "net_pre_tax_return": 0.00},
+        {"date": "2026-05-08", "gross_return": 0.02, "net_pre_tax_return": 0.01},
+    ]
+
+    result = decompose(current, preopen)
+
+    assert result["common"] == {"days": 1, "gross_delta_sum_bps": 200.0, "net_delta_sum_bps": 200.0}
+    assert result["current_only"] == {"days": 1, "gross_delta_sum_bps": 100.0, "net_delta_sum_bps": 0.0}
+    assert result["preopen_only"] == {"days": 1, "gross_delta_sum_bps": -200.0, "net_delta_sum_bps": -100.0}
