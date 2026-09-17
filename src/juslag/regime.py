@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import numpy as np
 import pandas as pd
 
 TREND_UP_THRESHOLD = 0.03
@@ -35,14 +34,10 @@ def _classify_quantile(
     low_label: str,
     mid_label: str,
 ) -> pd.Series:
-    clean = series.dropna()
     labels = pd.Series(mid_label, index=series.index, dtype="object")
-    if clean.empty:
-        return labels
-
-    hi_val = float(np.nanpercentile(clean.values, high_pct))
-    lo_val = float(np.nanpercentile(clean.values, low_pct))
-
+    history = series.expanding(min_periods=20)
+    hi_val = history.quantile(high_pct / 100)
+    lo_val = history.quantile(low_pct / 100)
     labels[series >= hi_val] = high_label
     labels[series <= lo_val] = low_label
     return labels

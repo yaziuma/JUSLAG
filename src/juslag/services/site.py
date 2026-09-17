@@ -532,7 +532,7 @@ function dashboard() {{
         <div class="section-label mb-3">2. 当日シグナル判定</div>
         <div class="fact-list small">
           <div class="fact-row"><span class="text-muted-soft">適用ルール</span><strong>{_esc(strategy.get("rule_id") or "-")}</strong></div>
-          <div class="fact-row"><span class="text-muted-soft">寄りgap</span><strong>{_percent((context.get("open_gap") or 0) * 100)} / 上限1.50%</strong></div>
+          <div class="fact-row"><span class="text-muted-soft">寄りgap</span><strong>{_percent(context["open_gap"] * 100) if context.get("open_gap") is not None else "未観測"} / 上限1.50%</strong></div>
           <div class="fact-row"><span class="text-muted-soft">Rotation</span><strong>{_esc(context.get("rotation_regime") or "-")} / weak以外</strong></div>
           <div class="fact-row"><span class="text-muted-soft">ルール結果</span><strong>{_esc((strategy.get("action") or "-").upper())}</strong></div>
           <div class="fact-row"><span class="text-muted-soft">対象日</span><strong>{_esc(latest_ds.get("execution_target_jp_date") or "-")}</strong></div>

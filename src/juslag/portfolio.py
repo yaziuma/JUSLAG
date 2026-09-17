@@ -150,6 +150,7 @@ def build_portfolio_with_strategy_rule(
 
     cfg = execution_costs or ExecutionCostConfig()
     jp_oc_aligned = jp_oc.shift(-1)
+    gap_next = overnight_gap_df.shift(-1)
     borrow_rate_daily = cfg.short_borrow_rate_annual / BUSINESS_DAYS_PER_YEAR
     rows: list[dict[str, object]] = []
 
@@ -167,8 +168,8 @@ def build_portfolio_with_strategy_rule(
         lo = sig_c.quantile(q)
         hi = sig_c.quantile(1.0 - q)
 
-        # overnight_gap for this date
-        gap_t = overnight_gap_df.loc[t] if t in overnight_gap_df.index else pd.Series(dtype=float)
+        # The signal at t is executed at the next JP open, not at t's open.
+        gap_t = gap_next.loc[t] if t in gap_next.index else pd.Series(dtype=float)
         open_gap = float(gap_t.mean()) if not gap_t.empty else None
 
         long_cands = sig_c.index[sig_c >= hi].tolist()

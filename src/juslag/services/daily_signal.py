@@ -176,14 +176,13 @@ def pick_overnight_gap(
 ) -> "pd.Series":
     """overnight_gap_df から適切な行を選ぶ。
 
-    execution_target_jp_date が index にある場合はその行（JP執行日の寄りgap）を返す。
-    ない場合は iloc[-1]（最新行）にフォールバックする。
+    執行日の寄り値が未観測なら空を返す。過去日のgapで代用しない。
     """
     if overnight_gap_df.empty:
         return pd.Series(dtype=float)
     if execution_target_jp_date is not None and execution_target_jp_date in overnight_gap_df.index:
-        return overnight_gap_df.loc[execution_target_jp_date]
-    return overnight_gap_df.iloc[-1]
+        return overnight_gap_df.loc[execution_target_jp_date].dropna()
+    return pd.Series(dtype=float)
 
 
 def build_daily_signal_from_signal_df(

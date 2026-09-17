@@ -179,16 +179,16 @@ class TestPickOvernightGap:
         result = pick_overnight_gap(df, exec_date)
         pd.testing.assert_series_equal(result, df.loc[exec_date])
 
-    def test_exec_date_not_in_index_returns_last_row(self):
+    def test_exec_date_not_in_index_returns_empty(self):
         df = self._make_df()
         exec_date = pd.Timestamp("2026-01-20")  # index にない
         result = pick_overnight_gap(df, exec_date)
-        pd.testing.assert_series_equal(result, df.iloc[-1])
+        assert result.empty
 
-    def test_none_exec_date_returns_last_row(self):
+    def test_none_exec_date_returns_empty(self):
         df = self._make_df()
         result = pick_overnight_gap(df, None)
-        pd.testing.assert_series_equal(result, df.iloc[-1])
+        assert result.empty
 
     def test_empty_df_returns_empty_series(self):
         result = pick_overnight_gap(pd.DataFrame(), None)

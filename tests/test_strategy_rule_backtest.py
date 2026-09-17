@@ -45,6 +45,28 @@ def _make_data(n_days: int = 10, n_tickers: int = 9):
 
 
 class TestBuildPortfolioWithStrategyRule:
+    def test_gap_context_uses_execution_day_not_signal_day(self):
+        signal_df, jp_oc, gap_df = _make_data()
+        observed = []
+
+        class RecordingRule(StrategyRule):
+            rule_id = "recording"
+            rule_name_ja = "recording"
+            description_ja = "recording"
+            default_strategy = "curr_oc"
+
+            def decide(self, ctx):
+                observed.append(ctx.open_gap)
+                return StrategyDecision(
+                    selected_strategy="curr_oc", action="execute", rule_id=self.rule_id,
+                    rule_name_ja=self.rule_name_ja, reason_ja="test",
+                )
+
+        gap_df.loc[gap_df.index[0]] = 0.5
+        gap_df.loc[gap_df.index[1]] = 0.01
+        build_portfolio_with_strategy_rule(signal_df, jp_oc, gap_df, None, RecordingRule())
+        assert observed[0] == pytest.approx(0.01)
+
     def test_curr_oc_same_as_base(self):
         signal_df, jp_oc, gap_df = _make_data()
         result = build_portfolio_with_strategy_rule(
