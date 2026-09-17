@@ -97,6 +97,26 @@ def test_compute_execution_target_jp_date_from_calendar() -> None:
     assert execution_target == pd.Timestamp("2026-04-14")
 
 
+def test_daily_generation_uses_latest_us_only_session(monkeypatch) -> None:
+    dates = pd.bdate_range("2025-01-02", periods=5)
+    us_cc = pd.DataFrame({"US": [0.01, 0.02, 0.03, 0.04, 0.50]}, index=dates)
+    jp_cc = pd.DataFrame({"JP": [0.01, 0.02, 0.03, 0.04]}, index=dates[:-1])
+    observed = []
+
+    def record_signal(_window, latest_us, *_args, **_kwargs):
+        observed.append(float(latest_us[0]))
+        return np.array([latest_us[0]])
+
+    monkeypatch.setattr(signal_module, "compute_signal_at_t", record_signal)
+    historical = signal_module.generate_signals(us_cc, jp_cc, np.eye(2), l=2)
+    daily = signal_module.generate_signals(us_cc, jp_cc, np.eye(2), l=2, include_latest_us_only=True)
+
+    assert historical.index.max() == dates[-2]
+    assert daily.index.max() == dates[-1]
+    assert len(daily) == len(historical) + 1
+    assert observed[-1] > observed[-2]
+
+
 def test_get_todays_signal_live_without_future_jp_prices(monkeypatch) -> None:
     idx = pd.bdate_range("2026-01-01", "2026-04-13")
     us_cc = pd.DataFrame({"US1": np.linspace(0.001, 0.003, len(idx))}, index=idx)
@@ -606,4 +626,3 @@ def test_daily_signal_result_no_trade_classified(monkeypatch) -> None:
     assert result.no_trade_classification in (
         "near_miss_threshold", "hard_no_signal", "one_side_only", "regime_blocked"
     )
-

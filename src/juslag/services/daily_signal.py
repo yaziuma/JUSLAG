@@ -331,6 +331,7 @@ def run_daily_signal_service(
         l=eff_window_l,
         k=eff_k,
         lam=eff_lambda,
+        include_latest_us_only=True,
     )
     # Compute regime first so vol_regime can inform adaptive threshold.
     regime_df = build_regime_frame(jp_cc, signal_df)

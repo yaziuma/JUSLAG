@@ -464,7 +464,7 @@ def build_daily_signal_log_entry(
     }
 
 
-def generate_signals(us_cc: pd.DataFrame, jp_cc: pd.DataFrame, c0: np.ndarray, l: int = 60, k: int = 3, lam: float = 0.9) -> pd.DataFrame:
+def generate_signals(us_cc: pd.DataFrame, jp_cc: pd.DataFrame, c0: np.ndarray, l: int = 60, k: int = 3, lam: float = 0.9, include_latest_us_only: bool = False) -> pd.DataFrame:
     """Generate historical JP signals indexed by signal date."""
     us_tickers = us_cc.columns.tolist()
     jp_tickers = jp_cc.columns.tolist()
@@ -485,6 +485,19 @@ def generate_signals(us_cc: pd.DataFrame, jp_cc: pd.DataFrame, c0: np.ndarray, l
         z_us_t = (r_us_t - mu_w[:n_u]) / sig_w[:n_u]
         sig_vec = compute_signal_at_t(z_win, z_us_t, c0, n_u=n_u, k=k, lam=lam)
         signals[t] = dict(zip(jp_tickers, sig_vec))
+
+    if include_latest_us_only and len(dates) >= l and not us_cc.empty:
+        latest_us_date = us_cc.index.max()
+        if latest_us_date > dates.max():
+            latest_us = us_cc.loc[latest_us_date, us_tickers]
+            if latest_us.notna().all():
+                r_win = joint_cc.iloc[-l:].values
+                mu_w = r_win.mean(axis=0)
+                sig_w = r_win.std(axis=0) + 1e-10
+                z_win = (r_win - mu_w) / sig_w
+                z_us_t = (latest_us.values - mu_w[:n_u]) / sig_w[:n_u]
+                sig_vec = compute_signal_at_t(z_win, z_us_t, c0, n_u=n_u, k=k, lam=lam)
+                signals[latest_us_date] = dict(zip(jp_tickers, sig_vec))
 
     signal_df = pd.DataFrame(signals).T
     signal_df.index.name = "date"
