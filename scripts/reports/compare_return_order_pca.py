@@ -8,7 +8,7 @@ import pandas as pd
 
 from juslag.cache import DEFAULT_DB_PATH, PriceCache
 from juslag.config import JP_CYCLICAL, JP_TICKERS, US_CYCLICAL, US_TICKERS
-from juslag.data_loader import repair_known_bad_prices
+from juslag.data_loader import build_joint_cc, compute_returns, repair_known_bad_prices
 from juslag.portfolio import build_portfolio_returns_detail
 from juslag.prior import build_prior_eigenvectors, build_prior_exposure
 from juslag.signal import generate_signals
@@ -91,6 +91,30 @@ def paired_execution_returns(
     return paired, mismatch
 
 
+def production_paper_returns(
+    close: pd.DataFrame,
+    open_: pd.DataFrame,
+    us: list[str],
+    jp: list[str],
+    pretrain_end: str,
+    eval_start: str,
+) -> pd.Series:
+    """Mirror the production paper branch using local prices and no network fetch."""
+    us_close = close[us].dropna(how="all")
+    jp_close = close[jp].dropna(how="all")
+    jp_open = open_[jp].dropna(how="all")
+    us_cc, jp_oc, jp_cc = compute_returns(us_close, jp_close, jp_open)
+    joint_cc, _ = build_joint_cc(us_cc, jp_cc)
+    v0 = build_prior_eigenvectors(us, jp, US_CYCLICAL, JP_CYCLICAL)
+    prior = build_prior_exposure(joint_cc.loc[:pretrain_end], v0)
+    signals = generate_signals(us_cc, jp_cc, prior, l=60, k=3, lam=0.9)
+    detail = build_portfolio_returns_detail(
+        signals.loc[eval_start:], jp_oc.loc[eval_start:],
+        q=0.3, min_long_signal=-1e9, max_short_signal=1e9,
+    )
+    return detail["gross_return"]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--db", default=DEFAULT_DB_PATH)
@@ -112,6 +136,9 @@ def main() -> None:
     delta = paired["market_first"] - paired["common_first"]
     execution, mismatch = paired_execution_returns(close, open_, us, jp, args.pretrain_end, args.eval_start)
     execution_delta = execution["next_jp"] - execution["next_common"]
+    production = production_paper_returns(close, open_, us, jp, args.pretrain_end, args.eval_start)
+    production_paired = pd.concat({"fixed_panel": execution["next_jp"], "production": production}, axis=1).dropna()
+    production_delta = production_paired["production"] - production_paired["fixed_panel"]
     cost = 4 * args.slippage_bps / 10_000
     print(json.dumps({
         "evaluation_start": args.eval_start,
@@ -132,6 +159,17 @@ def main() -> None:
             "next_jp_gross_ar_pct": round(float(execution["next_jp"].mean() * 252 * 100), 3),
             "next_jp_minus_common_ar_points": round(float(execution_delta.mean() * 252 * 100), 3),
             "different_pnl_days": int(execution_delta.abs().gt(1e-10).sum()),
+        },
+        "production_reconciliation": {
+            "production_days": len(production),
+            "production_gross_ar_pct": round(float(production.mean() * 252 * 100), 3),
+            "paired_signal_days": len(production_paired),
+            "production_minus_fixed_panel_ar_points": round(float(production_delta.mean() * 252 * 100), 3),
+            "different_pnl_days": int(production_delta.abs().gt(1e-10).sum()),
+            "mean_abs_daily_pnl_diff_bps": round(float(production_delta.abs().mean() * 10_000), 3),
+            "production_only_signal_days": len(production.index.difference(execution.index)),
+            "production_only_signal_dates": [str(d.date()) for d in production.index.difference(execution.index)],
+            "fixed_panel_only_signal_days": len(execution.index.difference(production.index)),
         },
     }, indent=2))
 

@@ -12,6 +12,9 @@ paired_pca_returns = runpy.run_path(
 paired_execution_returns = runpy.run_path(
     str(Path(__file__).resolve().parents[1] / "scripts/reports/compare_return_order_pca.py")
 )["paired_execution_returns"]
+production_paper_returns = runpy.run_path(
+    str(Path(__file__).resolve().parents[1] / "scripts/reports/compare_return_order_pca.py")
+)["production_paper_returns"]
 
 
 def test_identical_calendars_produce_identical_pca_pnl() -> None:
@@ -30,6 +33,8 @@ def test_identical_calendars_produce_identical_pca_pnl() -> None:
     execution, mismatch = paired_execution_returns(close, open_, us, jp, str(dates[65].date()), str(dates[70].date()))
     assert mismatch == 0
     pd.testing.assert_series_equal(execution["next_common"], execution["next_jp"], check_names=False)
+    production = production_paper_returns(close, open_, us, jp, str(dates[65].date()), str(dates[70].date()))
+    pd.testing.assert_series_equal(execution["next_jp"], production, check_names=False)
 
     close.loc[dates[75], us] = np.nan
     execution, mismatch = paired_execution_returns(close, open_, us, jp, str(dates[65].date()), str(dates[70].date()))
