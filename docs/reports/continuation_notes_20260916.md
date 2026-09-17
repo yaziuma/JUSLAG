@@ -2,11 +2,11 @@
 
 ## コンパクト後の再開点
 
-- 作業場所: `/home/quieter/projects/JUSLAG`。2026-09-17時点で`main`は`origin/main`と同期し、作業ツリーはクリーン。直近: `7ffc5d9`（日別差分）、`aa82765`（寄りgapなし比較）、`df7cd8e`（未検証の発注候補ブロック）、`502d1f7`（JPX休場鮮度）。すべてpush済み。以前の`4f0ff47`等はリモート日次データを取り込むリベースでコミットIDが変わった。
+- 作業場所: `/home/quieter/projects/JUSLAG`。2026-09-17時点で`main`は`origin/main`と同期し、作業ツリーはクリーン。直近: `45a11a1`（本番論文準拠系列の再現）、`1684103`（次JP営業日と次共通日の執行差）、`b828126`（前日比順序のPCA損益差）、`6a6bb78`（前日比入力差）。いずれもpush済み。
 - `5b497a8`: レジーム分位点の未来参照を除去。バックテストの次JP寄りgapと日次のgap欠損表示・判定を修正。
 - `48a2b69`: シグナル日より後の最初のJP価格行へ損益・gapを対応付ける。gap欠損時に後日の値を代用しない。
 - `9ef9042`: 米国だけ開場した最新日のリターンを日次シグナルへ反映。履歴バックテストのシグナル生成は従来通り。
-- 最終検証: `.venv/bin/pytest -q`で233 passed、40 warnings（既存のPandas4Warning）。`git diff --check`と変更箇所のRuff `--ignore E741`通過。RuffのE741は既存の`signal.py`引数`l`に由来。
+- 最終検証: `.venv/bin/pytest -q`で235 passed、40 warnings（既存のPandas4Warning）。変更箇所のRuffと`git diff --check`通過。全体RuffのE741は既存の`signal.py`引数`l`に由来。
 - JP休場日を許容する鮮度ゲートと修正後バックテスト再実行は完了。サイトは当日寄りgapを見た後に同じ寄り値で約定する前提を警告し、この前提が残る現行メタ版はJudgeがPASSでも発注候補にしない。08:00 JSTに当日寄りgapは未知なので、現行ルールをライブ運用可能とみなさない。
 
 ## 現状
@@ -15,7 +15,7 @@
 - 論文準拠PCAと現行メタ戦略の比較を日次レポート/サイトに追加。詳細は`paper_implementation_review_20260916.md`。
 - 1629.Tの2026-03-30/31はYahooキャッシュで分割調整が二重適用された。運用会社の1:500分割開示と株探・みんかぶのOHLCで照合し、`data_loader.repair_known_bad_prices()`で読み込み時のみ修復。キャッシュ原本は変更しない。
 - 外部独立実装`akihidem/subspace-pca-leadlag`（commit `3bc7147b7783cea117aaaa109352a922f12089a5`）を同じローカル調整価格・共通取引日・PCA設定で走らせた。1,106日の日次グロス損益はJUSLAGと全日一致。グロス年率+6.454%、両側グロス2を毎日寄り→引け往復し5bps/sideを課すとネット年率-43.946%。スクリプトは`scripts/reports/compare_external_pca.py`、詳細は`external_paper_implementations_20260916.md`。
-- 2026-09-17の再計算では、論文準拠版1104日でグロス年率+8.31%、税前-42.09%。現行メタ版701日でグロス+55.08%、税前+5.44%、税後+2.88%。ただしメタ版は寄りgap確定後に同じ寄り値で約定する非現実的な前提が残り、利益を実運用可能と見なせない。詳細は`backtest_recheck_20260917.md`。外部との6.454%の差は主に市場別の前日比と共通日での前日比の作り方の違い。比較期間・算式を混同しない。
+- 2026-09-17の再計算では、論文準拠版1104日でグロス年率+8.31%、税前-42.09%。現行メタ版701日でグロス+55.08%、税前+5.44%、税後+2.88%。ただしメタ版は寄りgap確定後に同じ寄り値で約定する非現実的な前提が残り、利益を実運用可能と見なせない。詳細は`backtest_recheck_20260917.md`。外部同条件版+6.454%との差は、前日比順序よりも次JP営業日か次米日共通日かの執行カレンダー差が大きい。評価日数も異なるため単純な差分を厳密な寄与とみなさない。
 - 外部実装はコストを`Σ|w_t-w_(t-1)|`で計算。寄り建て・引け全決済なら`2Σ|w_t|=4`が必要で、外部のネット成績は日中往復売買を過小計上する。論文のグロス値とは別。
 - 当日寄りgapを全く使わない研究用アブレーションは790日、グロス年率+12.51%、税前-37.89%、税後-38.13%。現行メタ版701日の税前+5.44%との差は大きいが、採用日数が異なり全部を先読みと断定しない。`preopen_gap_ablation_20260917.md`参照。研究用ルールは本番登録しない。
 - 日別内訳では現行701日はすべてgapなし版にも含まれる。共通日のグロス平均は現行+21.86bps、gapなし+4.80bps。gapなし版だけの89日はコスト後合計マイナス。主な差は当日gapによる銘柄除外・ウェイト変更であり、同値約定の実現性は未検証。
@@ -34,6 +34,8 @@
 ## 再実行・検証
 
 - 外部コードを`/tmp/subspace-pca-leadlag`にcloneした場合: `.venv/bin/python scripts/reports/compare_external_pca.py --external-repo /tmp/subspace-pca-leadlag`
+- 前日比入力差: `PYTHONPATH=src .venv/bin/python scripts/reports/analyze_return_alignment.py`。
+- PCA前日比順序・執行カレンダー・本番再現: `PYTHONPATH=src .venv/bin/python scripts/reports/compare_return_order_pca.py`。ローカル調整価格キャッシュのみ使い、外部取得しない。結果の読み方は`return_order_pca_20260917.md`。
 - 保有期間: `.venv/bin/python scripts/reports/validate_signal_horizons.py`
 - 寄りgap除外比較: 本番設定JSONを`JUSLAG_BACKTEST_SETTINGS_JSON`へ設定し、`.venv/bin/python scripts/reports/compare_preopen_baseline.py`。外部取得をモックしてローカル価格キャッシュのみ利用。出力は`/tmp/juslag_preopen_comparison.json`。同ファイルは一時ファイルなので、コンパクト後も必要なら再実行。研究用ルール`PreopenNoGap`は本番レジストリに未登録。
 - 2026-09-17の休日対応後、`/tmp/juslag_repaired_compare_v2/reports/2026-09-16.json`に再計算済み（作業環境の一時ファイル）。レポートは`backtest_recheck_20260917.md`。
