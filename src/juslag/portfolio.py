@@ -7,6 +7,16 @@ from juslag.config import ExecutionCostConfig
 BUSINESS_DAYS_PER_YEAR = 252
 
 
+def _next_jp_session_values(frame: pd.DataFrame, signal_dates: pd.Index) -> pd.DataFrame:
+    """Align each signal with the first observed JP session strictly after it."""
+    frame = frame.sort_index()
+    positions = frame.index.searchsorted(signal_dates, side="right")
+    valid = positions < len(frame)
+    aligned = frame.iloc[positions[valid]].copy()
+    aligned.index = signal_dates[valid]
+    return aligned.reindex(signal_dates)
+
+
 def _apply_short_constraints(
     short_mask: pd.Series,
     allow_short: bool,
@@ -31,7 +41,7 @@ def build_portfolio_returns_detail(
 ) -> pd.DataFrame:
     """Build equal-weight long/short returns with cost breakdown per day."""
     cfg = execution_costs or ExecutionCostConfig()
-    jp_oc_aligned = jp_oc.shift(-1)
+    jp_oc_aligned = _next_jp_session_values(jp_oc, signal_df.index)
     rows: list[dict[str, object]] = []
 
     borrow_rate_daily = cfg.short_borrow_rate_annual / BUSINESS_DAYS_PER_YEAR
@@ -149,8 +159,8 @@ def build_portfolio_with_strategy_rule(
     from juslag.strategies.context import StrategyContext
 
     cfg = execution_costs or ExecutionCostConfig()
-    jp_oc_aligned = jp_oc.shift(-1)
-    gap_next = overnight_gap_df.shift(-1)
+    jp_oc_aligned = _next_jp_session_values(jp_oc, signal_df.index)
+    gap_next = _next_jp_session_values(overnight_gap_df.reindex(jp_oc.index), signal_df.index)
     borrow_rate_daily = cfg.short_borrow_rate_annual / BUSINESS_DAYS_PER_YEAR
     rows: list[dict[str, object]] = []
 
@@ -169,7 +179,7 @@ def build_portfolio_with_strategy_rule(
         hi = sig_c.quantile(1.0 - q)
 
         # The signal at t is executed at the next JP open, not at t's open.
-        gap_t = gap_next.loc[t] if t in gap_next.index else pd.Series(dtype=float)
+        gap_t = gap_next.loc[t].dropna() if t in gap_next.index else pd.Series(dtype=float)
         open_gap = float(gap_t.mean()) if not gap_t.empty else None
 
         long_cands = sig_c.index[sig_c >= hi].tolist()

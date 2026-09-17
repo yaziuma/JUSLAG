@@ -1,6 +1,17 @@
 import pandas as pd
 
-from juslag.portfolio import build_portfolio
+from juslag.portfolio import _next_jp_session_values, build_portfolio
+
+
+def test_next_jp_session_skips_jp_holiday_and_us_holiday() -> None:
+    jp_dates = pd.to_datetime(["2025-01-10", "2025-01-14", "2025-01-15"])
+    signal_dates = pd.to_datetime(["2025-01-10", "2025-01-13", "2025-01-14", "2025-01-15"])
+    frame = pd.DataFrame({"A": [0.01, 0.02, 0.03]}, index=jp_dates)
+
+    aligned = _next_jp_session_values(frame, signal_dates)
+
+    assert aligned["A"].iloc[:3].tolist() == [0.02, 0.02, 0.03]
+    assert pd.isna(aligned["A"].iloc[3])
 
 
 def test_build_portfolio_returns_series_non_empty() -> None:

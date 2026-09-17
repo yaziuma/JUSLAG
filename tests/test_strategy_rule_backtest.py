@@ -45,6 +45,53 @@ def _make_data(n_days: int = 10, n_tickers: int = 9):
 
 
 class TestBuildPortfolioWithStrategyRule:
+    def test_jp_holiday_signal_uses_next_jp_return_and_gap(self):
+        signal_df, jp_oc, gap_df = _make_data()
+        signal_df = signal_df.iloc[:2].copy()
+        signal_df.index = pd.to_datetime(["2025-01-04", "2025-01-06"])
+        observed = []
+
+        class RecordingRule(StrategyRule):
+            rule_id = "recording"
+            rule_name_ja = "recording"
+            description_ja = "recording"
+            default_strategy = "curr_oc"
+
+            def decide(self, ctx):
+                observed.append(ctx.open_gap)
+                return StrategyDecision(
+                    selected_strategy="curr_oc", action="execute", rule_id=self.rule_id,
+                    rule_name_ja=self.rule_name_ja, reason_ja="test",
+                )
+
+        gap_df.loc[gap_df.index[2]] = 0.02
+        result = build_portfolio_with_strategy_rule(signal_df, jp_oc, gap_df, None, RecordingRule())
+        assert not result.empty
+        assert observed == pytest.approx([0.02, 0.0])
+
+    def test_missing_execution_day_gap_does_not_use_later_gap(self):
+        signal_df, jp_oc, gap_df = _make_data()
+        signal_df = signal_df.iloc[:1]
+        gap_df = gap_df.drop(jp_oc.index[1])
+        gap_df.loc[jp_oc.index[2]] = 0.03
+        observed = []
+
+        class RecordingRule(StrategyRule):
+            rule_id = "recording"
+            rule_name_ja = "recording"
+            description_ja = "recording"
+            default_strategy = "curr_oc"
+
+            def decide(self, ctx):
+                observed.append(ctx.open_gap)
+                return StrategyDecision(
+                    selected_strategy="curr_oc", action="execute", rule_id=self.rule_id,
+                    rule_name_ja=self.rule_name_ja, reason_ja="test",
+                )
+
+        build_portfolio_with_strategy_rule(signal_df, jp_oc, gap_df, None, RecordingRule())
+        assert observed == [None]
+
     def test_gap_context_uses_execution_day_not_signal_day(self):
         signal_df, jp_oc, gap_df = _make_data()
         observed = []
