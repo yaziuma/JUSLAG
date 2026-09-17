@@ -172,5 +172,7 @@ def test_build_daily_report_includes_comparable_paper_backtest() -> None:
     assert comparison["paper_aligned"]["strategy_name"] == "PCA SUB"
     assert comparison["paper_aligned"]["price_mode"] == "adjusted"
     assert comparison["paper_aligned"]["strategy_rule_id"] is None
+    assert comparison["current"]["same_open_gap_assumption"] is True
+    assert comparison["paper_aligned"]["same_open_gap_assumption"] is False
     assert comparison["paper_aligned"]["metrics"]["net_after_tax_ar_pct"] == 4.2
     assert comparison["shared_cost_assumptions"]["slippage_bps_per_side"] == params.slippage_bps_per_side

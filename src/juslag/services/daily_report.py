@@ -128,6 +128,7 @@ def _comparison_entry(label: str, bt: dict, params: BacktestParams, note: str) -
         "sample_end": params.sample_end,
         "eval_start": bt.get("eval_start"),
         "strategy_rule_id": params.strategy_rule_id,
+        "same_open_gap_assumption": bool(params.strategy_rule_id),
         "judge": {
             "overall_score": judge.get("overall_score"),
             "overall_decision": judge.get("overall_decision"),

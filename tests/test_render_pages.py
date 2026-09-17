@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from juslag.services.site import load_history, load_reports, render_site
+from juslag.services.site import _final_actionable, load_history, load_reports, render_site
 
 
 def _write_report(reports_dir: Path, date: str, tradeable: bool) -> None:
@@ -184,6 +184,7 @@ def test_render_site_produces_index_and_report_pages(tmp_path: Path) -> None:
     assert "visibleCount: 20" in index_html
     assert "さらに表示" in index_html
     assert "論文準拠 vs 現行運用" in index_html
+    assert "この成績は執行可能性未検証" in index_html
     assert "共通コスト設定" in index_html
     assert "adjusted" in index_html
 
@@ -201,6 +202,19 @@ def test_render_site_produces_index_and_report_pages(tmp_path: Path) -> None:
     assert "80" in report_html
     assert "テスト判定理由テキスト" in report_html
     assert "論文準拠 vs 現行運用" in report_html
+    assert "シグナル候補" in report_html
 
     # サイト全体にJSONファイルは出力しない（HTML単位でパスワード保護するため）
     assert not any(out_dir.rglob("*.json"))
+
+
+def test_same_open_gap_rule_cannot_be_final_actionable() -> None:
+    report = {
+        "daily_signal": {"tradeable": True},
+        "backtest": {"judge": {"overall_decision": "pass"}},
+        "backtest_comparison": {"current": {"strategy_rule_id": "rule_406_no_flip"}},
+    }
+    assert _final_actionable(report) is False
+
+    report["backtest_comparison"]["current"]["same_open_gap_assumption"] = False
+    assert _final_actionable(report) is True

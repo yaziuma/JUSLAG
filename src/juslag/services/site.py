@@ -227,10 +227,17 @@ def _decision_variant(decision: str | None) -> str:
     return _DECISION_VARIANTS.get(decision or "", "secondary")
 
 
+def _same_open_gap_assumption(report: dict) -> bool:
+    comparison_current = (report.get("backtest_comparison") or {}).get("current") or {}
+    params = (report.get("backtest") or {}).get("params") or {}
+    rule_id = comparison_current.get("strategy_rule_id") or params.get("strategy_rule_id")
+    return bool(comparison_current.get("same_open_gap_assumption", bool(rule_id)))
+
+
 def _final_actionable(report: dict) -> bool:
     ds = report.get("daily_signal") or {}
     judge = (report.get("backtest") or {}).get("judge") or {}
-    return bool(ds.get("tradeable")) and judge.get("overall_decision") == "pass"
+    return bool(ds.get("tradeable")) and judge.get("overall_decision") == "pass" and not _same_open_gap_assumption(report)
 
 
 def _money(value: object) -> str:
@@ -343,6 +350,11 @@ def _backtest_comparison(report: dict) -> str:
         return f"{_esc(decision)} / {_esc(score if score is not None else '-')}点"
 
     shared = comparison.get("shared_cost_assumptions") or {}
+    gap_warning = (
+        '<p class="small text-warning-emphasis mb-2">現行メタ版は当日寄りgapで判断し、同じ寄り値で約定する前提です。'
+        'この成績は執行可能性未検証のため、発注判断には使えません。</p>'
+        if current.get("same_open_gap_assumption", bool(current.get("strategy_rule_id"))) else ""
+    )
     rows = [
         ("戦略", current.get("strategy_name"), paper.get("strategy_name")),
         ("価格系列", current.get("price_mode"), paper.get("price_mode")),
@@ -371,6 +383,7 @@ def _backtest_comparison(report: dict) -> str:
         '<h2 class="h6 text-heading mb-2">論文準拠 vs 現行運用</h2>'
         '<p class="small text-muted-soft mb-3">論文準拠は調整済み価格・PCA SUB単体・上下30%等ウェイト。'
         '掲載値の転載ではなく、現行と同じ期間・コスト実装で再計算した比較です。</p>'
+        f'{gap_warning}'
         '<div class="table-responsive"><table class="table table-sm align-middle mb-2">'
         '<thead><tr><th>比較項目</th><th>現行運用</th><th>論文準拠</th></tr></thead>'
         f'<tbody>{body}</tbody></table></div>'
@@ -395,6 +408,8 @@ def _render_index(history: list[dict], reports: list[dict]) -> str:
         decision_reason = _cls_label(latest_ds.get("no_trade_classification"))
     elif judge_decision == "reject":
         decision_reason = "注文候補は生成済み / モデル審査で却下"
+    elif _same_open_gap_assumption(latest_report):
+        decision_reason = "当日寄りgap判断後の同値約定が未検証 / 発注不可"
     elif judge_decision == "pass":
         decision_reason = "シグナル条件・モデル審査ともに通過"
     else:
@@ -639,7 +654,7 @@ def _summary_table(report: dict) -> str:
     rotation = _rotation_regime(ds)
 
     if tradeable:
-        exec_cell = '<span class="badge text-bg-success">執行</span>'
+        exec_cell = '<span class="badge text-bg-success">候補あり</span>'
     else:
         reason = ds.get("trade_block_reason")
         exec_cell = (
@@ -650,7 +665,7 @@ def _summary_table(report: dict) -> str:
     rows: list[tuple[str, str]] = [
         ("執行対象日 (JP)", _esc(ds.get("execution_target_jp_date")) or "-"),
         ("参照日 (US)", _esc(ds.get("signal_reference_us_date")) or "-"),
-        ("執行可否", exec_cell),
+        ("シグナル候補", exec_cell),
         (
             "見送り分類",
             f'<span class="badge text-bg-{_cls_variant(cls)}">{_esc(_cls_label(cls))}</span>'
