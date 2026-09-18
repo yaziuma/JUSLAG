@@ -5,7 +5,7 @@ import hashlib
 from pathlib import Path
 from typing import Any
 
-from juslag.turso_store import load_snapshot, read_snapshot
+from juslag.turso_store import ensure_schema, load_snapshot, publish_snapshot, read_snapshot
 
 
 ROLLOUT_DATE = "2026-09-18"
@@ -43,3 +43,27 @@ def plan_reconciliation(
                 "run_id": f"reconcile:{path.stem}:{snapshot['content_hash'][:16]}:{fingerprint}",
             })
     return repairs
+
+
+def repair_snapshots(
+    conn: Any, repairs: list[dict[str, Any]], *, source_commit: str, published_at_utc: str,
+) -> None:
+    if not repairs:
+        return
+    ensure_schema(conn)
+    conn.push()
+    for item in repairs:
+        publish_snapshot(
+            conn, item["snapshot"], run_id=item["run_id"],
+            source_commit=source_commit, published_at_utc=published_at_utc,
+        )
+        # A previous push may have failed after the local commit; always retry it.
+        conn.push()
+
+
+def verify_repairs(conn: Any, repairs: list[dict[str, Any]]) -> None:
+    for item in repairs:
+        snapshot = item["snapshot"]
+        stored = read_snapshot(conn, report_date=snapshot["report_date"])
+        if stored is None or stored["content_hash"] != snapshot["content_hash"]:
+            raise ValueError("Cloud readback mismatch")

@@ -8,8 +8,7 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from juslag.turso_reconcile import ROLLOUT_DATE, plan_reconciliation
-from juslag.turso_store import ensure_schema, publish_snapshot, read_snapshot
+from juslag.turso_reconcile import ROLLOUT_DATE, plan_reconciliation, repair_snapshots, verify_repairs
 from turso_daily import connect
 
 
@@ -39,25 +38,15 @@ def main() -> None:
                 raise SystemExit(2)
             if len(repairs) > args.max_repairs:
                 raise ValueError("repair count exceeds --max-repairs")
-            ensure_schema(conn)
-            conn.push()
             source_commit = os.getenv("GITHUB_SHA") or subprocess.check_output(
                 ["git", "rev-parse", "HEAD"], text=True,
             ).strip()
-            for item in repairs:
-                inserted = publish_snapshot(
-                    conn, item["snapshot"], run_id=item["run_id"],
-                    source_commit=source_commit,
-                    published_at_utc=datetime.now(timezone.utc).isoformat(),
-                )
-                if inserted:
-                    conn.push()
+            repair_snapshots(
+                conn, repairs, source_commit=source_commit,
+                published_at_utc=datetime.now(timezone.utc).isoformat(),
+            )
             verifier = connect(root_path / "verify.db")
-            for item in repairs:
-                snapshot = item["snapshot"]
-                stored = read_snapshot(verifier, report_date=snapshot["report_date"])
-                if stored is None or stored["content_hash"] != snapshot["content_hash"]:
-                    raise ValueError("Cloud readback mismatch")
+            verify_repairs(verifier, repairs)
             print(f"PASS: reconciled {len(repairs)} date(s)")
     except Exception as exc:  # noqa: BLE001 - SDK errors may contain credentials
         raise SystemExit(f"Turso reconciliation failed: {type(exc).__name__}") from None

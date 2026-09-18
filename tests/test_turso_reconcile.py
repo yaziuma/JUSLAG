@@ -3,7 +3,7 @@ import sqlite3
 
 import pytest
 
-from juslag.turso_reconcile import plan_reconciliation
+from juslag.turso_reconcile import plan_reconciliation, repair_snapshots, verify_repairs
 from juslag.turso_store import ensure_schema, publish_snapshot
 
 
@@ -69,3 +69,32 @@ def test_rollout_boundary_and_filename_validation(tmp_path):
     }), encoding="utf-8")
     with pytest.raises(ValueError, match="report date differs"):
         plan_reconciliation(conn, reports, history)
+
+
+def test_failed_push_is_retried_even_when_row_exists(tmp_path):
+    reports, history = _files(tmp_path)
+
+    class FlakyConnection:
+        def __init__(self):
+            self.db = sqlite3.connect(":memory:")
+            self.pushes = 0
+
+        def execute(self, *args):
+            return self.db.execute(*args)
+
+        def commit(self):
+            self.db.commit()
+
+        def push(self):
+            self.pushes += 1
+            if self.pushes == 2:
+                raise ConnectionError("push failed")
+
+    conn = FlakyConnection()
+    repairs = plan_reconciliation(conn, reports, history)
+    with pytest.raises(ConnectionError, match="push failed"):
+        repair_snapshots(conn, repairs, source_commit="abc", published_at_utc="2026-09-18T01:00Z")
+    assert conn.db.execute("SELECT count(*) FROM juslag_daily_snapshots").fetchone()[0] == 1
+    repair_snapshots(conn, repairs, source_commit="abc", published_at_utc="2026-09-18T01:00Z")
+    assert conn.pushes == 4
+    verify_repairs(conn, repairs)
