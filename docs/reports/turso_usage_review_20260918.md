@@ -27,4 +27,6 @@
 
 毎週と、大量の手動再送・DB構造変更の前後に、認証済みSSH端末で `turso plan show`、`turso db inspect juslagdb` を確認する。増分測定では集計遅延を考慮して翌日も再確認し、実行前後の累計差を記録する。閾値超過ならTursoジョブ停止後、既存のGit正本から復旧できることを照合する。
 
+定期照合の10回ゲートは `python3 scripts/ops/check_turso_reconcile_streak.py` で確認できる。GitHub CLIの認証が必要で、手動実行は数えない。各定期実行が成功し、ログに要修復0日の監査結果がある場合のみ連続件数に含める。対象100件より古い履歴は調べず、終了コード1は未達を示す。2026-09-18時点は手動実行2件、定期実行0件で、ゲート未達。
+
 公式[CLIの契約表示](https://docs.turso.tech/cli)、[組織の契約API](https://docs.turso.tech/api-reference/organizations/subscription)、[プランAPI](https://docs.turso.tech/api-reference/organizations/plans)を確認した。今回調べた公式資料には利用量閾値の自動通知設定は見当たらず、標準機能がないと断定はしない。次の判断は、管理APIトークンを追加してActionsで自動監視するか、当面の小規模運用では手動週次確認を続けるか。どちらの場合も定常10回の照合・使用量推移の記録が必要。
