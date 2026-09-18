@@ -54,3 +54,5 @@ JUSLAG_WRITE_TURSO=1 uv run --frozen --extra turso python scripts/ops/turso_reco
 本番Cloudを変更せずに復旧経路を試すには、公式`tursodb`実行ファイルを指定して`uv run --frozen --extra turso python scripts/ops/turso_recovery_drill.py --server-bin /path/to/tursodb`を実行する。スクリプトは一時DB・localhostのSyncサーバーを作り、欠落、差分、切断中のpush失敗、復帰後の再送を検証して終了する。
 
 Sync方式ではActionsの一時DBが毎回Cloudから`pull()`する。これは履歴が増えるほど初回同期量を消費する。現時点の小規模実測は`docs/reports/turso_b0_poc_20260918.md`に記録。運用開始後は`Turso db inspect`で同期量を追い、DB全体の増加によって月間3 GB枠に近づく前に直接書込方式か保持期間を再評価する。ブラウザからのCloud直接接続は行わない。
+
+2026-09-18の現契約・使用量、暫定の監視閾値と停止条件は[利用量レビュー](reports/turso_usage_review_20260918.md)に記録した。枠の数値は固定せず、`turso plan show`で再確認する。利用量閾値の自動通知は未実装であり、照合失敗時のSlack通知と区別する。
