@@ -141,4 +141,5 @@ fi
 
 emit_output llm_status "$LLM_STATUS"
 emit_output slack_status "$SLACK_STATUS"
+emit_output report_date "$JST_DATE"
 echo "[done] date=${JST_DATE} llm=${LLM_STATUS} slack=${SLACK_STATUS} report=${REPORT}"

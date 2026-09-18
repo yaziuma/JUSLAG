@@ -33,6 +33,7 @@ jobs:
     outputs:
       llm_status: ${{ steps.batch.outputs.llm_status }}
       slack_status: ${{ steps.batch.outputs.slack_status }}
+      report_date: ${{ steps.batch.outputs.report_date }}
     steps:
       - uses: actions/checkout@v4
 
@@ -110,6 +111,39 @@ jobs:
         run: |
           echo "Slack notification failed (data was still committed)"
           exit 1
+
+  turso:
+    if: ${{ vars.JUSLAG_WRITE_TURSO == 'true' && !inputs.dry_run }}
+    needs: research
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull finalized daily files
+        run: git pull --ff-only
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Turso dependency
+        run: uv sync --frozen --extra turso
+
+      - name: Publish and verify daily snapshot
+        env:
+          JUSLAG_WRITE_TURSO: "1"
+          JUSLAG_TURSO_DATABASE_URL: ${{ vars.JUSLAG_TURSO_DATABASE_URL }}
+          JUSLAG_TURSO_AUTH_TOKEN: ${{ secrets.JUSLAG_TURSO_AUTH_TOKEN }}
+          REPORT_DATE: ${{ needs.research.outputs.report_date }}
+        run: |
+          test -n "$JUSLAG_TURSO_DATABASE_URL" || { echo "::error::Turso URL is missing"; exit 1; }
+          test -n "$JUSLAG_TURSO_AUTH_TOKEN" || { echo "::error::Turso token is missing"; exit 1; }
+          test -n "$REPORT_DATE" || { echo "::error::report date is missing"; exit 1; }
+          uv run --frozen --extra turso python scripts/ops/turso_daily.py publish \
+            --report "data/reports/${REPORT_DATE}.json"
 
   site:
     # 閲覧用静的サイトのデプロイ（初期OFF。有効化: gh variable set ENABLE_SITE_DEPLOY --body true）

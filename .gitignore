@@ -16,9 +16,10 @@
 # Tracked directories
 !docs/
 !docs/**
-!skills/
-!skills/**/
-!skills/**/SKILL.md
+!.agents/
+!.agents/skills/
+!.agents/skills/**/
+!.agents/skills/**/SKILL.md
 !scripts/
 !scripts/**
 !tests/

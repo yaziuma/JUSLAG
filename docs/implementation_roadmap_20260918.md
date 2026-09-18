@@ -44,7 +44,7 @@
 1. Turso CloudのDBエンジン種別、Python書き込みSDK、同期SDK、利用上限・費用、バックアップ/復元、リージョンを現行公式ドキュメントと小さな実験で確定する。旧libSQL Embedded Replicasと新Turso Syncを混同しない。SQLite互換性も必要なSQL/JSON関数・トランザクションで確認する。
 2. ローカル同期サーバーで「Pythonから書く、別クライアントで読む、切断後に復帰する」を試す。Cloudはその後に最小データで試す。GitHub Actions Secretに書込資格情報を置き、ログ・成果物・DB行へ漏らさない。
 3. Viewerの公開範囲を先に確定する。非公開データの場合、静的PagesのJavaScriptへ固定DB tokenを埋め込まない。認証付き読み取りAPI、短命かつ適切に限定した資格情報、または認証済み静的スナップショットのいずれかを比較し、脅威モデルと運用負担で選ぶ。read-only tokenでも漏えいすれば全読取可能範囲が露出する。
-4. Cloud読取・同期を増やす設計では、[Turso利用量レビューskill](../skills/juslag-turso-usage/SKILL.md)に沿ってクエリ計画、呼出頻度、キャッシュ、実測使用量、警告と縮退手順を確認する。記事の無料枠数値やNext.js対策を固定要件にはしない。
+4. Cloud読取・同期を増やす設計では、[Turso利用量レビューskill](../.agents/skills/juslag-turso-usage/SKILL.md)に沿ってクエリ計画、呼出頻度、キャッシュ、実測使用量、警告と縮退手順を確認する。記事の無料枠数値やNext.js対策を固定要件にはしない。
 
 **B0ゲート:** Cloudを使わないローカルPoC、Secret非露出検査、読み取り認証方針、費用上限の確認。未達ならCloud/Viewer開発へ進まない。
 
@@ -76,9 +76,9 @@ B1/B2が安定してから、日次生成物のGit commit削減と旧Pages縮退
 
 | 順 | 実施単位 | 依存 | 状態 |
 | --- | --- | --- | --- |
-| 1 | A1 情報時刻監査、A2のデータ取得要件を確定 | なし | 未着手 |
-| 2 | B0 SDK/同期/認証/費用PoC | なし。Aと並行可 | 一部実測、[記録](reports/turso_b0_poc_20260918.md)。ゲート未達 |
-| 3 | B1 スキーマ・publisher・二重書き・照合 | B0通過 | 未着手 |
+| 1 | A1 情報時刻監査、A2のデータ取得要件を確定 | なし | [一次監査](reports/information_time_audit_20260918.md)済み。日別検査と取得時刻の実測は未完 |
+| 2 | B0 SDK/同期/認証/費用PoC | なし。Aと並行可 | ローカルSync・Cloud最小書込/読取を実測、[記録](reports/turso_b0_poc_20260918.md)。ゲート未達 |
+| 3 | B1 スキーマ・publisher・二重書き・照合 | B0通過 | 単一スナップショットの試験実装中。Cloudローカル書込/読取成功、Actions未検証、ゲート未達 |
 | 4 | A2 実データで約定検証、A3 代替戦略評価 | A1、取得データ | 未着手 |
 | 5 | B2 認証付きViewerとローカルDB採否 | B0/B1通過 | 未着手 |
 | 6 | B3 旧経路縮退、B4 PriceCache比較 | B1/B2の安定運用 | 未着手 |

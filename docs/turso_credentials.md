@@ -20,4 +20,21 @@ gh variable set JUSLAG_TURSO_DATABASE_URL --body "$JUSLAG_TURSO_DATABASE_URL" --
 unset JUSLAG_TURSO_AUTH_TOKEN JUSLAG_TURSO_DATABASE_URL
 ```
 
-現時点ではworkflowにTurso書込処理がないため、Secretsを設定しても二重書きは始まらない。ブラウザ閲覧にはこの書込トークンを使わず、認証方式の決定後に権限を分離する。
+ブラウザ閲覧にはこの書込トークンを使わず、認証方式の決定後に権限を分離する。
+
+## 日次スナップショットの読み書き
+
+`pyturso==0.7.2`を`pyproject.toml`の`turso` extraとして固定した。ローカルでは次のように使う。書込は`JUSLAG_WRITE_TURSO=1`を明示したときだけ有効。`read`は指定日の最新runをJSONに書き出し、出力ファイルは600で新規作成する。
+
+```bash
+set -a; source .env.turso; set +a
+uv sync --frozen --extra turso
+JUSLAG_WRITE_TURSO=1 uv run --frozen --extra turso python scripts/ops/turso_daily.py publish --report data/reports/2026-09-18.json
+uv run --frozen --extra turso python scripts/ops/turso_daily.py read --date 2026-09-18 --out /tmp/juslag-readback.json
+```
+
+Actionsの`daily-juslag.yml`は`JUSLAG_WRITE_TURSO`リポジトリ変数が`true`の時だけ、研究結果のGit保存後に独立したTursoジョブを実行する。URLは`JUSLAG_TURSO_DATABASE_URL`変数、書込トークンは`JUSLAG_TURSO_AUTH_TOKEN` Secretを使う。研究・Git・Pages・SlackはTursoジョブの失敗から独立している。手動の`turso-smoke.yml`では、指定した既存日付をGitHub Actionsから書き込み・読み戻して照合できる。トークンは30日で期限切れとなるため、期限前に更新してActions Secretも同時更新する。
+
+保存形式は`juslag_daily_snapshots`の1行にレポートJSON、確定要約、LLM状態、生成時刻、コードSHA、内容SHA-256を格納する。同じ`run_id`で内容が変わった場合は上書きせず失敗する。同日再実行は別runとして残り、読取ではその日の最新公開runを返す。ファイルが正本であり、Turso失敗時はGit上の結果を再確認してから手動再送する。`turso-smoke`は既存データで読書きするため、本番の次回予定日を指定しない。
+
+Sync方式ではActionsの一時DBが毎回Cloudから`pull()`する。これは履歴が増えるほど初回同期量を消費する。現時点の小規模実測は`docs/reports/turso_b0_poc_20260918.md`に記録。運用開始後は`Turso db inspect`で同期量を追い、DB全体の増加によって月間3 GB枠に近づく前に直接書込方式か保持期間を再評価する。ブラウザからのCloud直接接続は行わない。

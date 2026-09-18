@@ -28,7 +28,7 @@
 ## Turso化の現在地（2026-09-18）
 
 - ユーザー提供の`docs/JUSLAG_Turso化計画書_2026-09-18.md`を取り込み済み。実施順は`docs/implementation_roadmap_20260918.md`を基準とし、戦略の執行可能性検証と保存・閲覧基盤を別トラックにする。基盤完成は実売買の許可を意味しない。
-- `skills/juslag-turso-usage/SKILL.md`は、ZennのTurso読み取り使用量急増事例を踏まえ、クエリ計画・Cloud使用量・キャッシュ・公開経路・警告/縮退をレビューするためのリポジトリ内skill。Next.js/Cloudflare固有策や当時の無料枠数値をJUSLAGへそのまま適用しない。
+- `.agents/skills/juslag-turso-usage/SKILL.md`は、ZennのTurso読み取り使用量急増事例を踏まえ、クエリ計画・Cloud使用量・キャッシュ・公開経路・警告/縮退をレビューするためのリポジトリ内skill。Next.js/Cloudflare固有策や当時の無料枠数値をJUSLAGへそのまま適用しない。
 - ユーザーはTurso Cloudに`juslagdb`を作成。現状はActionsの単一writerが想定なので、組織のconcurrent writesは不要。TursoDB/Syncは別PoCでSDK・互換性・認証を検証し、既存SQLite価格キャッシュは維持する。
 - `scripts/ops/setup_turso_credentials.sh`でDB URLと30日期限の書込トークンをローカル`.env.turso`に保存済み。`.env.turso`はGit管理外、権限600。**値を表示・記録・commitしない。** 手順は`docs/turso_credentials.md`。初回スクリプトはCLI未ログイン文を値として保存するバグがあったが、URL/JWT形式検証を追加して修正済み。ユーザーがログイン後に`--replace`で再作成した。
 - 保存トークンによるDB直接アクセスを確認済み: HTTP 200、`SELECT 1`は1、トランザクション内の検証用テーブル作成は成功、`ROLLBACK`後の同名テーブル数は0。これは認証・基本的な読み書きの検証のみで、Cloud Sync書込、JUSLAG用スキーマ、publisher、Actions Secret、二重書き、Viewerは未実装・未検証。

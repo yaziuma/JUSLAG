@@ -5,7 +5,7 @@ description: Review JUSLAG Turso storage or viewer changes for query cost, sync 
 
 # JUSLAG Turso Usage Review
 
-Apply this skill when a JUSLAG change adds or modifies a Turso-backed read, synchronization job, or public viewer path. Follow the [integrated roadmap](../../docs/implementation_roadmap_20260918.md); this review does not authorize Cloud provisioning, deployment, paid upgrades, or live trading.
+Apply this skill when a JUSLAG change adds or modifies a Turso-backed read, synchronization job, or public viewer path. Follow the [integrated roadmap](../../../docs/implementation_roadmap_20260918.md); this review does not authorize Cloud provisioning, deployment, paid upgrades, or live trading.
 
 ## Review the actual workload
 

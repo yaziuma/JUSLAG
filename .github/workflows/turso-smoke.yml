@@ -1,0 +1,45 @@
+name: turso-smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      report_date:
+        description: "既存の日次レポート日付 (YYYY-MM-DD)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish-read:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --frozen --extra turso
+
+      - name: Publish and read back
+        env:
+          JUSLAG_WRITE_TURSO: "1"
+          JUSLAG_TURSO_DATABASE_URL: ${{ vars.JUSLAG_TURSO_DATABASE_URL }}
+          JUSLAG_TURSO_AUTH_TOKEN: ${{ secrets.JUSLAG_TURSO_AUTH_TOKEN }}
+          REPORT_DATE: ${{ inputs.report_date }}
+        run: |
+          [[ "$REPORT_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || exit 2
+          test -n "$JUSLAG_TURSO_DATABASE_URL" || exit 2
+          test -n "$JUSLAG_TURSO_AUTH_TOKEN" || exit 2
+          uv run --frozen --extra turso python scripts/ops/turso_daily.py publish \
+            --report "data/reports/${REPORT_DATE}.json" \
+            --run-id "actions-smoke:${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}"
+          uv run --frozen --extra turso python scripts/ops/turso_daily.py read \
+            --date "$REPORT_DATE" --out "$RUNNER_TEMP/juslag-turso-readback.json"
+          jq -S -c . "data/reports/${REPORT_DATE}.json" > "$RUNNER_TEMP/report.expected"
+          jq -S -c .report "$RUNNER_TEMP/juslag-turso-readback.json" > "$RUNNER_TEMP/report.actual"
+          cmp "$RUNNER_TEMP/report.expected" "$RUNNER_TEMP/report.actual"

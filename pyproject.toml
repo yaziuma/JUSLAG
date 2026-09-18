@@ -20,6 +20,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+turso = [
+  "pyturso==0.7.2",
+]
 dev = [
   "playwright>=1.55",
   "python-dotenv>=1.0",
