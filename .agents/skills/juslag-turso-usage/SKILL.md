@@ -19,4 +19,8 @@ Apply this skill when a JUSLAG change adds or modifies a Turso-backed read, sync
 
 Record the query or sync path, test data size, query plan, measured usage, expected invocation rate, cache freshness rule, budget/alert threshold, and rollback switch. If Cloud usage cannot be observed, the plan cannot be confirmed cost-safe; keep the existing file/Pages route active until measured.
 
+## Regression and diagnosis
+
+For a changed SQL or sync path, add a focused test that fails before the change and passes after it. Use an in-memory SQLite fixture for row-selection and idempotence rules, then a small Cloud readback smoke test when the remote driver or transport behavior is the risk. Compare the same query and representative rows locally and remotely before attributing a mismatch to Turso itself. Capture the failing query, parameters, row counts, and elapsed time without exposing tokens or full data dumps. The upstream [testing](https://github.com/tursodatabase/turso/blob/main/.claude/skills/testing/SKILL.md) and [debugging](https://github.com/tursodatabase/turso/blob/main/.claude/skills/debugging/SKILL.md) skills motivate these checks; their Rust/SQLite-engine commands do not apply to JUSLAG's `libsql` Cloud client.
+
 The [Zenn incident](https://zenn.dev/tukiyubi/articles/9608da84dbb7a5) is a motivating case, not a universal Turso benchmark: a public Next.js/Cloudflare site combined expensive queries, disabled caching, and bot traffic. For mechanics and current limits consult [SQLite EXPLAIN QUERY PLAN](https://www.sqlite.org/eqp.html), [Turso pricing](https://turso.tech/pricing), and the [Turso Cloud documentation](https://docs.turso.tech/).
