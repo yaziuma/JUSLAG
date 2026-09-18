@@ -115,6 +115,48 @@ def production_paper_returns(
     return detail["gross_return"]
 
 
+def reconcile_production_inputs(
+    close: pd.DataFrame,
+    open_: pd.DataFrame,
+    us: list[str],
+    jp: list[str],
+    pretrain_end: str,
+    eval_start: str,
+) -> tuple[pd.DataFrame, dict[str, object]]:
+    """Isolate prior training and signal-row selection on the next-JP fill calendar."""
+    us_close = close[us].dropna(how="all")
+    jp_close = close[jp].dropna(how="all")
+    us_cc, jp_oc, jp_cc = compute_returns(us_close, jp_close, open_[jp].dropna(how="all"))
+    production_rows, _ = build_joint_cc(us_cc, jp_cc)
+    common = us_close.index.intersection(jp_close.index)
+    common_cc = close.loc[common, us + jp].pct_change(fill_method=None)
+    fixed_rows = production_rows.loc[production_rows.index.intersection(common_cc.dropna().index)]
+    v0 = build_prior_eigenvectors(us, jp, US_CYCLICAL, JP_CYCLICAL)
+    common_prior = build_prior_exposure(common_cc.loc[fixed_rows.index].loc[:pretrain_end], v0)
+    production_prior = build_prior_exposure(production_rows.loc[:pretrain_end], v0)
+
+    def gross(rows: pd.DataFrame, prior: object) -> pd.Series:
+        signals = generate_signals(rows[us], rows[jp], prior, l=60, k=3, lam=0.9)
+        detail = build_portfolio_returns_detail(
+            signals.loc[eval_start:], jp_oc.loc[eval_start:],
+            q=0.3, min_long_signal=-1e9, max_short_signal=1e9,
+        )
+        return detail["gross_return"]
+
+    variants = pd.concat({
+        "common_prior_fixed_rows": gross(fixed_rows, common_prior),
+        "production_prior_fixed_rows": gross(fixed_rows, production_prior),
+        "production_prior_production_rows": gross(production_rows, production_prior),
+    }, axis=1).dropna()
+    metadata = {
+        "fixed_return_rows": len(fixed_rows),
+        "production_return_rows": len(production_rows),
+        "production_only_return_dates": [str(d.date()) for d in production_rows.index.difference(fixed_rows.index)],
+        "fixed_only_return_dates": [str(d.date()) for d in fixed_rows.index.difference(production_rows.index)],
+    }
+    return variants, metadata
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--db", default=DEFAULT_DB_PATH)
@@ -139,6 +181,11 @@ def main() -> None:
     production = production_paper_returns(close, open_, us, jp, args.pretrain_end, args.eval_start)
     production_paired = pd.concat({"fixed_panel": execution["next_jp"], "production": production}, axis=1).dropna()
     production_delta = production_paired["production"] - production_paired["fixed_panel"]
+    reconciled, row_metadata = reconcile_production_inputs(
+        close, open_, us, jp, args.pretrain_end, args.eval_start,
+    )
+    prior_delta = reconciled["production_prior_fixed_rows"] - reconciled["common_prior_fixed_rows"]
+    row_delta = reconciled["production_prior_production_rows"] - reconciled["production_prior_fixed_rows"]
     cost = 4 * args.slippage_bps / 10_000
     print(json.dumps({
         "evaluation_start": args.eval_start,
@@ -170,6 +217,14 @@ def main() -> None:
             "production_only_signal_days": len(production.index.difference(execution.index)),
             "production_only_signal_dates": [str(d.date()) for d in production.index.difference(execution.index)],
             "fixed_panel_only_signal_days": len(execution.index.difference(production.index)),
+        },
+        "production_input_attribution": {
+            **row_metadata,
+            "paired_signal_days": len(reconciled),
+            "prior_effect_ar_points": round(float(prior_delta.mean() * 252 * 100), 3),
+            "prior_different_pnl_days": int(prior_delta.abs().gt(1e-10).sum()),
+            "row_selection_effect_ar_points": round(float(row_delta.mean() * 252 * 100), 3),
+            "row_selection_different_pnl_days": int(row_delta.abs().gt(1e-10).sum()),
         },
     }, indent=2))
 
