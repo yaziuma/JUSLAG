@@ -37,6 +37,18 @@ Actionsの`daily-juslag.yml`は`JUSLAG_WRITE_TURSO`リポジトリ変数が`true
 
 2026-09-18時点で`JUSLAG_WRITE_TURSO=true`を設定し、[日次Actions実行](https://github.com/yaziuma/JUSLAG/actions/runs/35310809472)で同期を確認した。問題が起きた場合は`gh variable set JUSLAG_WRITE_TURSO --body false --repo yaziuma/JUSLAG`で次回以降のTursoジョブだけ止める。Git・Pages・Slack経路は継続する。
 
-保存形式は`juslag_daily_snapshots`の1行にレポートJSON、確定要約、LLM状態、生成時刻、コードSHA、内容SHA-256を格納する。同じ`run_id`で内容が変わった場合は上書きせず失敗する。同日再実行は別runとして残り、読取ではその日の最新公開runを返す。ファイルが正本であり、Turso失敗時はGit上の結果を再確認してから手動再送する。`turso-smoke`は既存データで読書きするため、本番の次回予定日を指定しない。
+保存形式は`juslag_daily_snapshots`の1行にレポートJSON、確定要約、LLM状態、生成時刻、コードSHA、内容SHA-256を格納する。同じ`run_id`で内容が変わった場合は上書きせず失敗する。同日再実行は別runとして残り、読取ではその日の最新公開runを返す。ファイルが正本であり、Turso失敗時はGit上の結果を次回の定期照合で再送する。`turso-smoke`は既存データで読書きするため、本番の次回予定日を指定しない。
+
+`turso-reconcile.yml`は平日09:30 JSTに、Git上の確定レポートとCloudの同日最新runを照合し、欠落・差分だけを最大10日分再送する。Git履歴の古いレポートを意図せず一括投入しないよう、既定の開始日は運用開始日の`2026-09-18`。上限超過・読取不能・Cloud読み戻し不一致は失敗としてSlackに通知する。次回定期実行または手動再実行で未修復分を再試行する。修復は既存行を上書きせず新runを追加する。修復runの`source_commit`は照合ワークフローのcommitであり、元レポート生成時のcommitではない。
+
+手動Actions実行は既定で照合のみ（差分があれば終了コード2）。`repair=true`を選ぶと再送する。ローカルでは下記の通り。`--since`を過去日に変えると明示的なバックフィルになるため、事前に件数を確認し、必要なら`--max-repairs`を指定する。
+
+```bash
+set -a; source .env.turso; set +a
+uv run --frozen --extra turso python scripts/ops/turso_reconcile.py
+JUSLAG_WRITE_TURSO=1 uv run --frozen --extra turso python scripts/ops/turso_reconcile.py --repair
+```
+
+ワークフロー停止は`JUSLAG_WRITE_TURSO=false`。照合は実行ごとに一時DBへCloudを1回pullし、修復時は差分をpushした後、別の一時DBで1回pullして読み戻す。対象日ごとにCloudへ個別pullしないが、DB増大に伴うSync使用量は監視する。
 
 Sync方式ではActionsの一時DBが毎回Cloudから`pull()`する。これは履歴が増えるほど初回同期量を消費する。現時点の小規模実測は`docs/reports/turso_b0_poc_20260918.md`に記録。運用開始後は`Turso db inspect`で同期量を追い、DB全体の増加によって月間3 GB枠に近づく前に直接書込方式か保持期間を再評価する。ブラウザからのCloud直接接続は行わない。

@@ -12,4 +12,9 @@
 
 - 旧ファイル、Slack、Pagesを維持する。Tursoジョブは研究完了後の別ジョブなので、Turso障害はそれらを巻き戻さない。停止は`gh variable set JUSLAG_WRITE_TURSO --body false --repo yaziuma/JUSLAG`。30日期限のトークンは期限前に更新し、Actions Secretも更新する。
 - Sync方式はActions一時DBで毎回Cloudをpullする。PoC前の`db inspect`は12 kB/読取41/書込21/Sync 90 kB、Actionsとローカル読取後は98 kB/読取135/書込41/Sync 778 kB。間に複数の試行・照合があり、差分を単一実行の請求量とはみなさない。月間3 GB枠・Overages無効。履歴増大時のbootstrap量を監視する。
-- 全B0/B1ゲートは未達。内部テーブル警告の原因、Cloud再インポート、Cloud障害後の再送、10回連続照合、使用量アラート、認証付きViewerは別途必要。これは研究結果の保存であり、発注許可ではない。
+- 全B0/B1ゲートは未達。内部テーブル警告の原因、Cloud再インポート、10回連続照合、使用量アラート、認証付きViewerは別途必要。これは研究結果の保存であり、発注許可ではない。
+
+## 2026-09-18 照合・再送の追加
+
+- `turso-reconcile.yml`はGit上の運用開始日以降の確定レポートとCloudの最新runを毎平日比較する。欠落・差分を最大10日分修復し、別接続から内容ハッシュを読み戻す。上限超過なら書き込まず失敗、次回再試行する。手動実行は既定で監査のみ。
+- Cloudへのアクセスは一時DBの最初のpull、修復時のpush、別接続の検証pull。対象日数に比例するCloud pullは行わない。Cloud障害・トークン失効時は失敗通知のみでGit正本を維持する。実運用10回連続照合と失敗復旧は今後確認する。

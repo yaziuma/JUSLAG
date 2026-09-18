@@ -1,0 +1,59 @@
+name: turso-reconcile
+
+on:
+  schedule:
+    # Weekdays 09:30 JST, after the scheduled research run.
+    - cron: "30 0 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      repair:
+        description: "Repair missing or different Cloud snapshots"
+        type: boolean
+        default: false
+      since:
+        description: "First report date to audit (YYYY-MM-DD)"
+        type: string
+        default: "2026-09-18"
+
+concurrency:
+  group: turso-reconcile
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  reconcile:
+    if: ${{ vars.JUSLAG_WRITE_TURSO == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: uv sync --frozen --extra turso
+      - name: Audit and optionally repair
+        env:
+          JUSLAG_TURSO_DATABASE_URL: ${{ vars.JUSLAG_TURSO_DATABASE_URL }}
+          JUSLAG_TURSO_AUTH_TOKEN: ${{ secrets.JUSLAG_TURSO_AUTH_TOKEN }}
+          JUSLAG_WRITE_TURSO: ${{ vars.JUSLAG_WRITE_TURSO }}
+          SINCE: ${{ inputs.since || '2026-09-18' }}
+          REPAIR: ${{ github.event_name == 'schedule' || inputs.repair }}
+        run: |
+          test -n "$JUSLAG_TURSO_DATABASE_URL" || { echo "::error::Turso URL is missing"; exit 1; }
+          test -n "$JUSLAG_TURSO_AUTH_TOKEN" || { echo "::error::Turso token is missing"; exit 1; }
+          args=(--since "$SINCE")
+          if [ "$REPAIR" = "true" ]; then args+=(--repair); fi
+          uv run --frozen --extra turso python scripts/ops/turso_reconcile.py "${args[@]}"
+      - name: Notify failure to Slack
+        if: ${{ failure() }}
+        env:
+          JUSLAG_SLACK_WEBHOOK: ${{ secrets.JUSLAG_SLACK_WEBHOOK }}
+        run: |
+          if [ -n "$JUSLAG_SLACK_WEBHOOK" ]; then
+            RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            jq -n --arg text "JUSLAG Turso照合失敗: $RUN_URL" '{text: $text}' \
+              | curl -fsS --max-time 15 -H 'Content-Type: application/json' -d @- "$JUSLAG_SLACK_WEBHOOK" || true
+          fi
