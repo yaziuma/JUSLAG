@@ -5,11 +5,11 @@ import argparse
 import sqlite3
 from pathlib import Path
 
-from juslag.turso_reconcile import ROLLOUT_DATE, plan_reconciliation
+from juslag.turso_reconcile import FIRST_REPORT_DATE, plan_reconciliation
 
 
 def verify_export(
-    db_path: Path, reports_dir: Path, history_path: Path, *, since: str = ROLLOUT_DATE,
+    db_path: Path, reports_dir: Path, history_path: Path, *, since: str = FIRST_REPORT_DATE,
 ) -> tuple[int, int]:
     if not db_path.is_file():
         raise ValueError("export file is missing")
@@ -29,7 +29,7 @@ def main() -> None:
     parser.add_argument("--db", type=Path, required=True)
     parser.add_argument("--reports", type=Path, default=Path("data/reports"))
     parser.add_argument("--history", type=Path, default=Path("data/history.jsonl"))
-    parser.add_argument("--since", default=ROLLOUT_DATE)
+    parser.add_argument("--since", default=FIRST_REPORT_DATE)
     args = parser.parse_args()
     try:
         row_count, mismatch_count = verify_export(

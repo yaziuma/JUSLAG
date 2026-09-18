@@ -8,11 +8,11 @@ from typing import Any
 from juslag.turso_store import ensure_schema, load_snapshot, publish_snapshot, read_snapshot
 
 
-ROLLOUT_DATE = "2026-09-18"
+FIRST_REPORT_DATE = "2026-07-09"
 
 
 def plan_reconciliation(
-    conn: Any, reports_dir: Path, history_path: Path, *, since: str = ROLLOUT_DATE,
+    conn: Any, reports_dir: Path, history_path: Path, *, since: str = FIRST_REPORT_DATE,
 ) -> list[dict[str, Any]]:
     if not reports_dir.is_dir():
         raise ValueError("reports directory is missing")

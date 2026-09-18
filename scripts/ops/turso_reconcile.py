@@ -8,13 +8,13 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from juslag.turso_reconcile import ROLLOUT_DATE, plan_reconciliation, repair_snapshots, verify_repairs
+from juslag.turso_reconcile import FIRST_REPORT_DATE, plan_reconciliation, repair_snapshots, verify_repairs
 from turso_daily import connect
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--since", default=ROLLOUT_DATE)
+    parser.add_argument("--since", default=FIRST_REPORT_DATE)
     parser.add_argument("--reports", type=Path, default=Path("data/reports"))
     parser.add_argument("--history", type=Path, default=Path("data/history.jsonl"))
     parser.add_argument("--repair", action="store_true")

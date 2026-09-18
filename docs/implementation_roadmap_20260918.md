@@ -78,7 +78,7 @@ B1/B2が安定してから、日次生成物のGit commit削減と旧Pages縮退
 | --- | --- | --- | --- |
 | 1 | A1 情報時刻監査、A2のデータ取得要件を確定 | なし | [一次監査](reports/information_time_audit_20260918.md)済み。日別検査と取得時刻の実測は未完 |
 | 2 | B0 SDK/同期/認証/費用PoC | なし。Aと並行可 | ローカルSync・Cloud最小書込/読取を実測、[記録](reports/turso_b0_poc_20260918.md)。ゲート未達 |
-| 3 | B1 スキーマ・publisher・二重書き・照合 | B0通過 | 日次スナップショットの[限定運用](reports/turso_actions_verification_20260918.md)を先行。Actionsで書込・読戻し確認済み。全B1ゲート未達 |
+| 3 | B1 スキーマ・publisher・二重書き・照合 | B0通過 | [既存52日分をCloudへ投入・全日照合](reports/turso_actions_verification_20260918.md)。日次Actionsの書込・読戻しも確認済み。10回連続実行など全B1ゲートは未達 |
 | 4 | A2 実データで約定検証、A3 代替戦略評価 | A1、取得データ | 未着手 |
 | 5 | B2 認証付きViewerとローカルDB採否 | B0/B1通過 | 未着手 |
 | 6 | B3 旧経路縮退、B4 PriceCache比較 | B1/B2の安定運用 | 未着手 |

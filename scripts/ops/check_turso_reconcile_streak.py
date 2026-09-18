@@ -7,7 +7,7 @@ import subprocess
 
 REPO = "yaziuma/JUSLAG"
 WORKFLOW = "turso-reconcile.yml"
-AUDIT_OK = "Audit: 0 date(s) require repair since 2026-09-18"
+AUDIT_OK = "Audit: 0 date(s) require repair since 2026-07-09"
 
 
 def scheduled_runs(runs: list[dict]) -> list[dict]:

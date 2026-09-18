@@ -4,8 +4,8 @@
 
 - 作業場所は`/home/quieter/projects/JUSLAG`。`main`は`origin/main`へpush済み。直近commitは`80af718`（ローカルSync復旧訓練）、その前が`0b0fd24`（Git正本との定期照合・再送）。このメモ作成前の作業ツリーはclean。
 - 本番DBはTurso Cloudの`juslagdb`（SQLite型、東京リージョン）。`.env.turso`はGit管理外・600で、URLと30日期限のトークンを保持する。値を表示・記録・commitしない。Actions Variable `JUSLAG_TURSO_DATABASE_URL`、Secret `JUSLAG_TURSO_AUTH_TOKEN`、Variable `JUSLAG_WRITE_TURSO=true`は設定済み。
-- Gitの`data/reports/*.json`と`data/history.jsonl`が正本。Tursoの`juslag_daily_snapshots`は運用開始日`2026-09-18`以降の複製。過去全件のバックフィルは未実施。旧Pages、Slack、価格SQLiteキャッシュは維持。Tursoの障害は研究結果のGit保存を巻き戻さない。
-- 日次Actionsのpublish後、`.github/workflows/turso-reconcile.yml`が平日09:30 JSTにGitとCloudを照合し、欠落・内容差分を最大10日分再送。手動実行は既定で監査のみ。差分があれば終了コード2。修復は新runを追加し、別接続からハッシュを読み戻す。`JUSLAG_WRITE_TURSO=false`でTursoジョブを停止できる。
+- Gitの`data/reports/*.json`と`data/history.jsonl`が正本。2026-09-18にTursoへ既存51日分をバックフィルし、計52日分・54行を確認した。旧Pages、Slack、価格SQLiteキャッシュは維持。Tursoの障害は研究結果のGit保存を巻き戻さない。
+- 日次Actionsのpublish後、`.github/workflows/turso-reconcile.yml`が平日09:30 JSTに最初のレポート日`2026-07-09`以降のGitとCloudを照合し、欠落・内容差分を最大10日分再送。手動実行は既定で監査のみ。差分があれば終了コード2。修復は新runを追加し、別接続からハッシュを読み戻す。`JUSLAG_WRITE_TURSO=false`でTursoジョブを停止できる。
 - `pyturso==0.7.2`の公式`pull()`/`push()`と、公式`tursodb --sync-server`を使用。Gitとの内容比較、`run_id`の冪等化、再送制御のみJUSLAG固有コード。ブラウザにはトークンを渡さない。
 
 ## 直近の検証

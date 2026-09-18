@@ -55,8 +55,8 @@ def test_changed_git_summary_creates_new_run(tmp_path):
     assert conn.execute("SELECT count(*) FROM juslag_daily_snapshots").fetchone()[0] == 2
 
 
-def test_rollout_boundary_and_filename_validation(tmp_path):
-    reports, history = _files(tmp_path, date="2026-09-17")
+def test_first_report_boundary_and_filename_validation(tmp_path):
+    reports, history = _files(tmp_path, date="2026-07-08")
     conn = sqlite3.connect(":memory:")
     assert plan_reconciliation(conn, reports, history) == []
     with pytest.raises(ValueError):

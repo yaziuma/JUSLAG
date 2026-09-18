@@ -13,7 +13,7 @@ on:
       since:
         description: "First report date to audit (YYYY-MM-DD)"
         type: string
-        default: "2026-09-18"
+        default: "2026-07-09"
 
 concurrency:
   group: turso-reconcile
@@ -39,7 +39,7 @@ jobs:
           JUSLAG_TURSO_DATABASE_URL: ${{ vars.JUSLAG_TURSO_DATABASE_URL }}
           JUSLAG_TURSO_AUTH_TOKEN: ${{ secrets.JUSLAG_TURSO_AUTH_TOKEN }}
           JUSLAG_WRITE_TURSO: ${{ vars.JUSLAG_WRITE_TURSO }}
-          SINCE: ${{ inputs.since || '2026-09-18' }}
+          SINCE: ${{ inputs.since || '2026-07-09' }}
           REPAIR: ${{ github.event_name == 'schedule' || inputs.repair }}
         run: |
           test -n "$JUSLAG_TURSO_DATABASE_URL" || { echo "::error::Turso URL is missing"; exit 1; }
