@@ -79,19 +79,6 @@ jobs:
           SKIP_SLACK: ${{ inputs.skip_slack && '1' || '0' }}
         run: bash scripts/ops/daily_research.sh
 
-      - name: Preserve price cache for Turso
-        if: ${{ vars.JUSLAG_WRITE_TURSO == 'true' && !inputs.dry_run }}
-        run: cp ~/.juslag/prices.db "$RUNNER_TEMP/prices.db"
-
-      - name: Upload price cache for Turso
-        if: ${{ vars.JUSLAG_WRITE_TURSO == 'true' && !inputs.dry_run }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: juslag-prices-${{ github.run_id }}
-          path: ${{ runner.temp }}/prices.db
-          retention-days: 1
-          if-no-files-found: error
-
       - name: Commit and push results
         if: ${{ !inputs.dry_run }}
         run: |
@@ -145,11 +132,17 @@ jobs:
       - name: Install Turso dependency
         run: uv sync --frozen --extra turso
 
-      - name: Download this run's price cache
-        uses: actions/download-artifact@v4
+      - name: Restore this run's price cache
+        id: price_cache
+        uses: actions/cache/restore@v4
         with:
-          name: juslag-prices-${{ github.run_id }}
-          path: _price_cache
+          path: ~/.juslag/prices.db
+          key: juslag-prices-v1-${{ github.run_id }}
+
+      - name: Validate price cache
+        run: |
+          test "${{ steps.price_cache.outputs.cache-hit }}" = "true" || { echo "::error::Exact price cache not found"; exit 1; }
+          test -s ~/.juslag/prices.db || { echo "::error::Price database missing"; exit 1; }
 
       - name: Publish and verify daily snapshot
         env:
@@ -168,7 +161,7 @@ jobs:
         env:
           JUSLAG_TURSO_DATABASE_URL: ${{ vars.JUSLAG_TURSO_DATABASE_URL }}
           JUSLAG_TURSO_AUTH_TOKEN: ${{ secrets.JUSLAG_TURSO_AUTH_TOKEN }}
-        run: uv run --frozen --extra turso python scripts/ops/turso_data.py --prices _price_cache/prices.db
+        run: uv run --frozen --extra turso python scripts/ops/turso_data.py --prices ~/.juslag/prices.db
 
       - name: Notify Turso failure to Slack
         if: ${{ failure() }}
