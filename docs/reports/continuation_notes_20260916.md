@@ -1,5 +1,7 @@
 # 引き継ぎメモ（2026-09-18更新）
 
+> Tursoの最新状態は[2026-09-18の引き継ぎ](continuation_turso_20260918.md)を参照。この文書のTurso節には導入初期の記録が残り、現在の資格情報・Actions設定を表していない。
+
 ## コンパクト後の再開点
 
 - 作業場所: `/home/quieter/projects/JUSLAG`。2026-09-18時点で`main`は`origin/main`と同期。直近push済み: `ad610fb`（TursoローカルSync PoC）、`2e4547d`（切断・復帰PoC）、`e09c08e`（警告の切り分けとCloud読取pull記録）。`docs/.JUSLAG_Turso化計画書_2026-09-18.md.swp`だけが未追跡で、ユーザーのスワップファイルとして触れない。
