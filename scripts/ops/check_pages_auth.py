@@ -36,11 +36,21 @@ def main() -> int:
             password_input = page.locator("#staticrypt-password")
             password_input.wait_for(state="visible", timeout=10_000)
             password_input.fill(password)
+            page.locator("#staticrypt-remember").check()
             page.locator("#staticrypt-form").evaluate("form => form.requestSubmit()")
             page.wait_for_function(
                 "!document.documentElement.classList.contains('staticrypt-html')",
                 timeout=15_000,
             )
+            report = page.locator('a[href^="reports/"][href$=".html"]').first
+            report.wait_for(state="visible", timeout=10_000)
+            report.click()
+            page.wait_for_function(
+                "!document.documentElement.classList.contains('staticrypt-html')",
+                timeout=15_000,
+            )
+            if page.locator("#staticrypt-password").count():
+                raise RuntimeError("password prompt reappeared on the report page")
         except PlaywrightTimeoutError as exc:
             raise RuntimeError(
                 "authentication did not complete; check JUSLAG_SITE_PASSWORD and the deployed site"
@@ -48,7 +58,7 @@ def main() -> int:
         finally:
             browser.close()
 
-    print(f"Pages authentication succeeded: {site_url}")
+    print(f"Pages authentication and remembered report navigation succeeded: {site_url}")
     return 0
 
 

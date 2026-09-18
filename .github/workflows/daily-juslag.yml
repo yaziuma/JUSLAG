@@ -212,8 +212,11 @@ jobs:
           SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
         run: |
           test -n "$SITE_PASSWORD" || { echo "::error::secrets.SITE_PASSWORD is not set"; exit 1; }
+          site_date=$(TZ=Asia/Tokyo date +%F)
+          salt=$(printf 'JUSLAG-staticrypt-v1:%s' "$site_date" | sha256sum | cut -c1-32)
           npx --yes staticrypt --recursive _site -d _site_protected -p "$SITE_PASSWORD" \
-            --short --remember 30 --template-title "JUSLAG Research"
+            --short --remember 1 --salt "$salt" \
+            --template-title "JUSLAG Research"
 
           # staticrypt -r _site -d _site_protected mirrors the input under _site_protected/_site/
           protected_dir="_site_protected/_site"

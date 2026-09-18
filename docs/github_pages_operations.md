@@ -161,11 +161,13 @@ uv run python scripts/ops/check_pages_auth.py
 成功時:
 
 ```text
-Pages authentication succeeded: https://yaziuma.github.io/JUSLAG/
+Pages authentication and remembered report navigation succeeded: https://yaziuma.github.io/JUSLAG/
 ```
 
 `.env.local`はGit管理対象外である。実行スクリプトはパスワードをコマンド引数や
-標準出力へ表示せず、認証フォームへ直接入力する。
+標準出力へ表示せず、認証フォームへ直接入力する。ブラウザでの初回認証時は
+`Remember me`を選ぶ。同じ日本時間の日付に公開された全ページでは、ページ移動や
+同日再デプロイ後も再入力不要となる。翌日の公開ではソルトが変わるため再認証する。
 
 ## 9. パスワード変更手順
 
