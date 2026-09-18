@@ -1,4 +1,4 @@
-"""Immutable daily research snapshots stored through Turso Sync."""
+"""Immutable daily research snapshots stored in Turso."""
 from __future__ import annotations
 
 import hashlib

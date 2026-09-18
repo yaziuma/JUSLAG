@@ -24,7 +24,7 @@ unset JUSLAG_TURSO_AUTH_TOKEN JUSLAG_TURSO_DATABASE_URL
 
 ## 日次スナップショットの読み書き
 
-`pyturso==0.7.2`を`pyproject.toml`の`turso` extraとして固定した。ローカルでは次のように使う。書込は`JUSLAG_WRITE_TURSO=1`を明示したときだけ有効。`read`は指定日の最新runをJSONに書き出し、出力ファイルは600で新規作成する。
+`libsql==0.1.11`（日次のCloud直接接続）と`pyturso==0.7.2`（ローカルSync検証）を`turso` extraに固定した。ローカルでは次のように使う。書込は`JUSLAG_WRITE_TURSO=1`を明示したときだけ有効。`read`は指定日の最新runをJSONに書き出し、出力ファイルは600で新規作成する。
 
 ```bash
 set -a; source .env.turso; set +a
@@ -49,10 +49,10 @@ uv run --frozen --extra turso python scripts/ops/turso_reconcile.py
 JUSLAG_WRITE_TURSO=1 uv run --frozen --extra turso python scripts/ops/turso_reconcile.py --repair
 ```
 
-ワークフロー停止は`JUSLAG_WRITE_TURSO=false`。照合は実行ごとに一時DBへCloudを1回pullし、修復時は差分をpushした後、別の一時DBで1回pullして読み戻す。対象日ごとにCloudへ個別pullしないが、DB増大に伴うSync使用量は監視する。
+ワークフロー停止は`JUSLAG_WRITE_TURSO=false`。日次publish・照合・価格差分更新は公式`libsql`の直接SQL接続を使い、別接続で読み戻す。全件移行に使った旧Sync方式は実証用として残すが、価格データ増加後の日次実行では初回pullの使用量が大きいため使わない。詳細は[全データ移行結果](reports/turso_full_migration_20260918.md)。
 
 本番Cloudを変更せずに復旧経路を試すには、公式`tursodb`実行ファイルを指定して`uv run --frozen --extra turso python scripts/ops/turso_recovery_drill.py --server-bin /path/to/tursodb`を実行する。スクリプトは一時DB・localhostのSyncサーバーを作り、欠落、差分、切断中のpush失敗、復帰後の再送を検証して終了する。
 
-Sync方式ではActionsの一時DBが毎回Cloudから`pull()`する。これは履歴が増えるほど初回同期量を消費する。現時点の小規模実測は`docs/reports/turso_b0_poc_20260918.md`に記録。運用開始後は`Turso db inspect`で同期量を追い、DB全体の増加によって月間3 GB枠に近づく前に直接書込方式か保持期間を再評価する。ブラウザからのCloud直接接続は行わない。
+価格キャッシュを含むCloud移行後、旧Sync方式の初回pull量が増えたため、日次経路は直接書込方式へ変更した。`turso plan show`で月間使用量を追い、通常の日次実行でEmbedded Syncsが増えないことを確認する。ブラウザからのCloud直接接続は行わない。
 
 2026-09-18の現契約・使用量、暫定の監視閾値と停止条件は[利用量レビュー](reports/turso_usage_review_20260918.md)に記録した。枠の数値は固定せず、`turso plan show`で再確認する。利用量閾値の自動通知は未実装であり、照合失敗時のSlack通知と区別する。

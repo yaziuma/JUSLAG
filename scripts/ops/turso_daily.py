@@ -14,17 +14,27 @@ from juslag.turso_store import ensure_schema, load_snapshot, publish_snapshot, r
 
 
 def connect(path: Path):
-    import turso.sync
+    import libsql
 
     url = os.environ["JUSLAG_TURSO_DATABASE_URL"]
     token = os.environ["JUSLAG_TURSO_AUTH_TOKEN"]
     if not url.startswith(("libsql://", "turso://")):
         raise ValueError("unsupported Turso URL scheme")
-    conn = turso.sync.connect(
-        path=str(path), remote_url=url, auth_token=token, bootstrap_if_empty=False,
-    )
-    conn.pull()
-    return conn
+    return RemoteConnection(libsql.connect(database=url, auth_token=token))
+
+
+class RemoteConnection:
+    """DB-API connection with a no-op push for the existing publisher contract."""
+
+    def __init__(self, conn):
+        self.conn = conn
+
+    def __getattr__(self, name):
+        return getattr(self.conn, name)
+
+    def push(self):
+        # libsql commits directly to Cloud; there is no local replica to push.
+        pass
 
 
 def main() -> None:
