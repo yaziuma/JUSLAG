@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
 from juslag.data_loader import _fetch_group_with_cache, build_joint_cc, compute_returns, repair_known_bad_prices
 
@@ -138,3 +139,61 @@ def test_fetch_group_with_cache_passes_price_mode(monkeypatch) -> None:
     assert ("date_range", "raw") in calls
     assert ("upsert", "raw") in calls
     assert ("load", "raw") in calls
+
+
+@pytest.mark.parametrize(
+    ("start", "expected_download_start"),
+    [
+        ("2010-01-01", "2026-09-10"),
+        ("2009-12-20", "2009-12-20"),
+    ],
+)
+def test_fetch_group_treats_first_trading_day_as_covered(
+    monkeypatch, start: str, expected_download_start: str,
+) -> None:
+    class StubCache:
+        def date_range(self, ticker: str, price_mode: str):
+            return "2010-01-04", "2026-09-17"
+
+        def load(self, tickers, start, end, price_mode: str):
+            return {}
+
+    downloaded: list[tuple[str, str]] = []
+
+    def fake_download(*args, **kwargs):
+        downloaded.append((kwargs["start"], kwargs["end"]))
+        return pd.DataFrame()
+
+    monkeypatch.setattr("juslag.data_loader.yf.download", fake_download)
+    _fetch_group_with_cache(["SPY"], start, "2026-09-19", StubCache())
+
+    expected = [(expected_download_start, "2026-09-19")]
+    if start == "2010-01-01":
+        expected.insert(0, ("2010-01-01", "2010-01-04"))
+    assert downloaded == expected
+
+
+def test_fetch_group_recovers_missing_head_trading_day(monkeypatch) -> None:
+    saved: list[str] = []
+
+    class StubCache:
+        def date_range(self, ticker: str, price_mode: str):
+            return "2010-01-04", "2026-09-17"
+
+        def upsert(self, ticker, open_s, close_s, price_mode: str):
+            saved.extend(str(date.date()) for date in open_s.index)
+            return len(open_s)
+
+        def load(self, tickers, start, end, price_mode: str):
+            return {}
+
+    def fake_download(*args, **kwargs):
+        if kwargs["end"] != "2010-01-04":
+            return pd.DataFrame()
+        columns = pd.MultiIndex.from_product([["Close", "Open"], ["SPY"]])
+        return pd.DataFrame([[101.0, 100.0]], index=pd.to_datetime(["2010-01-02"]), columns=columns)
+
+    monkeypatch.setattr("juslag.data_loader.yf.download", fake_download)
+    _fetch_group_with_cache(["SPY"], "2010-01-01", "2026-09-19", StubCache())
+
+    assert saved == ["2010-01-02"]

@@ -27,3 +27,7 @@ Turso Syncから戻るREAL値は元SQLiteと最下位桁が異なる場合があ
 [手動日次run #35321613413](https://github.com/yaziuma/JUSLAG/actions/runs/35321613413)で研究、同一run IDの価格キャッシュ復元、レポートCloud公開、Pages公開は成功した。価格同期だけは大量の差分が発生し、旧`executemany`経路では45分のジョブ上限で中断した。これは全件一致を確認できた状態ではなく、部分書込み状態だった。
 
 価格差分を1,000行までの複数VALUES文でまとめて送る方式へ変更後、同じ価格キャッシュを使った[移行run #35325950045](https://github.com/yaziuma/JUSLAG/actions/runs/35325950045)は2分で完了し、別接続で`PASS: artifacts=366 changed=0 prices=224924 changed=59865`を確認した。Cloud直接照会でも価格224,924行・28銘柄（`2010-01-04`〜`2026-09-18`）、ファイル401件、レポート55 run/52日、最新run `actions:35321613413:1`。`turso_reconcile.py --since 2026-07-09`は修復必要日0。管理画面のEmbedded Syncsはユーザー共有値で286.82 MBのまま、Rows Writtenは増加しており、直接SQLで差分が反映されたことと整合する。
+
+修正版の[日次run #35326344970](https://github.com/yaziuma/JUSLAG/actions/runs/35326344970)では研究・Turso・Pagesの全ジョブが成功し、同一runの価格キャッシュから価格224,924行を全件読戻しした。ただしこのrunでも72,512行の差分が発生した。同じキャッシュを[再照合 #35327335959](https://github.com/yaziuma/JUSLAG/actions/runs/35327335959)すると変更0なので、Cloud比較・書込みは冪等である。
+
+Actions Cacheの2世代をCloudに接続せず比較したところ、[比較 #35327616790](https://github.com/yaziuma/JUSLAG/actions/runs/35327616790)は73,212行、[比較 #35327624210](https://github.com/yaziuma/JUSLAG/actions/runs/35327624210)は72,085行が変わり、いずれも全件がadjusted系列の過去年分だった。原因は要求開始日`2010-01-01`が初回取引日`2010-01-04`より前であるため、キャッシュが不足と誤判定され、毎回全履歴をyfinanceから再取得していたこと。非取引日の短い先頭ギャップを別取得して確認し、通常の末尾取得を直近7日に限定するよう修正した。これにより過去年分の不要な再取得・Cloud再書込みが減る見込みで、修正後の実測を別途確認する。

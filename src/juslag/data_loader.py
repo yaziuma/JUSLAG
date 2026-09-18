@@ -113,7 +113,12 @@ def _fetch_group_with_cache(
     earliest_list = [r[0] for r in ranges if r[0] is not None]
     latest_list = [r[1] for r in ranges if r[1] is not None]
 
-    if len(latest_list) == len(tickers) and earliest_list and min(earliest_list) <= start:
+    # A calendar start may precede the first trading day by a holiday weekend.
+    covered_start = (
+        earliest_list
+        and pd.Timestamp(min(earliest_list)) <= pd.Timestamp(start) + pd.Timedelta(days=7)
+    )
+    if len(latest_list) == len(tickers) and covered_start:
         # Cache fully covers the requested start — download only the fresh tail
         overlap_start = (pd.Timestamp(min(latest_list)) - pd.Timedelta(days=7)).strftime("%Y-%m-%d")
         dl_start = max(overlap_start, start)
@@ -122,6 +127,15 @@ def _fetch_group_with_cache(
         dl_start = start
 
     logger.info("Incremental download: %d tickers [%s, %s) (cache start=%s)", len(tickers), dl_start, end, start)
+    head = pd.DataFrame()
+    if covered_start and min(earliest_list) > start and dl_start > min(earliest_list):
+        head = yf.download(
+            tickers,
+            start=start,
+            end=min(earliest_list),
+            auto_adjust=(price_mode == "adjusted"),
+            progress=False,
+        )
     raw = yf.download(
         tickers,
         start=dl_start,
@@ -129,6 +143,8 @@ def _fetch_group_with_cache(
         auto_adjust=(price_mode == "adjusted"),
         progress=False,
     )
+    if not head.empty:
+        raw = pd.concat([head, raw]).sort_index()
 
     if not raw.empty:
         close_raw = raw["Close"]
