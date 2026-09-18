@@ -19,24 +19,32 @@ def main() -> None:
     parser.add_argument("--data", type=Path, default=Path("data"))
     parser.add_argument("--batch-size", type=int, default=1000)
     args = parser.parse_args()
+    stage = "connect"
     try:
         with tempfile.TemporaryDirectory(prefix="juslag-turso-data-") as directory:
             root = Path(directory)
             writer = connect(root / "writer.db")
+            stage = "schema"
             ensure_data_schema(writer)
             writer.push()
+            stage = "artifacts"
             artifact_changes = sync_artifacts(writer, args.data)
             if args.prices is None:
+                stage = "artifact readback"
                 reader = connect(root / "reader.db")
                 artifact_total = verify_artifacts(reader, args.data)
                 print(f"PASS: artifacts={artifact_total} changed={artifact_changes}")
                 return
             with closing(open_price_source(args.prices)) as source:
+                stage = "price sync"
                 price_total, price_changes = sync_prices(
                     writer, source, batch_size=args.batch_size,
                 )
+                stage = "readback connection"
                 reader = connect(root / "reader.db")
+                stage = "artifact readback"
                 artifact_total = verify_artifacts(reader, args.data)
+                stage = "price readback"
                 if verify_prices(reader, source) != price_total:
                     raise ValueError("price row count mismatch")
                 print(
@@ -44,7 +52,9 @@ def main() -> None:
                     f"prices={price_total} changed={price_changes}"
                 )
     except Exception as exc:  # noqa: BLE001 - SDK errors may contain credentials
-        raise SystemExit(f"Turso data sync failed: {type(exc).__name__}") from None
+        if stage == "price readback" and isinstance(exc, ValueError) and str(exc).startswith("price mismatch: "):
+            raise SystemExit(f"Turso data sync failed at {stage}: {exc}") from None
+        raise SystemExit(f"Turso data sync failed at {stage}: {type(exc).__name__}") from None
 
 
 if __name__ == "__main__":
