@@ -62,6 +62,9 @@ def test_prices_backfill_retry_and_verify(tmp_path: Path):
         assert verify_prices(conn, source) == 2
         assert sync_prices(conn, source, batch_size=1) == (2, 0)
         assert conn.pushes == 1
+        conn.execute("UPDATE juslag_prices SET open = open - 0.000000000002 WHERE price_mode = 'raw'")
+        assert sync_prices(conn, source, batch_size=1) == (2, 0)
+        assert verify_prices(conn, source) == 2
         conn.execute("UPDATE juslag_prices SET close = 9 WHERE price_mode = 'raw'")
         with pytest.raises(ValueError, match="price mismatch"):
             verify_prices(conn, source)
@@ -69,3 +72,13 @@ def test_prices_backfill_retry_and_verify(tmp_path: Path):
         assert verify_prices(conn, source) == 2
     finally:
         source.close()
+
+
+def test_ticker_mode_date_query_uses_composite_index():
+    conn = LocalSync()
+    ensure_data_schema(conn)
+    plan = conn.execute("""EXPLAIN QUERY PLAN
+        SELECT date, open, close FROM juslag_prices
+        WHERE ticker = 'A' AND price_mode = 'raw' AND date >= '2026-01-01'
+        ORDER BY date""").fetchall()
+    assert "juslag_prices_ticker_mode_date" in plan[0][3]

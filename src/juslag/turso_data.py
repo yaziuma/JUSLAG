@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import math
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,8 @@ def ensure_data_schema(conn: Any) -> None:
     )""")
     conn.execute("""CREATE INDEX IF NOT EXISTS juslag_prices_mode_date
         ON juslag_prices(price_mode, date)""")
+    conn.execute("""CREATE INDEX IF NOT EXISTS juslag_prices_ticker_mode_date
+        ON juslag_prices(ticker, price_mode, date)""")
     conn.execute("""CREATE TABLE IF NOT EXISTS juslag_artifacts (
         path TEXT PRIMARY KEY, sha256 TEXT NOT NULL, content BLOB NOT NULL
     )""")
@@ -84,6 +87,18 @@ def _remote_prices(conn: Any) -> dict[tuple[str, str, str], tuple[float | None, 
     }
 
 
+def _price_values_equal(
+    left: tuple[float | None, float | None] | None,
+    right: tuple[float | None, float | None],
+) -> bool:
+    if left is None:
+        return False
+    return all(
+        a == b if a is None or b is None else math.isclose(a, b, rel_tol=1e-12, abs_tol=1e-8)
+        for a, b in zip(left, right)
+    )
+
+
 def sync_prices(conn: Any, source: sqlite3.Connection, *, batch_size: int = 1000) -> tuple[int, int]:
     if batch_size < 1:
         raise ValueError("batch_size must be positive")
@@ -97,7 +112,7 @@ def sync_prices(conn: Any, source: sqlite3.Connection, *, batch_size: int = 1000
     for row in source.execute(PRICE_SELECT):
         total += 1
         key = row[:3]
-        if existing.get(key) == row[3:]:
+        if _price_values_equal(existing.get(key), row[3:]):
             continue
         batch.append(row)
         if len(batch) == batch_size:
@@ -124,7 +139,7 @@ def verify_prices(conn: Any, source: sqlite3.Connection) -> int:
     total = 0
     for row in source.execute(PRICE_SELECT):
         total += 1
-        if stored.get(row[:3]) != row[3:]:
+        if not _price_values_equal(stored.get(row[:3]), row[3:]):
             raise ValueError(
                 f"price mismatch: {row[0]} {row[1]} {row[2]} "
                 f"source={row[3:]!r} cloud={stored.get(row[:3])!r}"
