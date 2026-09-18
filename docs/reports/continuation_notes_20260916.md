@@ -31,9 +31,9 @@
 - `.agents/skills/juslag-turso-usage/SKILL.md`は、ZennのTurso読み取り使用量急増事例を踏まえ、クエリ計画・Cloud使用量・キャッシュ・公開経路・警告/縮退をレビューするためのリポジトリ内skill。Next.js/Cloudflare固有策や当時の無料枠数値をJUSLAGへそのまま適用しない。
 - ユーザーはTurso Cloudに`juslagdb`を作成。現状はActionsの単一writerが想定なので、組織のconcurrent writesは不要。TursoDB/Syncは別PoCでSDK・互換性・認証を検証し、既存SQLite価格キャッシュは維持する。
 - `scripts/ops/setup_turso_credentials.sh`でDB URLと30日期限の書込トークンをローカル`.env.turso`に保存済み。`.env.turso`はGit管理外、権限600。**値を表示・記録・commitしない。** 手順は`docs/turso_credentials.md`。初回スクリプトはCLI未ログイン文を値として保存するバグがあったが、URL/JWT形式検証を追加して修正済み。ユーザーがログイン後に`--replace`で再作成した。
-- 保存トークンによるDB直接アクセスを確認済み: HTTP 200、`SELECT 1`は1、トランザクション内の検証用テーブル作成は成功、`ROLLBACK`後の同名テーブル数は0。これは認証・基本的な読み書きの検証のみで、Cloud Sync書込、JUSLAG用スキーマ、publisher、Actions Secret、二重書き、Viewerは未実装・未検証。
+- 保存トークンによるDB直接アクセスを確認済み。さらに2026-09-18にCloud Sync書込・読取、日次スナップショットpublisher、Actions Secretと実行を確認した。[Actions実証記録](turso_actions_verification_20260918.md)参照。Viewerは未実装。
 - 2026-09-18に`pyturso 0.7.2`/`tursodb 0.7.2`でCloud不使用の2クライアントSync PoCを実測。push/pull・push前分離・rollback・切断中の書込と再起動後の再送/新規読取は通過。サーバーの内部テーブル参照エラーは再現し、影響未判定。詳細は`docs/reports/turso_b0_poc_20260918.md`。B0ゲートは未達。
-- 警告はアプリ用テーブル不足ではなく、初回push時の`turso_sync_last_change_id`内部テーブル参照。`tursodb 0.8.0-pre.11`でも再現。Cloudの`juslagdb`はSQLite型・東京リージョンで、`pyturso 0.7.2`からの読取pullは成功した。Cloud pushは未試験。詳細は同PoC記録。
+- 警告はアプリ用テーブル不足ではなく、初回push時の`turso_sync_last_change_id`内部テーブル参照。`tursodb 0.8.0-pre.11`でも再現。Cloudの`juslagdb`はSQLite型・東京リージョンで、`pyturso 0.7.2`からのCloud push/pullは成功した。警告の原因は未解明。詳細は同PoC記録。
 - 資格情報のGitHub Actions設定はまだ行っていない。書込トークンをブラウザへ渡さない。Viewerの認証方式、Cloud利用量監視と費用上限をB0ゲートで先に決める。
 
 ## 次の優先事項
@@ -43,7 +43,7 @@
 1. 最優先: 現行メタ版の当日寄りgap判定後に約定できる価格・時刻を得る。日次OHLCだけでは「gap確定後に同じ寄り値で約定」の仮定を検証できない。寄り後の板・約定データを使うバックテスト設計、または実際の寄り/引け約定・売建在庫・HYPER料の記録と5bps/side仮定の実測が必要。データ取得前に現行成績を採用しない。
 2. 代替: 低回転・保有持越し案を別戦略として、資金・同時建玉・コスト・売建制約を含む独立ウォークフォワードで評価する。既存の保有期間イベントスタディは資金制約がなく、採用根拠にならない。
 3. 技術的残件: prior/観測行の残差分解は完了。US-onlyセッションと取引時刻の利用可能性を履歴バックテストで明示的に検証する。外部実装との過去集計差全体は母集団が異なり、加法的な完全分解ではない。
-4. Turso B0: ローカルSyncと既存Cloudの読取pullは確認済み。次は初回push時の内部テーブル警告の原因・影響確認、Cloud Sync書込の最小検証、Cloud実契約のOverages/費用上限、バックアップ/復元、Secret非露出とViewer認証方針を確認する。`docs/reports/turso_b0_poc_20260918.md`参照。B0ゲート未達の間はB1の二重書きを始めない。
+4. Turso B0/B1: 日次スナップショットのActions限定運用は確認済み。次は内部テーブル警告の原因、Cloudへの復元、失敗時の再送と10回連続照合、同期量アラート、Viewer認証方針を詰める。`docs/reports/turso_b0_poc_20260918.md`と`docs/reports/turso_actions_verification_20260918.md`参照。全B0/B1ゲートは未達。
 
 ## 再実行・検証
 

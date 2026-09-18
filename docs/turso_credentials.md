@@ -35,6 +35,8 @@ uv run --frozen --extra turso python scripts/ops/turso_daily.py read --date 2026
 
 Actionsの`daily-juslag.yml`は`JUSLAG_WRITE_TURSO`リポジトリ変数が`true`の時だけ、研究結果のGit保存後に独立したTursoジョブを実行する。URLは`JUSLAG_TURSO_DATABASE_URL`変数、書込トークンは`JUSLAG_TURSO_AUTH_TOKEN` Secretを使う。研究・Git・Pages・SlackはTursoジョブの失敗から独立している。手動の`turso-smoke.yml`では、指定した既存日付をGitHub Actionsから書き込み・読み戻して照合できる。トークンは30日で期限切れとなるため、期限前に更新してActions Secretも同時更新する。
 
+2026-09-18時点で`JUSLAG_WRITE_TURSO=true`を設定し、[日次Actions実行](https://github.com/yaziuma/JUSLAG/actions/runs/35310809472)で同期を確認した。問題が起きた場合は`gh variable set JUSLAG_WRITE_TURSO --body false --repo yaziuma/JUSLAG`で次回以降のTursoジョブだけ止める。Git・Pages・Slack経路は継続する。
+
 保存形式は`juslag_daily_snapshots`の1行にレポートJSON、確定要約、LLM状態、生成時刻、コードSHA、内容SHA-256を格納する。同じ`run_id`で内容が変わった場合は上書きせず失敗する。同日再実行は別runとして残り、読取ではその日の最新公開runを返す。ファイルが正本であり、Turso失敗時はGit上の結果を再確認してから手動再送する。`turso-smoke`は既存データで読書きするため、本番の次回予定日を指定しない。
 
 Sync方式ではActionsの一時DBが毎回Cloudから`pull()`する。これは履歴が増えるほど初回同期量を消費する。現時点の小規模実測は`docs/reports/turso_b0_poc_20260918.md`に記録。運用開始後は`Turso db inspect`で同期量を追い、DB全体の増加によって月間3 GB枠に近づく前に直接書込方式か保持期間を再評価する。ブラウザからのCloud直接接続は行わない。

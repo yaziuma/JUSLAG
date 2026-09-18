@@ -1,0 +1,15 @@
+# Turso日次同期・GitHub Actions実証（2026-09-18）
+
+## 到達点
+
+- `pyturso==0.7.2`を`turso` extraで固定。`scripts/ops/turso_daily.py`が確定済みのレポートJSONと同日`history.jsonl`の最後の要約を1行の`juslag_daily_snapshots`としてCloud Syncへpushする。別の一時ローカルDBからpullし、内容SHA-256を照合する。読取CLIも同じハッシュを検証し、600権限のファイルへ出力する。
+- `run_id`が同じで内容が同じなら再送はno-op、内容が異なればエラー。同日再実行は別runで保持。書込は`JUSLAG_WRITE_TURSO=1`、Actionsではリポジトリ変数`true`の時だけ。DBトークンはActions Secret、URLはVariable、ブラウザにはどちらも渡さない。既知トークンとSlack Webhookが本文に混入すれば公開を拒否する。
+- ローカルで実データ`2026-09-18.json`をCloudへ保存・読取し、元JSONとSHA-256一致。手動[Actionsスモーク #35310686146](https://github.com/yaziuma/JUSLAG/actions/runs/35310686146)は書込・読取・`cmp`が成功。
+- `JUSLAG_WRITE_TURSO=true`を設定した[日次Actions #35310809472](https://github.com/yaziuma/JUSLAG/actions/runs/35310809472)では、研究・Git保存・Turso・Pagesの全ジョブが成功。Tursoの`run_id=actions:35310809472:1`を独立CLIで読み戻し、Gitに保存された同日レポートとSHA-256一致。`main`は日次データcommit`fef2cdb`まで取得済み。
+- `.venv/bin/pytest -q`: 241 passed、40 warnings（既存Pandas4Warning）。Ruff、bash構文、workflow YAML、`uv lock --check`、`git diff --check`も通過。
+
+## 運用と残件
+
+- 旧ファイル、Slack、Pagesを維持する。Tursoジョブは研究完了後の別ジョブなので、Turso障害はそれらを巻き戻さない。停止は`gh variable set JUSLAG_WRITE_TURSO --body false --repo yaziuma/JUSLAG`。30日期限のトークンは期限前に更新し、Actions Secretも更新する。
+- Sync方式はActions一時DBで毎回Cloudをpullする。PoC前の`db inspect`は12 kB/読取41/書込21/Sync 90 kB、Actionsとローカル読取後は98 kB/読取135/書込41/Sync 778 kB。間に複数の試行・照合があり、差分を単一実行の請求量とはみなさない。月間3 GB枠・Overages無効。履歴増大時のbootstrap量を監視する。
+- 全B0/B1ゲートは未達。内部テーブル警告の原因、Cloud再インポート、Cloud障害後の再送、10回連続照合、使用量アラート、認証付きViewerは別途必要。これは研究結果の保存であり、発注許可ではない。
