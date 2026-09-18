@@ -125,5 +125,8 @@ def verify_prices(conn: Any, source: sqlite3.Connection) -> int:
     for row in source.execute(PRICE_SELECT):
         total += 1
         if stored.get(row[:3]) != row[3:]:
-            raise ValueError(f"price mismatch: {row[0]} {row[1]} {row[2]}")
+            raise ValueError(
+                f"price mismatch: {row[0]} {row[1]} {row[2]} "
+                f"source={row[3:]!r} cloud={stored.get(row[:3])!r}"
+            )
     return total
