@@ -9,8 +9,15 @@ from typing import Any
 
 PRICE_COLUMNS = ("ticker", "date", "price_mode", "open", "close")
 PRICE_SELECT = "SELECT ticker, date, price_mode, open, close FROM prices ORDER BY ticker, date, price_mode"
-PRICE_INSERT = """INSERT OR REPLACE INTO juslag_prices
-    (ticker, date, price_mode, open, close) VALUES (?, ?, ?, ?, ?)"""
+def _write_price_batch(conn: Any, batch: list[tuple]) -> None:
+    values = ", ".join(["(?, ?, ?, ?, ?)"] * len(batch))
+    params = tuple(value for row in batch for value in row)
+    conn.execute(
+        "INSERT OR REPLACE INTO juslag_prices "
+        "(ticker, date, price_mode, open, close) VALUES " + values,
+        params,
+    )
+    conn.commit()
 
 
 def ensure_data_schema(conn: Any) -> None:
@@ -100,8 +107,8 @@ def _price_values_equal(
 
 
 def sync_prices(conn: Any, source: sqlite3.Connection, *, batch_size: int = 1000) -> tuple[int, int]:
-    if batch_size < 1:
-        raise ValueError("batch_size must be positive")
+    if not 1 <= batch_size <= 1000:
+        raise ValueError("batch_size must be between 1 and 1000")
     if source.execute("SELECT count(*) FROM prices").fetchone()[0] == 0:
         raise ValueError("price cache is empty")
     existing = _remote_prices(conn)
@@ -116,8 +123,7 @@ def sync_prices(conn: Any, source: sqlite3.Connection, *, batch_size: int = 1000
             continue
         batch.append(row)
         if len(batch) == batch_size:
-            conn.executemany(PRICE_INSERT, batch)
-            conn.commit()
+            _write_price_batch(conn, batch)
             changed += len(batch)
             since_push += len(batch)
             batch.clear()
@@ -125,8 +131,7 @@ def sync_prices(conn: Any, source: sqlite3.Connection, *, batch_size: int = 1000
                 conn.push()
                 since_push = 0
     if batch:
-        conn.executemany(PRICE_INSERT, batch)
-        conn.commit()
+        _write_price_batch(conn, batch)
         changed += len(batch)
         since_push += len(batch)
     if since_push:
