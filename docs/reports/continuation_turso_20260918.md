@@ -14,6 +14,7 @@
 - この訓練で、ローカルcommit後にpushのみ失敗した場合の再送漏れを発見し修正。`repair_snapshots()`は既存runでもpushを再試行する。関連ユニットテストを追加。
 - 全テスト`245 passed, 40 warnings`（既存Pandas4Warning）。Ruffと`git diff --check`も通過。push後の読み取り専用[Actions監査 #35313515646](https://github.com/yaziuma/JUSLAG/actions/runs/35313515646)は成功。Cloudの要修復は0日。
 - 詳細は[実証記録](turso_actions_verification_20260918.md)と[運用手順](../turso_credentials.md)。
+- 追加の[エクスポート検査](turso_export_audit_20260918.md)では、Cloudからの取得物3行をSQLite整合性・Gitハッシュ一致で確認した。Cloudへの再インポートは未実施。
 
 ## 次の作業
 
