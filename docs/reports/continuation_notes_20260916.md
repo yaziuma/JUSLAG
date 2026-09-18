@@ -33,6 +33,7 @@
 - `scripts/ops/setup_turso_credentials.sh`でDB URLと30日期限の書込トークンをローカル`.env.turso`に保存済み。`.env.turso`はGit管理外、権限600。**値を表示・記録・commitしない。** 手順は`docs/turso_credentials.md`。初回スクリプトはCLI未ログイン文を値として保存するバグがあったが、URL/JWT形式検証を追加して修正済み。ユーザーがログイン後に`--replace`で再作成した。
 - 保存トークンによるDB直接アクセスを確認済み: HTTP 200、`SELECT 1`は1、トランザクション内の検証用テーブル作成は成功、`ROLLBACK`後の同名テーブル数は0。これは認証・基本的な読み書きの検証のみで、Turso Sync、スキーマ、publisher、Actions Secret、二重書き、Viewerは未実装・未検証。
 - 2026-09-18に`pyturso 0.7.2`/`tursodb 0.7.2`でCloud不使用の2クライアントSync PoCを実測。push/pull・push前分離・rollback・切断中の書込と再起動後の再送/新規読取は通過。サーバーの内部テーブル参照エラーは再現し、影響未判定。詳細は`docs/reports/turso_b0_poc_20260918.md`。B0ゲートは未達。
+- 警告はアプリ用テーブル不足ではなく、初回push時の`turso_sync_last_change_id`内部テーブル参照。`tursodb 0.8.0-pre.11`でも再現。Cloudの`juslagdb`はSQLite型・東京リージョンで、`pyturso 0.7.2`からの読取pullは成功した。Cloud pushは未試験。詳細は同PoC記録。
 - 資格情報のGitHub Actions設定はまだ行っていない。書込トークンをブラウザへ渡さない。Viewerの認証方式、Cloud利用量監視と費用上限をB0ゲートで先に決める。
 
 ## 次の優先事項
