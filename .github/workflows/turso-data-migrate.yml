@@ -1,0 +1,55 @@
+name: turso-data-migrate
+
+on:
+  workflow_dispatch:
+    inputs:
+      cache_key:
+        description: "Price cache key from gh cache list"
+        type: string
+        required: true
+        default: "juslag-prices-v1-35310809472"
+
+concurrency:
+  group: turso-data-migrate
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    if: ${{ vars.JUSLAG_WRITE_TURSO == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - name: Restore selected price cache
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.juslag/prices.db
+          key: ${{ inputs.cache_key }}
+      - name: Validate source
+        run: |
+          test "${{ steps.cache.outputs.cache-hit }}" = "true" || { echo "::error::Exact price cache not found"; exit 1; }
+          test -s ~/.juslag/prices.db || { echo "::error::Price database missing"; exit 1; }
+      - name: Install dependencies
+        run: uv sync --frozen --extra turso
+      - name: Sync and verify all data
+        env:
+          JUSLAG_TURSO_DATABASE_URL: ${{ vars.JUSLAG_TURSO_DATABASE_URL }}
+          JUSLAG_TURSO_AUTH_TOKEN: ${{ secrets.JUSLAG_TURSO_AUTH_TOKEN }}
+        run: uv run --frozen --extra turso python scripts/ops/turso_data.py --prices ~/.juslag/prices.db
+      - name: Notify failure to Slack
+        if: ${{ failure() }}
+        env:
+          JUSLAG_SLACK_WEBHOOK: ${{ secrets.JUSLAG_SLACK_WEBHOOK }}
+        run: |
+          if [ -n "$JUSLAG_SLACK_WEBHOOK" ]; then
+            RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            jq -n --arg text "JUSLAG Turso全データ移行失敗: $RUN_URL" '{text: $text}' \
+              | curl -fsS --max-time 15 -H 'Content-Type: application/json' -d @- "$JUSLAG_SLACK_WEBHOOK" || true
+          fi

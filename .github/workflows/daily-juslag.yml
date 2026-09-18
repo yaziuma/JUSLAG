@@ -79,6 +79,19 @@ jobs:
           SKIP_SLACK: ${{ inputs.skip_slack && '1' || '0' }}
         run: bash scripts/ops/daily_research.sh
 
+      - name: Preserve price cache for Turso
+        if: ${{ vars.JUSLAG_WRITE_TURSO == 'true' && !inputs.dry_run }}
+        run: cp ~/.juslag/prices.db "$RUNNER_TEMP/prices.db"
+
+      - name: Upload price cache for Turso
+        if: ${{ vars.JUSLAG_WRITE_TURSO == 'true' && !inputs.dry_run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: juslag-prices-${{ github.run_id }}
+          path: ${{ runner.temp }}/prices.db
+          retention-days: 1
+          if-no-files-found: error
+
       - name: Commit and push results
         if: ${{ !inputs.dry_run }}
         run: |
@@ -116,7 +129,7 @@ jobs:
     if: ${{ vars.JUSLAG_WRITE_TURSO == 'true' && !inputs.dry_run }}
     needs: research
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 45
     permissions:
       contents: read
     steps:
@@ -132,6 +145,12 @@ jobs:
       - name: Install Turso dependency
         run: uv sync --frozen --extra turso
 
+      - name: Download this run's price cache
+        uses: actions/download-artifact@v4
+        with:
+          name: juslag-prices-${{ github.run_id }}
+          path: _price_cache
+
       - name: Publish and verify daily snapshot
         env:
           JUSLAG_WRITE_TURSO: "1"
@@ -144,6 +163,23 @@ jobs:
           test -n "$REPORT_DATE" || { echo "::error::report date is missing"; exit 1; }
           uv run --frozen --extra turso python scripts/ops/turso_daily.py publish \
             --report "data/reports/${REPORT_DATE}.json"
+
+      - name: Sync prices and Git data
+        env:
+          JUSLAG_TURSO_DATABASE_URL: ${{ vars.JUSLAG_TURSO_DATABASE_URL }}
+          JUSLAG_TURSO_AUTH_TOKEN: ${{ secrets.JUSLAG_TURSO_AUTH_TOKEN }}
+        run: uv run --frozen --extra turso python scripts/ops/turso_data.py --prices _price_cache/prices.db
+
+      - name: Notify Turso failure to Slack
+        if: ${{ failure() }}
+        env:
+          JUSLAG_SLACK_WEBHOOK: ${{ secrets.JUSLAG_SLACK_WEBHOOK }}
+        run: |
+          if [ -n "$JUSLAG_SLACK_WEBHOOK" ]; then
+            RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            jq -n --arg text "JUSLAG Tursoデータ同期失敗: $RUN_URL" '{text: $text}' \
+              | curl -fsS --max-time 15 -H 'Content-Type: application/json' -d @- "$JUSLAG_SLACK_WEBHOOK" || true
+          fi
 
   site:
     # 閲覧用静的サイトのデプロイ（初期OFF。有効化: gh variable set ENABLE_SITE_DEPLOY --body true）
