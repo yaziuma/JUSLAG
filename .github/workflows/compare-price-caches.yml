@@ -1,0 +1,49 @@
+name: compare-price-caches
+
+on:
+  workflow_dispatch:
+    inputs:
+      left_key:
+        description: "Earlier exact Actions Cache key"
+        type: string
+        required: true
+      right_key:
+        description: "Later exact Actions Cache key"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - name: Restore earlier price cache
+        id: left
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.juslag/prices.db
+          key: ${{ inputs.left_key }}
+      - name: Move earlier cache
+        run: |
+          test "${{ steps.left.outputs.cache-hit }}" = "true"
+          test -s ~/.juslag/prices.db
+          mv ~/.juslag/prices.db /tmp/juslag-prices-left.db
+      - name: Restore later price cache
+        id: right
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.juslag/prices.db
+          key: ${{ inputs.right_key }}
+      - name: Compare cached prices
+        run: |
+          test "${{ steps.right.outputs.cache-hit }}" = "true"
+          test -s ~/.juslag/prices.db
+          uv run --frozen python scripts/ops/compare_price_caches.py \
+            --left /tmp/juslag-prices-left.db --right ~/.juslag/prices.db

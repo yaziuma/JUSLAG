@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import math
 import sqlite3
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -104,6 +105,22 @@ def _price_values_equal(
         a == b if a is None or b is None else math.isclose(a, b, rel_tol=1e-12, abs_tol=1e-8)
         for a, b in zip(left, right)
     )
+
+
+def compare_price_caches(
+    left: sqlite3.Connection, right: sqlite3.Connection,
+) -> tuple[int, int, Counter, Counter]:
+    previous = {row[:3]: row[3:] for row in left.execute(PRICE_SELECT)}
+    by_mode_year: Counter = Counter()
+    by_ticker_mode: Counter = Counter()
+    right_count = 0
+    for ticker, date, mode, open_price, close_price in right.execute(PRICE_SELECT):
+        right_count += 1
+        if _price_values_equal(previous.get((ticker, date, mode)), (open_price, close_price)):
+            continue
+        by_mode_year[(mode, date[:4])] += 1
+        by_ticker_mode[(ticker, mode)] += 1
+    return len(previous), right_count, by_mode_year, by_ticker_mode
 
 
 def sync_prices(conn: Any, source: sqlite3.Connection, *, batch_size: int = 1000) -> tuple[int, int]:
