@@ -2,11 +2,11 @@
 
 ## コンパクト後の再開点
 
-- 作業場所: `/home/quieter/projects/JUSLAG`。2026-09-18時点で`main`は`origin/main`と同期。直近push済み: `6e1bfe9`（PCA残差をpriorへ帰属）、`200843a`（統合計画・Turso利用量skill）、`7ddecf6`（Turso資格情報設定）。`docs/.JUSLAG_Turso化計画書_2026-09-18.md.swp`だけが未追跡で、ユーザーのスワップファイルとして触れない。
+- 作業場所: `/home/quieter/projects/JUSLAG`。2026-09-18時点で`main`は`origin/main`と同期。直近push済み: `ad610fb`（TursoローカルSync PoC）、`2e4547d`（切断・復帰PoC）、`e09c08e`（警告の切り分けとCloud読取pull記録）。`docs/.JUSLAG_Turso化計画書_2026-09-18.md.swp`だけが未追跡で、ユーザーのスワップファイルとして触れない。
 - `5b497a8`: レジーム分位点の未来参照を除去。バックテストの次JP寄りgapと日次のgap欠損表示・判定を修正。
 - `48a2b69`: シグナル日より後の最初のJP価格行へ損益・gapを対応付ける。gap欠損時に後日の値を代用しない。
 - `9ef9042`: 米国だけ開場した最新日のリターンを日次シグナルへ反映。履歴バックテストのシグナル生成は従来通り。
-- 最終検証: `.venv/bin/pytest -q`で235 passed、40 warnings（既存のPandas4Warning）。変更箇所のRuffと`git diff --check`通過。全体RuffのE741は既存の`signal.py`引数`l`に由来。
+- 研究コードの最終全体検証: `.venv/bin/pytest -q`で235 passed、40 warnings（既存のPandas4Warning）。Turso PoC追加後は全体pytest未再実行。PoC実行、変更スクリプトのRuffと`git diff --check`は通過。全体RuffのE741は既存の`signal.py`引数`l`に由来。
 - JP休場日を許容する鮮度ゲートと修正後バックテスト再実行は完了。サイトは当日寄りgapを見た後に同じ寄り値で約定する前提を警告し、この前提が残る現行メタ版はJudgeがPASSでも発注候補にしない。08:00 JSTに当日寄りgapは未知なので、現行ルールをライブ運用可能とみなさない。
 
 ## 現状
@@ -31,7 +31,7 @@
 - `skills/juslag-turso-usage/SKILL.md`は、ZennのTurso読み取り使用量急増事例を踏まえ、クエリ計画・Cloud使用量・キャッシュ・公開経路・警告/縮退をレビューするためのリポジトリ内skill。Next.js/Cloudflare固有策や当時の無料枠数値をJUSLAGへそのまま適用しない。
 - ユーザーはTurso Cloudに`juslagdb`を作成。現状はActionsの単一writerが想定なので、組織のconcurrent writesは不要。TursoDB/Syncは別PoCでSDK・互換性・認証を検証し、既存SQLite価格キャッシュは維持する。
 - `scripts/ops/setup_turso_credentials.sh`でDB URLと30日期限の書込トークンをローカル`.env.turso`に保存済み。`.env.turso`はGit管理外、権限600。**値を表示・記録・commitしない。** 手順は`docs/turso_credentials.md`。初回スクリプトはCLI未ログイン文を値として保存するバグがあったが、URL/JWT形式検証を追加して修正済み。ユーザーがログイン後に`--replace`で再作成した。
-- 保存トークンによるDB直接アクセスを確認済み: HTTP 200、`SELECT 1`は1、トランザクション内の検証用テーブル作成は成功、`ROLLBACK`後の同名テーブル数は0。これは認証・基本的な読み書きの検証のみで、Turso Sync、スキーマ、publisher、Actions Secret、二重書き、Viewerは未実装・未検証。
+- 保存トークンによるDB直接アクセスを確認済み: HTTP 200、`SELECT 1`は1、トランザクション内の検証用テーブル作成は成功、`ROLLBACK`後の同名テーブル数は0。これは認証・基本的な読み書きの検証のみで、Cloud Sync書込、JUSLAG用スキーマ、publisher、Actions Secret、二重書き、Viewerは未実装・未検証。
 - 2026-09-18に`pyturso 0.7.2`/`tursodb 0.7.2`でCloud不使用の2クライアントSync PoCを実測。push/pull・push前分離・rollback・切断中の書込と再起動後の再送/新規読取は通過。サーバーの内部テーブル参照エラーは再現し、影響未判定。詳細は`docs/reports/turso_b0_poc_20260918.md`。B0ゲートは未達。
 - 警告はアプリ用テーブル不足ではなく、初回push時の`turso_sync_last_change_id`内部テーブル参照。`tursodb 0.8.0-pre.11`でも再現。Cloudの`juslagdb`はSQLite型・東京リージョンで、`pyturso 0.7.2`からの読取pullは成功した。Cloud pushは未試験。詳細は同PoC記録。
 - 資格情報のGitHub Actions設定はまだ行っていない。書込トークンをブラウザへ渡さない。Viewerの認証方式、Cloud利用量監視と費用上限をB0ゲートで先に決める。
@@ -43,7 +43,7 @@
 1. 最優先: 現行メタ版の当日寄りgap判定後に約定できる価格・時刻を得る。日次OHLCだけでは「gap確定後に同じ寄り値で約定」の仮定を検証できない。寄り後の板・約定データを使うバックテスト設計、または実際の寄り/引け約定・売建在庫・HYPER料の記録と5bps/side仮定の実測が必要。データ取得前に現行成績を採用しない。
 2. 代替: 低回転・保有持越し案を別戦略として、資金・同時建玉・コスト・売建制約を含む独立ウォークフォワードで評価する。既存の保有期間イベントスタディは資金制約がなく、採用根拠にならない。
 3. 技術的残件: prior/観測行の残差分解は完了。US-onlyセッションと取引時刻の利用可能性を履歴バックテストで明示的に検証する。外部実装との過去集計差全体は母集団が異なり、加法的な完全分解ではない。
-4. Turso B0: `docs/implementation_roadmap_20260918.md`に沿い、対象DBエンジン/SDK、ローカル同期PoC、認証、費用・使用量監視を確定する。DB接続成功だけでB0完了としない。B1の二重書きはB0通過後に着手する。
+4. Turso B0: ローカルSyncと既存Cloudの読取pullは確認済み。次は初回push時の内部テーブル警告の原因・影響確認、Cloud Sync書込の最小検証、Cloud実契約のOverages/費用上限、バックアップ/復元、Secret非露出とViewer認証方針を確認する。`docs/reports/turso_b0_poc_20260918.md`参照。B0ゲート未達の間はB1の二重書きを始めない。
 
 ## 再実行・検証
 
@@ -53,4 +53,5 @@
 - 保有期間: `.venv/bin/python scripts/reports/validate_signal_horizons.py`
 - 寄りgap除外比較: 本番設定JSONを`JUSLAG_BACKTEST_SETTINGS_JSON`へ設定し、`.venv/bin/python scripts/reports/compare_preopen_baseline.py`。外部取得をモックしてローカル価格キャッシュのみ利用。出力は`/tmp/juslag_preopen_comparison.json`。同ファイルは一時ファイルなので、コンパクト後も必要なら再実行。研究用ルール`PreopenNoGap`は本番レジストリに未登録。
 - 2026-09-17の休日対応後、`/tmp/juslag_repaired_compare_v2/reports/2026-09-16.json`に再計算済み（作業環境の一時ファイル）。レポートは`backtest_recheck_20260917.md`。
+- TursoローカルSync PoC: `scripts/ops/turso_sync_poc.py --server-bin /path/to/tursodb`。実測時は`pyturso 0.7.2`/`tursodb 0.7.2`、比較で`tursodb 0.8.0-pre.11`を使用。依存バイナリは一時領域のみで、本番依存に未追加。現環境の`/tmp`成果物は永続とみなさない。
 - 現時点で発注・実資金投入は不可。寄りgapなし版は税前-37.89%/年、現行版の税前+5.44%/年は同値約定の未検証前提に依存する。修正前のJudgeメタ成績も信頼しない。
