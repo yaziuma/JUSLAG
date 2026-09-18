@@ -1,0 +1,47 @@
+name: opening-bars
+
+on:
+  schedule:
+    # JP weekdays 09:16 and 09:40 JST (UTC 00:16 and 00:40)
+    - cron: "16,40 0 * * 1-5"
+  workflow_dispatch:
+
+concurrency:
+  group: opening-bars
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Capture opening bars
+        run: uv run --frozen python scripts/ops/capture_intraday.py --period 1d --db "$RUNNER_TEMP/juslag-opening.sqlite" --snapshot-dir data/opening_bars
+
+      - name: Commit observed bars
+        run: |
+          if [ ! -d data/opening_bars ]; then
+            echo "No bars from today's JP opening window"
+            exit 0
+          fi
+          git add data/opening_bars/
+          if git diff --cached --quiet; then
+            echo "No new observed bars"
+            exit 0
+          fi
+          git -c user.name="juslag-bot" -c user.email="actions@users.noreply.github.com" \
+            commit -m "data: capture JP opening bars [skip ci]"
+          git pull --rebase
+          git push

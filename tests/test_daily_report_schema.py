@@ -73,11 +73,13 @@ def test_build_daily_report_schema_and_shape() -> None:
         history_entry=_fixture_history_entry(),
         slack_fallback_text="fallback text",
         generated_at_utc="2026-07-08T00:00:00+00:00",
+        run_provenance={"run_kind": "retrospective", "target_date": "2026-07-08"},
     )
 
     assert report["schema_version"] == 1
     assert report["date"] == "2026-07-08"
     assert report["generated_at_utc"] == "2026-07-08T00:00:00+00:00"
+    assert report["run_provenance"]["run_kind"] == "retrospective"
 
     assert report["backtest"]["settings_name"] == "本番適用 test"
     assert report["backtest"]["judge_strategy_name"] == "PCA SUB + rule_406_no_flip"

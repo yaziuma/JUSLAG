@@ -17,6 +17,8 @@ from juslag.cache import PriceCache
 from juslag.config import AppConfig, JP_TRADING_UNITS
 from juslag.services.daily_signal import (
     normalize_execution_plan_lots,
+    opening_gap_observable,
+    price_input_fingerprint,
     pick_overnight_gap,
     run_daily_signal_service,
 )
@@ -234,8 +236,55 @@ def test_strategy_context_open_gap_uses_pick_overnight_gap_result() -> None:
     def _fake_pick(df, exec_date):
         return pd.Series({t: fixed_gap for t in jp_tickers_in_test})
 
-    d = _run_daily_signal(pick_overnight_gap_fn=_fake_pick)
+    d = _run_daily_signal(
+        pick_overnight_gap_fn=_fake_pick,
+        now_jst=datetime(2026, 7, 8, 10, 0, tzinfo=_JST),
+    )
     assert abs(d["strategy_context"]["open_gap"] - fixed_gap) < 1e-6
+
+
+def test_preopen_gap_is_suppressed_even_if_price_provider_returns_it() -> None:
+    d = _run_daily_signal(pick_overnight_gap_fn=lambda *_: pd.Series({"1617.T": 0.01}))
+    assert d["strategy_context"]["open_gap"] is None
+
+
+def test_opening_gap_observability_fails_closed() -> None:
+    target = pd.Timestamp("2026-07-08")
+    assert not opening_gap_observable(datetime(2026, 7, 8, 8, 59, tzinfo=_JST), target)
+    assert not opening_gap_observable(datetime(2026, 7, 8, 9, 0, tzinfo=_JST), target)
+    assert opening_gap_observable(datetime(2026, 7, 8, 9, 1, tzinfo=_JST), target)
+    assert not opening_gap_observable(datetime(2026, 7, 8, 9, 1, tzinfo=_JST), pd.Timestamp("2026-07-11"))
+
+
+def test_retrospective_run_cannot_be_labeled_tradeable() -> None:
+    d = _run_daily_signal(
+        get_rule_fn=lambda _: _stub_rule("curr_oc"),
+        actual_run_jst=datetime(2026, 9, 18, 10, 0, tzinfo=_JST),
+    )
+    assert d["tradeable"] is False
+    assert d["trade_block_reason"] == "retrospective_run"
+    assert d["no_trade_classification"] == "retrospective_run"
+    assert len(d["input_snapshot_sha256"]) == 64
+
+
+def test_same_open_execution_is_blocked_after_market_open() -> None:
+    d = _run_daily_signal(
+        now_jst=datetime(2026, 7, 8, 10, 0, tzinfo=_JST),
+        get_rule_fn=lambda _: _stub_rule("curr_oc"),
+        pick_overnight_gap_fn=lambda *_: pd.Series({"1617.T": 0.01}),
+    )
+    assert d["tradeable"] is False
+    assert d["trade_block_reason"] == "assumed_open_fill_expired"
+    assert d["no_trade_classification"] == "assumed_open_fill_expired"
+
+
+def test_input_fingerprint_changes_when_price_changes() -> None:
+    panel = pd.DataFrame({"A": [100.0]}, index=pd.to_datetime(["2026-07-07"]))
+    first = price_input_fingerprint(panel, panel, panel)
+    changed = panel.copy()
+    changed.iloc[0, 0] = 101.0
+    assert first == price_input_fingerprint(panel.copy(), panel.copy(), panel.copy())
+    assert first != price_input_fingerprint(changed, panel, panel)
 
 
 # ---------------------------------------------------------------------------

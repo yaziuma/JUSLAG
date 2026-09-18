@@ -62,6 +62,7 @@ def build_daily_report(
     generated_at_utc: str,
     paper_bt: dict | None = None,
     paper_params: BacktestParams | None = None,
+    run_provenance: dict | None = None,
 ) -> dict:
     fetch_steps = {}
     for name, step in (fetch_result.get("steps") or {}).items():
@@ -73,6 +74,7 @@ def build_daily_report(
         "schema_version": 1,
         "date": date,
         "generated_at_utc": generated_at_utc,
+        "run_provenance": run_provenance,
         "backtest": {
             "settings_name": settings_name,
             "judge_strategy_name": bt.get("judge_strategy_name"),

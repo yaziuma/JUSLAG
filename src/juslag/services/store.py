@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pydantic import BaseModel, Field
 
@@ -12,6 +12,7 @@ class StrategyHistoryEntry(BaseModel):
     signal_date: str | None = None
     exec_jp_date: str | None = None
     recorded_at: str
+    recorded_at_utc: str | None = None
     operation_mode: str | None = None
     exec_jp_date_source: str | None = None
     tradeable: bool | None = None
@@ -50,7 +51,9 @@ class StrategyHistoryEntry(BaseModel):
     raw_signal_json: str | None = None
 
 
-def build_strategy_history_entry(ds: dict, now_jst: datetime) -> StrategyHistoryEntry:
+def build_strategy_history_entry(
+    ds: dict, now_jst: datetime, *, recorded_at_jst: datetime | None = None,
+) -> StrategyHistoryEntry:
     plan = ds.get("execution_plan") or {}
     long_tickers = sorted(e.get("ticker", "") for e in plan.get("long", []))
     short_tickers = sorted(e.get("ticker", "") for e in plan.get("short", []))
@@ -66,7 +69,8 @@ def build_strategy_history_entry(ds: dict, now_jst: datetime) -> StrategyHistory
         cached_date=now_jst.date().isoformat(),
         signal_date=ds.get("signal_reference_us_date") or ds.get("reference_date") or None,
         exec_jp_date=ds.get("execution_target_jp_date") or None,
-        recorded_at=now_jst.strftime("%Y/%m/%d %H:%M:%S"),
+        recorded_at=(recorded_at_jst or now_jst).strftime("%Y/%m/%d %H:%M:%S"),
+        recorded_at_utc=(recorded_at_jst or now_jst).astimezone(timezone.utc).isoformat(),
         operation_mode=ds.get("operation_mode") or "production",
         exec_jp_date_source=ds.get("execution_target_jp_date_source") or None,
         tradeable=ds.get("tradeable"),

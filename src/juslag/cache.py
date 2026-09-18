@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
 
@@ -51,6 +52,24 @@ class PriceCache:
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_ticker_price_mode_date ON prices (ticker, price_mode, date)"
             )
+            try:
+                conn.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS price_observations (
+                        ticker TEXT NOT NULL,
+                        date TEXT NOT NULL,
+                        price_mode TEXT NOT NULL,
+                        observed_at_utc TEXT NOT NULL,
+                        open REAL,
+                        close REAL,
+                        PRIMARY KEY (ticker, date, price_mode, observed_at_utc)
+                    )
+                    """
+                )
+            except sqlite3.OperationalError as exc:
+                if not existing_cols or "readonly" not in str(exc).lower():
+                    raise
+                logger.warning("Price observation history unavailable in read-only cache: %s", self.db_path)
 
     @staticmethod
     def _existing_price_columns(conn: sqlite3.Connection) -> set[str]:
@@ -118,10 +137,24 @@ class PriceCache:
             )
         if not rows:
             return 0
+        observed_at = datetime.now(timezone.utc).isoformat()
         with sqlite3.connect(self.db_path) as conn:
+            changed = []
+            for row in rows:
+                previous = conn.execute(
+                    "SELECT open, close FROM prices WHERE ticker = ? AND date = ? AND price_mode = ?",
+                    row[:3],
+                ).fetchone()
+                if previous != row[3:]:
+                    changed.append((row[0], row[1], row[2], observed_at, row[3], row[4]))
             conn.executemany(
                 "INSERT OR REPLACE INTO prices(ticker, date, price_mode, open, close) VALUES(?,?,?,?,?)",
                 rows,
+            )
+            conn.executemany(
+                "INSERT INTO price_observations(ticker, date, price_mode, observed_at_utc, open, close) "
+                "VALUES(?,?,?,?,?,?)",
+                changed,
             )
         return len(rows)
 

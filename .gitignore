@@ -61,3 +61,4 @@ logs/
 !data/**/*.csv
 # Re-derivable bulk external data stays out of git (factors/actions full CSVs)
 data/external/
+data/intraday/

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+import hashlib
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pandas as pd
+import pandas_market_calendars as mcal
 
 from juslag.cache import PriceCache
 from juslag.config import (
@@ -37,6 +39,15 @@ from juslag.services.data_status import build_data_status
 
 _JST = ZoneInfo("Asia/Tokyo")
 DEFAULT_ACTIVE_RULE_ID = "rule_406_no_flip"
+
+
+def price_input_fingerprint(us_close: pd.DataFrame, jp_close: pd.DataFrame, jp_open: pd.DataFrame) -> str:
+    """Fingerprint the actual price panels used for signal and regime construction."""
+    digest = hashlib.sha256()
+    for name, frame in (("us_close", us_close), ("jp_close", jp_close), ("jp_open", jp_open)):
+        digest.update(name.encode("ascii") + b"\n")
+        digest.update(frame.to_csv(float_format="%.17g", na_rep="NA", lineterminator="\n").encode("utf-8"))
+    return digest.hexdigest()
 
 
 def normalize_execution_plan_lots(
@@ -186,6 +197,29 @@ def pick_overnight_gap(
     return pd.Series(dtype=float)
 
 
+def _target_open_jst(execution_target_jp_date: pd.Timestamp | None) -> pd.Timestamp | None:
+    if execution_target_jp_date is None:
+        return None
+    target = pd.Timestamp(execution_target_jp_date).date()
+    schedule = mcal.get_calendar("JPX").schedule(start_date=target, end_date=target)
+    if schedule.empty:
+        return None
+    return schedule.iloc[0]["market_open"].tz_convert(_JST)
+
+
+def opening_gap_observable(now_jst: datetime, execution_target_jp_date: pd.Timestamp | None) -> bool:
+    """An execution-day opening gap cannot be known before that session opens."""
+    opening = _target_open_jst(execution_target_jp_date)
+    return bool(now_jst.tzinfo is not None and opening is not None
+                and pd.Timestamp(now_jst).tz_convert(_JST) > opening)
+
+
+def assumed_open_fill_expired(now_jst: datetime, execution_target_jp_date: pd.Timestamp | None) -> bool:
+    opening = _target_open_jst(execution_target_jp_date)
+    return bool(now_jst.tzinfo is not None and opening is not None
+                and pd.Timestamp(now_jst).tz_convert(_JST) >= opening)
+
+
 def build_daily_signal_from_signal_df(
     signal_df: pd.DataFrame,
     jp_tickers_map: dict[str, str],
@@ -291,6 +325,7 @@ def run_daily_signal_service(
     log_path: Path | None = None,
     analysis_status: dict | None = None,
     now_jst: datetime | None = None,
+    actual_run_jst: datetime | None = None,
     active_rule_id: str | None = None,
     generate_signals_fn=generate_signals,
     get_rule_fn=get_rule,
@@ -312,6 +347,7 @@ def run_daily_signal_service(
         sample_end,
         price_mode="raw",
     )
+    input_snapshot_sha256 = price_input_fingerprint(us_close, jp_close, jp_open)
     us_cc, jp_oc_daily, jp_cc = compute_returns(us_close, jp_close, jp_open)
 
     us_tickers = us_close.columns.tolist()
@@ -363,6 +399,8 @@ def run_daily_signal_service(
     # overnight gap = (JP執行日寄り - 前日JP終) / 前日JP終 = 本物の寄りgap
     overnight_gap_df = jp_open / jp_close.shift(1) - 1.0
     overnight_gap_latest = pick_overnight_gap_fn(overnight_gap_df, execution_target_jp_date)
+    if not opening_gap_observable(now_jst, execution_target_jp_date):
+        overnight_gap_latest = pd.Series(dtype=float)
 
     # StrategyContext 用 gap 値を overnight_gap から計算
     # open_gap: 全銘柄平均
@@ -526,10 +564,20 @@ def run_daily_signal_service(
     if _strategy_rule_skipped:
         tradeability["tradeable"] = False
         tradeability["trade_block_reason"] = "strategy_rule_skip"
+    if assumed_open_fill_expired(now_jst, execution_target_jp_date):
+        tradeability["tradeable"] = False
+        tradeability["trade_block_reason"] = "assumed_open_fill_expired"
+    if actual_run_jst is not None and actual_run_jst.astimezone(_JST).date() != now_jst.date():
+        tradeability["tradeable"] = False
+        tradeability["trade_block_reason"] = "retrospective_run"
     # no_trade_classification の優先順位（apply前の pre_rule 値を使用）:
     #   data_quality/freshness/execution_block > strategy_rule_skip
     #   > no_long/short_candidates > threshold_near_miss > no_signal
-    if _strategy_rule_skipped:
+    if tradeability["trade_block_reason"] == "retrospective_run":
+        _effective_no_trade = "retrospective_run"
+    elif tradeability["trade_block_reason"] == "assumed_open_fill_expired":
+        _effective_no_trade = "assumed_open_fill_expired"
+    elif _strategy_rule_skipped:
         _effective_no_trade = (
             "strategy_rule_skip_with_candidates"
             if pre_rule_has_both_adopted_candidates
@@ -582,6 +630,7 @@ def run_daily_signal_service(
         "execution_target_jp_date": str(execution_target_jp_date.date()) if execution_target_jp_date is not None else None,
         "execution_target_jp_date_source": execution_target_jp_date_source,
         "operation_mode": operation_mode,
+        "input_snapshot_sha256": input_snapshot_sha256,
         "rows": daily_df.to_dict(orient="records"),
         "execution_plan": execution_plan,
         "data_quality": quality,

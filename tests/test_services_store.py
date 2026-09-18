@@ -121,6 +121,16 @@ def test_build_strategy_history_entry_dedupe_key_is_stable() -> None:
     assert entry_a.recorded_at != entry_b.recorded_at
 
 
+def test_history_entry_records_actual_run_time_for_backfill() -> None:
+    ds = {"tradeable": False, "trade_block_reason": "retrospective_run"}
+    target = datetime(2026, 7, 8, 8, 0, tzinfo=_JST)
+    actual = datetime(2026, 9, 18, 10, 30, tzinfo=_JST)
+    entry = build_strategy_history_entry(ds, target, recorded_at_jst=actual)
+    assert entry.cached_date == "2026-07-08"
+    assert entry.recorded_at == "2026/09/18 10:30:00"
+    assert entry.recorded_at_utc == "2026-09-18T01:30:00+00:00"
+
+
 def test_build_strategy_history_entry_handles_missing_strategy_decision() -> None:
     ds = _make_daily_signal_result(strategy_decision=None, strategy_context=None, shadow_decisions=None)
     now_jst = datetime(2026, 7, 8, 8, 0, 0, tzinfo=_JST)

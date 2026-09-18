@@ -23,6 +23,28 @@ def test_raw_and_adjusted_are_isolated(tmp_path: Path) -> None:
     assert float(adjusted_loaded["SPY"]["close"].iloc[0]) == 81.0
 
 
+def test_price_observations_record_first_seen_and_revisions_only(tmp_path: Path) -> None:
+    db_path = tmp_path / "prices.db"
+    cache = PriceCache(db_path)
+    idx = pd.to_datetime(["2026-09-18"])
+    opens = pd.Series([100.0], index=idx)
+    first_close = pd.Series([101.0], index=idx)
+    revised_close = pd.Series([102.0], index=idx)
+
+    cache.upsert("SPY", opens, first_close, price_mode="raw")
+    cache.upsert("SPY", opens, first_close, price_mode="raw")
+    cache.upsert("SPY", opens, revised_close, price_mode="raw")
+
+    with sqlite3.connect(db_path) as conn:
+        rows = conn.execute(
+            "SELECT open, close, observed_at_utc FROM price_observations "
+            "WHERE ticker = 'SPY' AND date = '2026-09-18' ORDER BY observed_at_utc"
+        ).fetchall()
+    assert len(rows) == 2
+    assert [row[1] for row in rows] == [101.0, 102.0]
+    assert all(row[2].endswith("+00:00") for row in rows)
+
+
 def test_summary_and_freshness_are_mode_specific(tmp_path: Path) -> None:
     cache = PriceCache(tmp_path / "prices.db")
     idx = pd.to_datetime(["2026-04-06", "2026-04-07"])

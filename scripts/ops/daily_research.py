@@ -129,11 +129,12 @@ def main(argv: list[str] | None = None) -> None:
         log_path=_REPO_ROOT / cfg.output_dir / "daily_signal_log.csv",
         analysis_status=analysis_status,
         now_jst=now_jst,
+        actual_run_jst=now_actual,
         active_rule_id=params.strategy_rule_id or None,
     )
 
     # --- 5. 戦略履歴の保存 ---
-    entry = build_strategy_history_entry(ds, now_jst)
+    entry = build_strategy_history_entry(ds, now_jst, recorded_at_jst=datetime.now(_JST))
     history_entry_dict = _to_jsonable(entry.model_dump(exclude={"raw_signal_json"}))
     history_jsonl_path = out_dir / "strategy_history.jsonl"
     with history_jsonl_path.open("a", encoding="utf-8") as f:
@@ -154,6 +155,13 @@ def main(argv: list[str] | None = None) -> None:
         history_entry=history_entry_dict,
         slack_fallback_text=slack_text,
         generated_at_utc=generated_at_utc,
+        run_provenance={
+            "run_started_at_utc": now_actual.astimezone(timezone.utc).isoformat(),
+            "analysis_as_of_jst": now_jst.isoformat(),
+            "target_date": date_str,
+            "run_kind": "live_date" if target_date == now_actual.date() else "retrospective",
+            "input_snapshot_sha256": ds.get("input_snapshot_sha256"),
+        },
         paper_bt=paper_bt,
         paper_params=paper_params,
     )
