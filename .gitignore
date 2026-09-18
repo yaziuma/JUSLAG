@@ -8,6 +8,7 @@
 !uv.lock
 !lead_lag_strategy.py
 !.env.local.example
+!.env.turso.example
 !config/
 !config/**/*.example.yaml
 !config/app.ci.yaml
@@ -43,6 +44,7 @@
 **/*.pyd
 .venv/
 .env.local
+.env.turso
 .pytest_cache/
 .ruff_cache/
 outputs/
