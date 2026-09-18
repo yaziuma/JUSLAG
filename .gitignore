@@ -15,6 +15,9 @@
 # Tracked directories
 !docs/
 !docs/**
+!skills/
+!skills/**/
+!skills/**/SKILL.md
 !scripts/
 !scripts/**
 !tests/
