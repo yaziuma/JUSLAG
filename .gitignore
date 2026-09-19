@@ -12,6 +12,7 @@
 !config/
 !config/**/*.example.yaml
 !config/app.ci.yaml
+!config/a_evaluation_gate.yaml
 
 # Tracked directories
 !docs/

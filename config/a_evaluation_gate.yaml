@@ -1,0 +1,48 @@
+schema_version: 1
+frozen_at_utc: "2026-09-19T04:45:00+00:00"
+decision: no_go
+live_trading_allowed: false
+
+a1:
+  conclusion: historical_information_time_not_reconstructable
+  require_future_price_observation_timestamps: true
+  require_input_snapshot_hash: true
+
+a2:
+  proxy_collection:
+    start_jp_session: "2026-09-24"
+    minimum_complete_sessions: 60
+    required_ticker_day_coverage: 0.90
+    maximum_observation_delay_minutes: 20
+    postopen_bar_start_minute: "09:10"
+    postopen_bar_end_minute: "09:30"
+  go_requires_broker_execution_records: true
+  required_broker_fields:
+    - order_submitted_at
+    - order_accepted_at
+    - fill_at
+    - requested_quantity
+    - filled_quantity
+    - fill_price
+    - short_inventory_available
+    - short_borrow_fee
+
+a3:
+  prospective_holdout:
+    start_jp_session: "2026-09-24"
+    end_jp_session: "2027-03-23"
+    jp_sessions: 120
+    strategy: paper_aligned_pca_sub_long_only
+    holding_sessions: 5
+    initial_capital_yen: 1000000
+    slippage_bps_per_side: 5
+    commission_bps_per_side: 0
+    annual_tax_rate: 0.20315
+    loss_carryforward_years: 3
+    selection_quantile: 0.30
+    overlapping_positions: false
+  acceptance:
+    final_capital_after_tax_above_initial: true
+    maximum_drawdown_after_tax_pct_at_least: -25
+    mean_same_notional_sector_excess_bps_above: 0
+    no_parameter_changes_before_end: true
