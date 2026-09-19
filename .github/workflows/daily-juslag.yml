@@ -28,7 +28,7 @@ permissions:
 
 jobs:
   research:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     outputs:
       llm_status: ${{ steps.batch.outputs.llm_status }}
@@ -115,7 +115,7 @@ jobs:
   turso:
     if: ${{ vars.JUSLAG_WRITE_TURSO == 'true' && !inputs.dry_run }}
     needs: research
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
       contents: read
@@ -180,7 +180,7 @@ jobs:
     # （secrets.SITE_PASSWORD を設定すること）。
     if: ${{ vars.ENABLE_SITE_DEPLOY == 'true' }}
     needs: research
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
