@@ -30,6 +30,20 @@ jobs:
       - name: Capture opening bars
         run: uv run --frozen python scripts/ops/capture_intraday.py --period 1d --db "$RUNNER_TEMP/juslag-opening.sqlite" --snapshot-dir data/opening_bars
 
+      - name: Evaluate frozen A2/A3 gates
+        run: |
+          PYTHONPATH=src uv run --frozen python scripts/reports/check_a_evaluation_gate.py > "$RUNNER_TEMP/a-gate.json"
+          {
+            echo "## A2/A3 frozen gate"
+            echo
+            echo '| Gate | Progress | Ready |'
+            echo '| --- | ---: | --- |'
+            jq -r '"| A2 timely proxy sessions | \(.a2_proxy.complete_sessions)/\(.a2_proxy.minimum_complete_sessions) | \(.a2_proxy.ready) |"' "$RUNNER_TEMP/a-gate.json"
+            jq -r '"| A3 untouched JPX sessions | \(.a3_holdout.completed_sessions)/\(.a3_holdout.expected_sessions) | \(.a3_holdout.ready) |"' "$RUNNER_TEMP/a-gate.json"
+            echo
+            jq -r '"Decision: **\(.decision)** / live trading allowed: **\(.live_trading_allowed)**"' "$RUNNER_TEMP/a-gate.json"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Commit observed bars
         run: |
           if [ ! -d data/opening_bars ]; then
