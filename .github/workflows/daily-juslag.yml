@@ -35,7 +35,7 @@ jobs:
       slack_status: ${{ steps.batch.outputs.slack_status }}
       report_date: ${{ steps.batch.outputs.report_date }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
@@ -63,7 +63,7 @@ jobs:
         run: cp config/app.ci.yaml config/app.yaml
 
       - name: Restore price cache DB
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.juslag/prices.db
           key: juslag-prices-v1-${{ github.run_id }}
@@ -120,7 +120,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Pull finalized daily files
         run: git pull --ff-only
@@ -134,7 +134,7 @@ jobs:
 
       - name: Restore this run's price cache
         id: price_cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.juslag/prices.db
           key: juslag-prices-v1-${{ github.run_id }}
@@ -190,7 +190,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.ref }}
 
@@ -237,11 +237,11 @@ jobs:
             fi
           done < <(find "$protected_dir" -name '*.html')
 
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: _site_protected/_site
 
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
