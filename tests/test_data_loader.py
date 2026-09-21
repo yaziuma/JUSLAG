@@ -3,7 +3,23 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
+import juslag.data_loader as data_loader
 from juslag.data_loader import _fetch_group_with_cache, build_joint_cc, compute_returns, repair_known_bad_prices
+
+
+def test_fetch_data_uses_explicit_cache_for_both_markets(monkeypatch) -> None:
+    sentinel = object()
+    observed = []
+    dates = pd.to_datetime(["2026-01-05"])
+
+    def fake_group(tickers, start, end, cache, price_mode):
+        observed.append(cache)
+        frame = pd.DataFrame({ticker: [100.0] for ticker in tickers}, index=dates)
+        return frame, frame
+
+    monkeypatch.setattr(data_loader, "_fetch_group_with_cache", fake_group)
+    data_loader.fetch_data(["US"], ["JP"], "2026-01-01", "2026-01-06", cache=sentinel)
+    assert observed == [sentinel, sentinel]
 
 
 def test_repair_bad_1629_prices_without_double_adjustment() -> None:
