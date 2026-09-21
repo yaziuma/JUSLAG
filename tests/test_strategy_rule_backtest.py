@@ -1,8 +1,13 @@
 """build_portfolio_with_strategy_rule の単体テスト + run_backtest_service の strategy_rule_id 統合テスト"""
 from __future__ import annotations
+
+import numpy as np
 import pandas as pd
 import pytest
+
+import juslag.services.backtest as backtest_service
 from juslag.cache import PriceCache
+from juslag.config import JP_TICKERS, US_TICKERS
 from juslag.portfolio import build_portfolio_with_strategy_rule
 from juslag.services.backtest import BacktestParams, run_backtest_service
 from juslag.strategies.base import StrategyRule
@@ -182,11 +187,51 @@ class TestBuildPortfolioWithStrategyRule:
 
 
 class TestBacktestServiceWithStrategyRuleId:
-    """run_backtest_service に strategy_rule_id を渡すと meta_rule パフォーマンスが返る（オフライン: 実キャッシュ使用）"""
+    """run_backtest_service に strategy_rule_id を渡すと meta_rule パフォーマンスが返る。"""
+
+    @pytest.fixture(autouse=True)
+    def deterministic_market(self, monkeypatch, tmp_path):
+        dates = pd.bdate_range("2020-01-02", "2022-06-30")
+        step = np.arange(len(dates), dtype=float)
+        us_close = pd.DataFrame(
+            {
+                ticker: 100 + step * (0.02 + i * 0.001) + 2 * np.sin(step / (9 + i))
+                for i, ticker in enumerate(US_TICKERS)
+            },
+            index=dates,
+        )
+        jp_open = pd.DataFrame(
+            {
+                ticker: 100 + step * (0.015 + i * 0.0005) + 1.5 * np.cos(step / (8 + i))
+                for i, ticker in enumerate(JP_TICKERS)
+            },
+            index=dates,
+        )
+        jp_close = pd.DataFrame(
+            {
+                ticker: jp_open[ticker] * (1 + 0.003 * np.sin((step + i) / 5))
+                for i, ticker in enumerate(JP_TICKERS)
+            },
+            index=dates,
+        )
+        monkeypatch.setattr(
+            backtest_service,
+            "fetch_data",
+            lambda *args, **kwargs: (us_close, jp_close, jp_open),
+        )
+        self.cache = PriceCache(tmp_path / "prices.db")
+        self.params = {
+            "sample_start": "2020-01-01",
+            "sample_end": "2022-07-01",
+            "pretrain_end": "2021-12-31",
+        }
 
     def test_backtest_response_has_strategy_rule_id(self):
-        cache = PriceCache()
-        bt = run_backtest_service(BacktestParams(strategy_rule_id="rule_406"), cache, include_strategy_rule_detail=True)
+        bt = run_backtest_service(
+            BacktestParams(strategy_rule_id="rule_406", **self.params),
+            self.cache,
+            include_strategy_rule_detail=True,
+        )
         assert bt["strategy_rule_id"] == "rule_406"
         assert bt["judge_strategy_name"] == "PCA SUB + rule_406"
         assert "meta_rule_gross" in bt["performance_sets"]
@@ -200,8 +245,7 @@ class TestBacktestServiceWithStrategyRuleId:
         )
 
     def test_backtest_without_strategy_rule_id_unchanged(self):
-        cache = PriceCache()
-        bt = run_backtest_service(BacktestParams(), cache)
+        bt = run_backtest_service(BacktestParams(**self.params), self.cache)
         assert bt.get("strategy_rule_id") is None
         assert "meta_rule_net_pre_tax" not in bt.get("performance_sets", {})
         assert "strategy_rule_daily" not in bt
