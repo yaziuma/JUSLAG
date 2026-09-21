@@ -62,7 +62,7 @@ def test_write_and_audit_snapshot(tmp_path: Path) -> None:
     assert json.loads(path.read_text(encoding="utf-8"))["applicable_session"] == "2026-09-24"
     audit = audit_snapshots(tmp_path, "2026-09-24")
     assert audit["observed_sessions"] == 1
+    assert audit["valid_snapshot_files"] == 1
     assert audit["invalid_files"] == []
     assert audit["availability_known_from_public_source"] is False
     assert audit["informational_only"] is True
-

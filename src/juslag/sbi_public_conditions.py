@@ -113,6 +113,7 @@ def write_snapshot(snapshot: dict[str, Any], output_root: Path) -> Path:
 def audit_snapshots(output_root: Path, start_session: str) -> dict[str, Any]:
     sessions: dict[str, dict[str, Any]] = {}
     invalid_files: list[str] = []
+    valid_files = 0
     for path in sorted(output_root.glob("*/*.json")):
         try:
             item = json.loads(path.read_text(encoding="utf-8"))
@@ -126,6 +127,7 @@ def audit_snapshots(output_root: Path, start_session: str) -> dict[str, Any]:
             )
             if session >= start_session and valid:
                 sessions[session] = item
+                valid_files += 1
             elif session >= start_session:
                 invalid_files.append(str(path))
         except (KeyError, TypeError, ValueError, json.JSONDecodeError):
@@ -133,11 +135,10 @@ def audit_snapshots(output_root: Path, start_session: str) -> dict[str, Any]:
     return {
         "observed_sessions": len(sessions),
         "latest_session": max(sessions) if sessions else None,
-        "valid_snapshot_files": len(sessions),
+        "valid_snapshot_files": valid_files,
         "invalid_files": invalid_files,
         "target_ticker_count": len(JP_TICKERS),
         "availability_known_from_public_source": False,
         "broker_execution_records_present": False,
         "informational_only": True,
     }
-
