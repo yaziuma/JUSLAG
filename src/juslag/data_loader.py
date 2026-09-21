@@ -173,10 +173,16 @@ def fetch_data(
     start: str,
     end: str,
     price_mode: PriceMode = "adjusted",
+    cache: PriceCache | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Fetch Open/Close prices using SQLite cache — only downloads missing date ranges."""
-    us_close, _ = _fetch_group_with_cache(us_tickers, start, end, _cache, price_mode=price_mode)
-    jp_close, jp_open = _fetch_group_with_cache(jp_tickers, start, end, _cache, price_mode=price_mode)
+    active_cache = cache or _cache
+    us_close, _ = _fetch_group_with_cache(
+        us_tickers, start, end, active_cache, price_mode=price_mode
+    )
+    jp_close, jp_open = _fetch_group_with_cache(
+        jp_tickers, start, end, active_cache, price_mode=price_mode
+    )
 
     us_close = us_close.reindex(columns=us_tickers).dropna(how="all").dropna(axis=1, how="all")
     jp_close = jp_close.reindex(columns=jp_tickers).dropna(how="all").dropna(axis=1, how="all")
