@@ -1,0 +1,13 @@
+[Unit]
+Description=Capture JUSLAG JP opening bars at 09:16 and 09:40 JST
+
+[Timer]
+OnCalendar=Mon..Fri *-*-* 09:16:00
+OnCalendar=Mon..Fri *-*-* 09:40:00
+AccuracySec=10s
+RandomizedDelaySec=0
+Persistent=false
+Unit=juslag-opening-bars.service
+
+[Install]
+WantedBy=timers.target
