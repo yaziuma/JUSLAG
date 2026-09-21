@@ -33,6 +33,8 @@ No-Goは「効果が必ずない」という意味ではない。現行証拠で
 
 2026-09-19時点の機械判定はA2期限内観測0/60、A3未使用期間0/120、`live_trading_allowed=false`。平日09:16/09:40 JSTの収集workflowはGitHub Actionsに認識され、土曜の手動実行`35421759823`は成功した。最初のJP営業日における定時観測遅延はまだ未計測である。
 
+2026-09-21の最初の定時機会では、GitHub Actionsのworkflowは`active`にもかかわらず09:16/09:40 JSTのschedule runが作成されなかった。GitHubのscheduleを時刻証拠の主系にせず、SSHホスト上の`juslag-opening-bars.timer`で直接取得し、Actionsは補助系とする。timerは平日09:16/09:40 JST、`Persistent=false`（停止中の取り逃しを後から観測済みにしない）、`AccuracySec=10s`で固定した。同日にuser timerをインストール・有効化し、lingerも有効化した。手動service実行は17銘柄・575本を保存して終了コード0、休場日の当日スナップショットは0件だった。最初のJP営業日の実観測時刻は引き続き確認する。
+
 ## 運用判断
 
 1. 現行メタ版を発注候補として表示・利用しない。

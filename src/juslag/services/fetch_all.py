@@ -55,7 +55,14 @@ def run_fetch_all(
             on_step(name, step)
 
     def price_fetch(mode: str) -> None:
-        fetch_data(list(US_TICKERS.keys()), list(JP_TICKERS.keys()), start, end, price_mode=mode)
+        fetch_data(
+            list(US_TICKERS.keys()),
+            list(JP_TICKERS.keys()),
+            start,
+            end,
+            price_mode=mode,
+            cache=cache,
+        )
 
     def run_external_step(step: dict, script: Path, script_cwd: Path) -> None:
         log, code = run_script_capture(script, script_cwd)

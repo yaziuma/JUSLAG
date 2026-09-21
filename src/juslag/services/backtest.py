@@ -79,6 +79,7 @@ def run_backtest_service(
         params.sample_start,
         params.sample_end,
         price_mode=params.price_mode,
+        cache=cache,
     )
     us_cc, jp_oc, jp_cc = compute_returns(us_close, jp_close, jp_open)
 
