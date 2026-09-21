@@ -476,7 +476,7 @@ def build_daily_signal_log_entry(
     }
 
 
-def generate_signals(us_cc: pd.DataFrame, jp_cc: pd.DataFrame, c0: np.ndarray, l: int = 60, k: int = 3, lam: float = 0.9, include_latest_us_only: bool = False) -> pd.DataFrame:
+def generate_signals(us_cc: pd.DataFrame, jp_cc: pd.DataFrame, c0: np.ndarray, l: int = 60, k: int = 3, lam: float = 0.9, include_latest_us_only: bool = False) -> pd.DataFrame:  # noqa: E741
     """Generate historical JP signals indexed by signal date."""
     us_tickers = us_cc.columns.tolist()
     jp_tickers = jp_cc.columns.tolist()
@@ -516,7 +516,7 @@ def generate_signals(us_cc: pd.DataFrame, jp_cc: pd.DataFrame, c0: np.ndarray, l
     return signal_df
 
 
-def get_todays_signal(us_cc: pd.DataFrame, jp_cc: pd.DataFrame, c0: np.ndarray, jp_tickers_map: dict[str, str], l: int = 60, k: int = 3, lam: float = 0.9, q: float = 0.3, min_long_signal: float = 0.0, max_short_signal: float = 0.0, vol_regime: str | None = None, adaptive_threshold: bool = False, regime_warning: bool = False) -> DailySignalResult:
+def get_todays_signal(us_cc: pd.DataFrame, jp_cc: pd.DataFrame, c0: np.ndarray, jp_tickers_map: dict[str, str], l: int = 60, k: int = 3, lam: float = 0.9, q: float = 0.3, min_long_signal: float = 0.0, max_short_signal: float = 0.0, vol_regime: str | None = None, adaptive_threshold: bool = False, regime_warning: bool = False) -> DailySignalResult:  # noqa: E741
     """Return latest signal table, reference US market date, and JP execution target date.
 
     Returns:

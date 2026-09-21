@@ -7,10 +7,9 @@ from __future__ import annotations
 
 import pandas as pd
 import numpy as np
-import pytest
 
-from juslag.config import ExecutionCostConfig, TaxConfig
-from juslag.metrics import apply_tax_model, compute_performance
+from juslag.config import ExecutionCostConfig
+from juslag.metrics import compute_performance
 from juslag.portfolio import build_portfolio_returns_detail
 from juslag.signal import ADAPTIVE_LONG_THRESHOLDS, resolve_thresholds
 

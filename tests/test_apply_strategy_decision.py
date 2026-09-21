@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pandas as pd
-import pytest
 
 from juslag.signal import DailySignalResult, GAP_FILTER_THRESHOLD, apply_strategy_decision
 

@@ -1,0 +1,12 @@
+[Unit]
+Description=Audit JUSLAG Git reports against Turso Cloud
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/projects/JUSLAG
+EnvironmentFile=%h/projects/JUSLAG/.env.turso
+ExecStart=%h/projects/JUSLAG/scripts/ops/audit_turso_from_origin.sh
+TimeoutStartSec=15min
+

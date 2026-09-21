@@ -1,0 +1,13 @@
+[Unit]
+Description=Audit JUSLAG Turso reconciliation on JP weekdays
+
+[Timer]
+OnCalendar=Mon..Fri *-*-* 10:15:00
+AccuracySec=1min
+RandomizedDelaySec=0
+Persistent=true
+Unit=juslag-turso-reconcile.service
+
+[Install]
+WantedBy=timers.target
+

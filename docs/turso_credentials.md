@@ -41,6 +41,13 @@ Actionsの`daily-juslag.yml`は`JUSLAG_WRITE_TURSO`リポジトリ変数が`true
 
 `turso-reconcile.yml`は平日09:30 JSTに、Git上の確定レポートとCloudの同日最新runを照合し、欠落・差分だけを最大10日分再送する。既存51日分のバックフィルが完了したため、既定の開始日は最初のレポート日`2026-07-09`。上限超過・読取不能・Cloud読み戻し不一致は失敗としてSlackに通知する。次回定期実行または手動再実行で未修復分を再試行する。修復は既存行を上書きせず新runを追加する。修復runの`source_commit`は照合ワークフローのcommitであり、元レポート生成時のcommitではない。
 
+GitHub scheduleの遅延・未生成に備えたローカル補助系は、`bash scripts/ops/install_turso_reconcile_timer.sh`で導入する。平日10:15 JSTに`origin/main`をfetchし、確定済みの`data/reports`と`data/history.jsonl`だけを一時領域へ展開してCloudと照合する。作業ツリーの内容は監査対象にせず、Cloud修復もしない。不一致・認証期限切れ・ネットワーク障害はserviceを失敗させてjournalへ残す。
+
+```bash
+systemctl --user status juslag-turso-reconcile.timer --no-pager
+journalctl --user -u juslag-turso-reconcile.service --no-pager -n 200
+```
+
 手動Actions実行は既定で照合のみ（差分があれば終了コード2）。`repair=true`を選ぶと再送する。ローカルでは下記の通り。未投入の多数の日付を修復する場合は事前に監査で件数を確認し、必要なら`--max-repairs`を指定する。
 
 ```bash

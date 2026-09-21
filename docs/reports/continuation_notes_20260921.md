@@ -74,7 +74,7 @@ PYTHONPATH=src .venv/bin/python scripts/reports/check_a_evaluation_gate.py
 - 既存52日分のレポート、価格224,924行、401ファイルをCloudへ移行し、別接続で全件照合済み。
 - 日次workflowの`turso` jobが確定日次ファイルをpublishし、同runの価格キャッシュとGitデータを同期する。
 - `.github/workflows/turso-reconcile.yml`が平日09:30 JSTにGit正本とCloudを照合する。欠落・差分は設定に従い再送する。
-- `pyturso==0.7.2`の公式`pull()`/`push()`を利用。ブラウザへDB tokenは渡さない。
+- 日次publisher・照合・価格差分更新は`libsql==0.1.11`のCloud直接SQLを利用する。`pyturso==0.7.2`の`pull()`/`push()`はローカルSync PoC・復旧訓練用に残す。ブラウザへDB tokenは渡さない。
 - Turso使用量は大量同期後にRows Read/WrittenとEmbedded Syncsが増えた。公開読み取りをCloudへの高頻度直読みにはせず、クエリ・同期頻度・キャッシュを`.agents/skills/juslag-turso-usage/SKILL.md`に従って監査する。
 - 詳細資料: [`turso_full_migration_20260918.md`](turso_full_migration_20260918.md)、[`turso_actions_verification_20260918.md`](turso_actions_verification_20260918.md)、[`../turso_credentials.md`](../turso_credentials.md)。
 
@@ -175,9 +175,9 @@ tail -n 200 ~/.codex/app-server-daemon/app-server.stderr.log
 
 1. 最初のJP営業日後にローカルtimerの09:16/09:40実行、観測遅延、銘柄カバレッジ、A2ゲート進捗を確認する。翌日まで待つ間は以下の2～5を進める。
 2. Dependabot PR #1/#2/#3/#5でCIを発火させ、公式変更点と互換性を個別確認する。成功してもメジャー更新を自動マージしない。
-3. Turso reconcileの連続成功回数、最新日次publish、Git正本との不一致0件を確認する。Cloud読取・同期量を不必要に増やさない。
+3. Turso reconcileの連続成功回数、最新日次publish、Git正本との不一致0件を確認する。GitHub scheduleが生成されない場合に備え、`juslag-turso-reconcile.timer`は`origin/main`の確定データを一時領域へ展開して読み取り専用監査する。Cloud読取・同期量を不必要に増やさない。
 4. B2 Viewerは未完成。静的Pagesへtokenを埋めず、認証済み静的スナップショットを当面維持する。将来のCloud viewerは認証付きAPI等を別設計する。
-5. 全体Ruff既存17件を小さな独立commitで解消し、その後CIを全Python lintへ強化する。ただし戦略ロジックの変数名変更は回帰テストを伴わせる。
+5. 全体Ruff既存17件は解消し、CIを`src`・`scripts`・`tests`の全Python lintへ強化した。公開APIの`l`引数は互換性維持のため改名せず、警告を局所抑制した。
 6. A2のSBI実注文・約定証拠は未取得。実資金試験を勝手に開始しない。実施する場合は極小・別試験・明示承認・固定保存項目が必要。
 
 ## 新規チャットでの開始手順

@@ -273,7 +273,8 @@ def compute_jp_daily_features(
         sig = signal_df.loc[t].dropna()
         if len(sig) < 3:
             continue
-        lo = sig.quantile(Q); hi = sig.quantile(1.0 - Q)
+        lo = sig.quantile(Q)
+        hi = sig.quantile(1.0 - Q)
         long_tks  = sig.index[sig >= hi].tolist()
         short_tks = sig.index[sig <= lo].tolist()
 
@@ -306,9 +307,12 @@ def compute_signal_daily_features(signal_df: pd.DataFrame) -> pd.DataFrame:
         sig = signal_df.loc[t].dropna()
         if len(sig) < 3:
             continue
-        lo = sig.quantile(Q); hi = sig.quantile(1.0 - Q)
-        cand_l  = sig[sig >= hi]; cand_s = sig[sig <= lo]
-        adopt_l = cand_l[cand_l >= MIN_LONG]; adopt_s = cand_s[cand_s <= MAX_SHORT]
+        lo = sig.quantile(Q)
+        hi = sig.quantile(1.0 - Q)
+        cand_l = sig[sig >= hi]
+        cand_s = sig[sig <= lo]
+        adopt_l = cand_l[cand_l >= MIN_LONG]
+        adopt_s = cand_s[cand_s <= MAX_SHORT]
         cand_str  = float(cand_l.mean()  - cand_s.mean())  if not cand_l.empty  and not cand_s.empty  else float("nan")
         adopt_str = float(adopt_l.mean() - adopt_s.mean()) if not adopt_l.empty and not adopt_s.empty else float("nan")
         rows.append({
@@ -441,7 +445,8 @@ def _max_consec(arr: np.ndarray, positive: bool) -> int:
     mx = cur = 0
     for r in arr:
         if (r > 0) == positive:
-            cur += 1; mx = max(mx, cur)
+            cur += 1
+            mx = max(mx, cur)
         else:
             cur = 0
     return mx
@@ -587,7 +592,8 @@ def build_baseline_comparison(summary_df: pd.DataFrame) -> pd.DataFrame:
             return float(v) if v != NA else NA
         for _, row in grp.iterrows():
             def _diff(col: str) -> Any:
-                rv = row.get(col, NA); bv = _bval(col)
+                rv = row.get(col, NA)
+                bv = _bval(col)
                 if rv == NA or bv == NA:
                     return NA
                 try:
@@ -784,7 +790,7 @@ def run(
         d = build_period_daily(strat_rows, sig_feat_df, jp_feat_df, regime_df,
                                strategies, p["label"], p["start"], p["end"])
         if d.empty:
-            print(f"    → no data, skip")
+            print("    → no data, skip")
             continue
         all_daily.append(d)
 

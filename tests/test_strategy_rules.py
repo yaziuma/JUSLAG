@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from juslag.strategies import get_rule, list_rules, rule_ids, StrategyContext
-from juslag.strategies.registry import get_rule
+from juslag.strategies import get_rule, rule_ids, StrategyContext
 
 
 def _ctx(**kwargs) -> StrategyContext:
