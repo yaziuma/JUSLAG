@@ -67,6 +67,17 @@ SBI証券の取引履歴CSVには、受付番号、取引区分、受付日時�
 
 ## 2026-09-24から固定して保存する項目
 
+公開収集経路は2026-09-21に実装済み。
+
+- collector: `scripts/ops/capture_sbi_public_conditions.py`
+- parser/audit: `src/juslag/sbi_public_conditions.py`
+- 保存先: `data/sbi_execution_conditions/<applicable-session>/*.json`
+- ローカル主系: `juslag-sbi-public-conditions.timer`（平日08:45/19:10 JST）
+- GitHub補助系: `.github/workflows/sbi-public-conditions.yml`
+- A2表示: `check_a_evaluation_gate.py`の`a2_sbi_public_conditions`
+
+SBIの公開「HYPER空売り銘柄 前日比較」は取得できるが、一般信用・HYPERの全銘柄一覧は未ログイン状態ではログイン画面へ遷移する。このため、差分掲載のない銘柄は`unknown_public_diff_only`、全一覧確認が必要な状態は`full_list_requires_login`として保存する。差分非掲載を売建不可・HYPER対象外とは解釈しない。
+
 ### 公開条件スナップショット
 
 原則として、翌営業日分が公表された後と発注想定時刻直前の両方を保存する。
@@ -115,10 +126,20 @@ CSVや画面保存には口座番号、氏名、余力等の機微情報が含�
 
 ## 未解決事項
 
-1. SBI公式一覧の取得・解析方法と利用条件を確認し、17銘柄の日次スナップショットを自動保存する実装が必要。
+1. 公開差分ページの17銘柄日次スナップショットは実装済み。全一覧の最終可否はログインが必要。
 2. ログイン後の口座別売建可能数量を安全に保存する手順が必要。認証情報をコードやログへ渡さない。
 3. 約定履歴CSVの匿名化・検証スキーマと、原本をGit外で保管する場所を決める。
 4. 実注文を行う場合の最大資金、最大数量、中止条件、発注・取消手順について別の明示承認が必要。
+
+## 運用確認
+
+```bash
+systemctl --user status juslag-sbi-public-conditions.timer --no-pager
+journalctl --user -u juslag-sbi-public-conditions.service --no-pager -n 100
+PYTHONPATH=src .venv/bin/python scripts/reports/check_a_evaluation_gate.py
+```
+
+2026-09-21の実地試験では、2026-09-24適用ページを取得し、対象17銘柄、対象銘柄の変更掲載0件、原文SHA-256付きで保存した。systemd serviceからの再取得も終了コード0。これは17銘柄の売建不可を意味せず、当該公開差分ページに17銘柄の変更掲載がなかったことだけを示す。
 
 ## 公式資料
 

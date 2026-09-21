@@ -11,6 +11,7 @@ import yaml
 
 from juslag.config import JP_TICKERS
 from juslag.intraday import load_intraday_bars
+from juslag.sbi_public_conditions import audit_snapshots
 
 
 def evaluate_proxy(bars: pd.DataFrame, gate: dict) -> dict:
@@ -60,6 +61,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--gate", type=Path, default=Path("config/a_evaluation_gate.yaml"))
     parser.add_argument("--snapshot-dir", type=Path, default=Path("data/opening_bars"))
+    parser.add_argument(
+        "--sbi-conditions-dir", type=Path, default=Path("data/sbi_execution_conditions"),
+    )
     parser.add_argument("--as-of", default=pd.Timestamp.now(tz="Asia/Tokyo").date().isoformat())
     args = parser.parse_args()
     gate = yaml.safe_load(args.gate.read_text(encoding="utf-8"))
@@ -69,6 +73,10 @@ def main() -> None:
         "live_trading_allowed": gate["live_trading_allowed"],
         "a1": {"conclusion": gate["a1"]["conclusion"]},
         "a2_proxy": evaluate_proxy(bars, gate),
+        "a2_sbi_public_conditions": audit_snapshots(
+            args.sbi_conditions_dir,
+            gate["a2"]["proxy_collection"]["start_jp_session"],
+        ),
         "a2_go_requires_broker_execution_records": gate["a2"]["go_requires_broker_execution_records"],
         "a3_holdout": evaluate_holdout(gate, args.as_of),
     }

@@ -35,3 +35,11 @@ def test_holdout_calendar_is_frozen_to_120_sessions() -> None:
     assert before["completed_sessions"] == 0
     assert final["completed_sessions"] == 120
     assert final["ready"] is True
+
+
+def test_sbi_public_conditions_cannot_satisfy_broker_evidence() -> None:
+    result = MODULE.audit_snapshots(Path("does-not-exist"), "2026-09-24")
+    assert result["observed_sessions"] == 0
+    assert result["availability_known_from_public_source"] is False
+    assert result["broker_execution_records_present"] is False
+    assert result["informational_only"] is True

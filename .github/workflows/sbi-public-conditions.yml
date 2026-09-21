@@ -1,0 +1,43 @@
+name: sbi-public-conditions
+
+on:
+  schedule:
+    # JP weekdays 08:45 JST (previous UTC day 23:45) and 19:10 JST (10:10 UTC).
+    - cron: "45 23 * * 0-4"
+    - cron: "10 10 * * 1-5"
+  workflow_dispatch:
+
+concurrency:
+  group: sbi-public-conditions
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: uv sync --frozen
+      - name: Capture SBI public conditions
+        run: PYTHONPATH=src uv run --frozen python scripts/ops/capture_sbi_public_conditions.py
+      - name: Evaluate frozen A2/A3 gates
+        run: PYTHONPATH=src uv run --frozen python scripts/reports/check_a_evaluation_gate.py
+      - name: Commit evidence
+        run: |
+          git add data/sbi_execution_conditions/
+          if git diff --cached --quiet; then
+            echo "No new SBI evidence"
+            exit 0
+          fi
+          git -c user.name="juslag-bot" -c user.email="actions@users.noreply.github.com" \
+            commit -m "data: capture SBI public conditions [skip ci]"
+          git pull --rebase
+          git push
+

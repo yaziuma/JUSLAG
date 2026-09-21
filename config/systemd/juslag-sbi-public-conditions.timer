@@ -1,0 +1,14 @@
+[Unit]
+Description=Capture SBI public conditions after publication and before JP open
+
+[Timer]
+OnCalendar=Mon..Fri *-*-* 08:45:00
+OnCalendar=Mon..Fri *-*-* 19:10:00
+AccuracySec=1min
+RandomizedDelaySec=0
+Persistent=false
+Unit=juslag-sbi-public-conditions.service
+
+[Install]
+WantedBy=timers.target
+

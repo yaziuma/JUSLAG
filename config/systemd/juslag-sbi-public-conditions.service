@@ -1,0 +1,12 @@
+[Unit]
+Description=Capture SBI public short-selling condition evidence
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/projects/JUSLAG
+Environment=PYTHONPATH=src
+ExecStart=%h/projects/JUSLAG/.venv/bin/python scripts/ops/capture_sbi_public_conditions.py
+TimeoutStartSec=5min
+

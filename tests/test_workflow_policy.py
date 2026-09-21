@@ -34,6 +34,7 @@ def test_write_permissions_are_limited_to_expected_jobs() -> None:
         ("daily-juslag.yml", "site", "pages"),
         ("daily-juslag.yml", "site", "id-token"),
         ("opening-bars.yml", "capture", "contents"),
+        ("sbi-public-conditions.yml", "capture", "contents"),
     }
     actual = set()
     for path, workflow in _workflows():
