@@ -346,6 +346,7 @@ def run_daily_signal_service(
         cfg.daily.sample_start,
         sample_end,
         price_mode="raw",
+        cache=cache,
     )
     input_snapshot_sha256 = price_input_fingerprint(us_close, jp_close, jp_open)
     us_cc, jp_oc_daily, jp_cc = compute_returns(us_close, jp_close, jp_open)
