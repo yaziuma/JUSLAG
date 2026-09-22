@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "strategy_id": "pca_sub_long_5d_manual_v1",
+  "capital_yen": 1000000,
+  "high_watermark_yen": 1000000,
+  "drawdown_pct": 0.0,
+  "open_batch": null,
+  "history": []
+}

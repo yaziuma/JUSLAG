@@ -1,0 +1,26 @@
+schema_version: 1
+strategy_id: pca_sub_long_5d_manual_v1
+effective_from: "2026-09-24"
+signal_model:
+  window_l: 60
+  k_factors: 3
+  lambda_reg: 0.9
+  selection_quantile: 0.30
+portfolio:
+  initial_capital_yen: 1000000
+  deployment_fraction: 0.90
+  long_only: true
+  nonoverlapping_batches: true
+execution:
+  entry: next_jpx_session_open_market
+  entry_order_deadline_jst: "08:55"
+  holding_jpx_sessions: 5
+  exit: fifth_jpx_session_close_market
+  exit_order_deadline_jst: "15:20"
+  assumed_slippage_bps_per_side: 5
+risk:
+  maximum_drawdown_pct: -25
+  require_all_17_tickers: true
+  require_freshness_ok: true
+  prohibit_short: true
+  prohibit_overlapping_batch: true

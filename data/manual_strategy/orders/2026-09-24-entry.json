@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "strategy_id": "pca_sub_long_5d_manual_v1",
+  "as_of": "2026-09-24",
+  "action": "ENTRY",
+  "signal_reference_us_date": "2026-09-18 00:00:00",
+  "entry_date": "2026-09-24",
+  "planned_exit_date": "2026-09-30",
+  "capital_yen": 1000000,
+  "deployment_fraction": 0.9,
+  "entry_order_deadline_jst": "08:55",
+  "exit_order_deadline_jst": "15:20",
+  "orders": [
+    {
+      "stock_code": "1620",
+      "ticker": "1620.T",
+      "sector": "素材・化学",
+      "signal": 0.010841419624460752,
+      "quantity": 4,
+      "sizing_price_yen": 36400.0,
+      "estimated_notional_yen": 145600,
+      "order_kind": "genbutsu_buy",
+      "condition": "寄成"
+    },
+    {
+      "stock_code": "1627",
+      "ticker": "1627.T",
+      "sector": "電力・ガス",
+      "signal": 0.005356556186546402,
+      "quantity": 14,
+      "sizing_price_yen": 12760.0,
+      "estimated_notional_yen": 178640,
+      "order_kind": "genbutsu_buy",
+      "condition": "寄成"
+    },
+    {
+      "stock_code": "1622",
+      "ticker": "1622.T",
+      "sector": "自動車・輸送機",
+      "signal": 0.0051746780311753005,
+      "quantity": 5,
+      "sizing_price_yen": 34320.0,
+      "estimated_notional_yen": 171600,
+      "order_kind": "genbutsu_buy",
+      "condition": "寄成"
+    },
+    {
+      "stock_code": "1618",
+      "ticker": "1618.T",
+      "sector": "エネルギー資源",
+      "signal": 0.004279303659203176,
+      "quantity": 4,
+      "sizing_price_yen": 37300.0,
+      "estimated_notional_yen": 149200,
+      "order_kind": "genbutsu_buy",
+      "condition": "寄成"
+    },
+    {
+      "stock_code": "1626",
+      "ticker": "1626.T",
+      "sector": "情報通信・サービスその他",
+      "signal": 0.003991123840111688,
+      "quantity": 3,
+      "sizing_price_yen": 49820.0,
+      "estimated_notional_yen": 149460,
+      "order_kind": "genbutsu_buy",
+      "condition": "寄成"
+    }
+  ],
+  "manual_checks": [
+    "SBI画面で銘柄・数量・寄成を照合",
+    "全注文の受付番号と受付時刻を保存",
+    "約定後に実数量・価格を台帳へ記録",
+    "planned_exit_dateの引成注文を当日手動発注"
+  ],
+  "sheet_sha256": "4f381f6fd1b50e19f327498e6dff174ac7fcebb78063ee700a7e15eb956e48c4"
+}
