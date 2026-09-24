@@ -1,0 +1,185 @@
+{
+  "schema_version": 1,
+  "evidence_type": "sbi_public_hyper_difference",
+  "observed_at_jst": "2026-09-24T10:38:58.302487+09:00",
+  "previous_session": "2026-09-18",
+  "applicable_session": "2026-09-24",
+  "source_url": "https://site0.sbisec.co.jp/marble/domestic/top/hssProductDiff.do?int_pr1=150110_dstock_tool%3Amarginsellhyper_tmn_52",
+  "source_sha256": "46574e0b36a17b684c778b12b3398d4b502d913ea582ff2546f6eec98dd2f86d",
+  "source_encoding": "cp932",
+  "source_scope": "changes_only_full_lists_require_login",
+  "target_ticker_count": 17,
+  "changed_target_count": 0,
+  "rows": [
+    {
+      "ticker": "1617.T",
+      "sector": "食品",
+      "public_change_status": "not_present_in_change_page",
+      "hyper_status": "unknown_public_diff_only",
+      "hyper_fee_yen_per_share_day": null,
+      "max_position_units": null,
+      "new_short_allowed": null,
+      "collection_status": "full_list_requires_login"
+    },
+    {
+      "ticker": "1618.T",
+      "sector": "エネルギー資源",
+      "public_change_status": "not_present_in_change_page",
+      "hyper_status": "unknown_public_diff_only",
+      "hyper_fee_yen_per_share_day": null,
+      "max_position_units": null,
+      "new_short_allowed": null,
+      "collection_status": "full_list_requires_login"
+    },
+    {
+      "ticker": "1619.T",
+      "sector": "建設・資材",
+      "public_change_status": "not_present_in_change_page",
+      "hyper_status": "unknown_public_diff_only",
+      "hyper_fee_yen_per_share_day": null,
+      "max_position_units": null,
+      "new_short_allowed": null,
+      "collection_status": "full_list_requires_login"
+    },
+    {
+      "ticker": "1620.T",
+      "sector": "素材・化学",
+      "public_change_status": "not_present_in_change_page",
+      "hyper_status": "unknown_public_diff_only",
+      "hyper_fee_yen_per_share_day": null,
+      "max_position_units": null,
+      "new_short_allowed": null,
+      "collection_status": "full_list_requires_login"
+    },
+    {
+      "ticker": "1621.T",
+      "sector": "医薬品",
+      "public_change_status": "not_present_in_change_page",
+      "hyper_status": "unknown_public_diff_only",
+      "hyper_fee_yen_per_share_day": null,
+      "max_position_units": null,
+      "new_short_allowed": null,
+      "collection_status": "full_list_requires_login"
+    },
+    {
+      "ticker": "1622.T",
+      "sector": "自動車・輸送機",
+      "public_change_status": "not_present_in_change_page",
+      "hyper_status": "unknown_public_diff_only",
+      "hyper_fee_yen_per_share_day": null,
+      "max_position_units": null,
+      "new_short_allowed": null,
+      "collection_status": "full_list_requires_login"
+    },
+    {
+      "ticker": "1623.T",
+      "sector": "鉄鋼・非鉄",
+      "public_change_status": "not_present_in_change_page",
+      "hyper_status": "unknown_public_diff_only",
+      "hyper_fee_yen_per_share_day": null,
+      "max_position_units": null,
+      "new_short_allowed": null,
+      "collection_status": "full_list_requires_login"
+    },
+    {
+      "ticker": "1624.T",
+      "sector": "機械",
+      "public_change_status": "not_present_in_change_page",
+      "hyper_status": "unknown_public_diff_only",
+      "hyper_fee_yen_per_share_day": null,
+      "max_position_units": null,
+      "new_short_allowed": null,
+      "collection_status": "full_list_requires_login"
+    },
+    {
+      "ticker": "1625.T",
+      "sector": "電機・精密",
+      "public_change_status": "not_present_in_change_page",
+      "hyper_status": "unknown_public_diff_only",
+      "hyper_fee_yen_per_share_day": null,
+      "max_position_units": null,
+      "new_short_allowed": null,
+      "collection_status": "full_list_requires_login"
+    },
+    {
+      "ticker": "1626.T",
+      "sector": "情報通信・サービスその他",
+      "public_change_status": "not_present_in_change_page",
+      "hyper_status": "unknown_public_diff_only",
+      "hyper_fee_yen_per_share_day": null,
+      "max_position_units": null,
+      "new_short_allowed": null,
+      "collection_status": "full_list_requires_login"
+    },
+    {
+      "ticker": "1627.T",
+      "sector": "電力・ガス",
+      "public_change_status": "not_present_in_change_page",
+      "hyper_status": "unknown_public_diff_only",
+      "hyper_fee_yen_per_share_day": null,
+      "max_position_units": null,
+      "new_short_allowed": null,
+      "collection_status": "full_list_requires_login"
+    },
+    {
+      "ticker": "1628.T",
+      "sector": "運輸・物流",
+      "public_change_status": "not_present_in_change_page",
+      "hyper_status": "unknown_public_diff_only",
+      "hyper_fee_yen_per_share_day": null,
+      "max_position_units": null,
+      "new_short_allowed": null,
+      "collection_status": "full_list_requires_login"
+    },
+    {
+      "ticker": "1629.T",
+      "sector": "商社・卸売",
+      "public_change_status": "not_present_in_change_page",
+      "hyper_status": "unknown_public_diff_only",
+      "hyper_fee_yen_per_share_day": null,
+      "max_position_units": null,
+      "new_short_allowed": null,
+      "collection_status": "full_list_requires_login"
+    },
+    {
+      "ticker": "1630.T",
+      "sector": "小売",
+      "public_change_status": "not_present_in_change_page",
+      "hyper_status": "unknown_public_diff_only",
+      "hyper_fee_yen_per_share_day": null,
+      "max_position_units": null,
+      "new_short_allowed": null,
+      "collection_status": "full_list_requires_login"
+    },
+    {
+      "ticker": "1631.T",
+      "sector": "銀行",
+      "public_change_status": "not_present_in_change_page",
+      "hyper_status": "unknown_public_diff_only",
+      "hyper_fee_yen_per_share_day": null,
+      "max_position_units": null,
+      "new_short_allowed": null,
+      "collection_status": "full_list_requires_login"
+    },
+    {
+      "ticker": "1632.T",
+      "sector": "金融（除く銀行）",
+      "public_change_status": "not_present_in_change_page",
+      "hyper_status": "unknown_public_diff_only",
+      "hyper_fee_yen_per_share_day": null,
+      "max_position_units": null,
+      "new_short_allowed": null,
+      "collection_status": "full_list_requires_login"
+    },
+    {
+      "ticker": "1633.T",
+      "sector": "不動産",
+      "public_change_status": "not_present_in_change_page",
+      "hyper_status": "unknown_public_diff_only",
+      "hyper_fee_yen_per_share_day": null,
+      "max_position_units": null,
+      "new_short_allowed": null,
+      "collection_status": "full_list_requires_login"
+    }
+  ]
+}
