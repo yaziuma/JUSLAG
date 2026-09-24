@@ -12,6 +12,7 @@ portfolio:
   long_only: true
   nonoverlapping_batches: true
 execution:
+  preflight_time_jst: "08:30"
   entry: next_jpx_session_open_market
   entry_order_deadline_jst: "08:55"
   holding_jpx_sessions: 5

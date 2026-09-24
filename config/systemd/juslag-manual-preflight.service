@@ -1,0 +1,14 @@
+[Unit]
+Description=Generate attested JUSLAG manual order sheet before JPX open
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/projects/JUSLAG
+Environment=PYTHONPATH=src
+ExecStart=%h/projects/JUSLAG/.venv/bin/python scripts/ops/manual_strategy_preflight.py --fetch
+TimeoutStartSec=10min
+
+[Install]
+WantedBy=default.target

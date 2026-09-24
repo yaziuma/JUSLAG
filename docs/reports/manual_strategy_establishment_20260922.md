@@ -22,9 +22,9 @@
 
 停止条件が発動しても保有玉の決済は止めない。決済予定日を過ぎた未決済玉は、次に操作可能になった時点で全数量を決済し、`overdue=true`として残す。場中の裁量的な銘柄入替、ナンピン、損切り、利確、空売り、信用取引は禁止する。
 
-## 9月24日の注文票
+## 9月24日の注文票（失効）
 
-現在の確定可能データから作成した注文票は`data/manual_strategy/orders/2026-09-24-entry.json`。元レポートは`data/reports/2026-09-22.json`、米国シグナル参照日は9月18日、JPX執行対象日は9月24日、入力鮮度判定は合格。
+当初作成した`data/manual_strategy/orders/2026-09-24-entry.json`は失効した。元レポートは`data/reports/2026-09-22.json`だったが、寄付き前に利用可能だった9月23日レポートを反映していなかった。以下は実際に発注できる注文票ではなく、失効した内容の監査記録である。
 
 | コード | 業種 | 数量 | 9/18終値による推定元本 | 注文 |
 | --- | --- | ---: | ---: | --- |
@@ -35,13 +35,29 @@
 | 1626 | 情報通信・サービスその他 | 3 | 149,460円 | 現物買・寄成 |
 | 合計 | | 30 | 794,500円 | |
 
-資金前提は100万円。10%を価格変動バッファとして確保し、単位切捨て後の推定投下率は79.45%。決済予定日は9月30日。注文票SHA-256は`4f381f6fd1b50e19f327498e6dff174ac7fcebb78063ee700a7e15eb956e48c4`。
+資金前提は100万円。10%を価格変動バッファとして確保し、単位切捨て後の推定投下率は79.45%。決済予定日は9月30日だった。旧注文票SHA-256は`4f381f6fd1b50e19f327498e6dff174ac7fcebb78063ee700a7e15eb956e48c4`。プリフライト署名を持たないため、現行CLIによる約定登録は拒否される。
+
+## 9月24日の運用障害と是正
+
+9月24日08:55までに最新注文票を生成・照合・発注する工程が実行されず、台帳は`open_batch=null`のままだった。寄付き後の追随発注は禁止されているため、同日の新規建ては見送った。
+
+寄付き前に利用可能だった9月23日レポートから再現した正しい候補は1630.T、1621.T、1617.T、1627.T、1628.Tであり、旧注文票とは4銘柄が異なった。原因は日次レポートから注文票への接続が手順書だけで、自動プリフライトと陳腐化拒否がなかったことである。
+
+是正後は次のゲートを必須とする。
+
+1. GitHubの日次処理を06:00 JSTへ前倒しする。
+2. ローカルtimerが08:30 JSTに`origin/main`をfetchする。
+3. 当日を執行対象とし、鮮度合格かつ08:55以前に生成されたレポートだけを比較する。
+4. シグナル参照日が最も新しいレポートを選び、同じ取得日のraw価格で注文数量を生成する。
+5. 入力commit、入力レポート、確認時刻を注文票へ埋め込み、SHA-256を再計算する。
+6. `preflight.status=READY`と入力commitがない注文票は`record-entry`で拒否する。
+7. レポートなし、締切超過、非営業日、入力欠損は`BLOCKED`または`SKIP`として日付別statusへ保存する。
 
 ## 9月24日朝の実行手順
 
-1. 08:30までに最新の日次取得が成功したことを確認する。9月24日を執行対象とする、より新しい正常レポートがある場合だけ注文票を再生成する。異常・欠損時に古い対象日の注文票を流用しない。
-2. `PYTHONPATH=src .venv/bin/python scripts/ops/manual_strategy_orders.py plan --report <最新レポート> --prices <同じ取得日のprices_tail_raw.csv> --as-of 2026-09-24 --output data/manual_strategy/orders/2026-09-24-entry.json`を実行する。
-3. `action=ENTRY`、5銘柄、合計推定元本が100万円以下、`entry_date=2026-09-24`、`planned_exit_date=2026-09-30`を確認する。どれか不一致なら発注しない。
+1. 08:30の`juslag-manual-preflight.timer`が成功したことを確認する。手動再実行は`PYTHONPATH=src .venv/bin/python scripts/ops/manual_strategy_preflight.py --fetch`。
+2. `data/manual_strategy/preflight/<当日>.json`が`status=READY`で、その`sheet_sha256`が注文票と一致することを確認する。`BLOCKED`、`SKIP`、status不在なら発注しない。
+3. `action=ENTRY`、5銘柄、合計推定元本が台帳資金以下、`entry_date=<当日>`、決済予定日を確認する。どれか不一致なら発注しない。
 4. SBIで各銘柄を「現物買・寄成・数量指定」で入力し、08:55までに発注する。預り区分は実際に保有する口座区分を選ぶ。注文確認画面のコード・売買・数量・条件をJSONと一件ずつ照合する。
 5. 受付番号と受付時刻を保存する。寄り後、約定価格・約定数量・約定時刻・手数料を`data/manual_strategy/fills/2026-09-24-entry.template.json`へ記入する。`fill_price=0`や仮の受付番号のまま台帳へ登録してはならない。
 6. `PYTHONPATH=src .venv/bin/python scripts/ops/manual_strategy_orders.py record-entry --sheet data/manual_strategy/orders/2026-09-24-entry.json --fills <記入済み約定JSON>`を実行する。予定数量と完全一致しない場合は登録が拒否されるため、未約定・一部約定を先にSBI画面で解消する。
@@ -60,6 +76,8 @@
 - 固定設定: `config/manual_strategy.yaml`
 - 注文・台帳ロジック: `src/juslag/manual_strategy.py`
 - 手動CLI: `scripts/ops/manual_strategy_orders.py`
+- 寄付き前プリフライト: `scripts/ops/manual_strategy_preflight.py`
+- 定時実行: `config/systemd/juslag-manual-preflight.{service,timer}`
 - 資金・保有状態: `data/manual_strategy/state.json`
 - 9/24注文票: `data/manual_strategy/orders/2026-09-24-entry.json`
 - 約定入力様式: `data/manual_strategy/fills/*.template.json`

@@ -46,7 +46,7 @@ def latest_prices(path: Path, before_date: str) -> dict[str, float]:
     return {str(row.ticker): float(row.close) for row in latest.itertuples()}
 
 
-def _fingerprint(payload: object) -> str:
+def fingerprint(payload: object) -> str:
     raw = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(raw.encode()).hexdigest()
 
@@ -148,7 +148,7 @@ def build_order_sheet(
             "planned_exit_dateの引成注文を当日手動発注",
         ],
     }
-    sheet["sheet_sha256"] = _fingerprint(sheet)
+    sheet["sheet_sha256"] = fingerprint(sheet)
     return sheet
 
 
@@ -157,6 +157,9 @@ def record_entry(
 ) -> dict[str, Any]:
     if sheet["action"] != "ENTRY" or state.get("open_batch"):
         raise ValueError("entry cannot be recorded")
+    preflight = sheet.get("preflight", {})
+    if preflight.get("status") != "READY" or not preflight.get("source_commit"):
+        raise ValueError("entry sheet lacks a READY preflight attestation")
     planned = {row["ticker"]: int(row["quantity"]) for row in sheet["orders"]}
     if len({row["ticker"] for row in fills}) != len(fills):
         raise ValueError("duplicate entry fill ticker")

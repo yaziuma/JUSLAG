@@ -78,6 +78,7 @@ def test_record_round_trip_includes_fees_and_exit_is_never_blocked_by_drawdown()
     state = initial_state(config)
     prices = {f"{code}.T": 1000.0 for code in range(1617, 1634)}
     sheet = build_order_sheet(_report(), state, config, prices, "2026-09-24")
+    sheet["preflight"] = {"status": "READY", "source_commit": "a" * 40}
     entry_fills = [_fill(order) for order in sheet["orders"]]
     entry_fills[0]["fee_yen"] = 10
     record_entry(state, sheet, entry_fills)
@@ -101,6 +102,10 @@ def test_entry_rejects_missing_broker_evidence_and_drawdown_blocks_new_batch() -
     state = initial_state(config)
     prices = {f"{code}.T": 1000.0 for code in range(1617, 1634)}
     sheet = build_order_sheet(_report(), state, config, prices, "2026-09-24")
+    valid_fills = [_fill(order) for order in sheet["orders"]]
+    with pytest.raises(ValueError, match="READY preflight"):
+        record_entry(state, sheet, valid_fills)
+    sheet["preflight"] = {"status": "READY", "source_commit": "a" * 40}
     bad_fills = [
         {"ticker": row["ticker"], "quantity": row["quantity"], "fill_price": 1000}
         for row in sheet["orders"]

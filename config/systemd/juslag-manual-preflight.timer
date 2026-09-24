@@ -1,0 +1,12 @@
+[Unit]
+Description=Prepare JUSLAG manual orders at 08:30 JST
+
+[Timer]
+OnCalendar=Mon..Fri *-*-* 08:30:00
+AccuracySec=10s
+RandomizedDelaySec=0
+Persistent=false
+Unit=juslag-manual-preflight.service
+
+[Install]
+WantedBy=timers.target
