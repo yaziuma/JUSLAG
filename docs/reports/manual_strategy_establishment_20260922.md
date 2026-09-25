@@ -45,8 +45,8 @@
 
 是正後は次のゲートを必須とする。
 
-1. GitHubの日次処理を06:00 JSTへ前倒しする。
-2. ローカルtimerが08:30 JSTに`origin/main`をfetchする。
+1. GitHubの日次処理を、米国市場終了後の05:45 JSTへ前倒しする。
+2. ローカルtimerが08:15、08:30、08:45、08:50 JSTに`origin/main`をfetchして再試行する。
 3. 当日を執行対象とし、鮮度合格かつ08:55以前に生成されたレポートだけを比較する。
 4. シグナル参照日が最も新しいレポートを選び、同じ取得日のraw価格で注文数量を生成する。
 5. 入力commit、入力レポート、確認時刻を注文票へ埋め込み、SHA-256を再計算する。
@@ -55,7 +55,7 @@
 
 ## 9月24日朝の実行手順
 
-1. 08:30の`juslag-manual-preflight.timer`が成功したことを確認する。手動再実行は`PYTHONPATH=src .venv/bin/python scripts/ops/manual_strategy_preflight.py --fetch`。
+1. `juslag-manual-preflight.timer`は08:15、08:30、08:45、08:50に再試行する。直近のserviceが成功したことを確認する。手動再実行は`PYTHONPATH=src .venv/bin/python scripts/ops/manual_strategy_preflight.py --fetch`。
 2. `data/manual_strategy/preflight/<当日>.json`が`status=READY`で、その`sheet_sha256`が注文票と一致することを確認する。`BLOCKED`、`SKIP`、status不在なら発注しない。
 3. `action=ENTRY`、5銘柄、合計推定元本が台帳資金以下、`entry_date=<当日>`、決済予定日を確認する。どれか不一致なら発注しない。
 4. SBIで各銘柄を「現物買・寄成・数量指定」で入力し、08:55までに発注する。預り区分は実際に保有する口座区分を選ぶ。注文確認画面のコード・売買・数量・条件をJSONと一件ずつ照合する。

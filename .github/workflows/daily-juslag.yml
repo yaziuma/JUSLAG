@@ -2,8 +2,8 @@ name: daily-juslag
 
 on:
   schedule:
-    # 平日 JST 6:00 = UTC 21:00（前日）。遅延しても08:30プリフライトに間に合わせる。
-    - cron: "0 21 * * 0-4"
+    # 平日 JST 5:45 = UTC 20:45（前日）。米国終値取得後、schedule遅延の余裕を最大化する。
+    - cron: "45 20 * * 0-4"
   workflow_dispatch:
     inputs:
       skip_llm:

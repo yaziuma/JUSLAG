@@ -1,8 +1,11 @@
 [Unit]
-Description=Prepare JUSLAG manual orders at 08:30 JST
+Description=Prepare JUSLAG manual orders before the 08:55 entry deadline
 
 [Timer]
+OnCalendar=Mon..Fri *-*-* 08:15:00
 OnCalendar=Mon..Fri *-*-* 08:30:00
+OnCalendar=Mon..Fri *-*-* 08:45:00
+OnCalendar=Mon..Fri *-*-* 08:50:00
 AccuracySec=10s
 RandomizedDelaySec=0
 Persistent=false
