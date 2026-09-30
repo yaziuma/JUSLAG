@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
+import subprocess
 import sys
 from datetime import date as date_cls, datetime, timedelta, timezone
 from pathlib import Path
@@ -40,6 +41,16 @@ from juslag.services.store import build_strategy_history_entry
 
 _JST = ZoneInfo("Asia/Tokyo")
 _REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _source_commit() -> str:
+    try:
+        commit = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=_REPO_ROOT, text=True
+        ).strip()
+    except (OSError, subprocess.CalledProcessError):
+        return ""
+    return commit if len(commit) == 40 else ""
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -161,6 +172,7 @@ def main(argv: list[str] | None = None) -> None:
             "target_date": date_str,
             "run_kind": "live_date" if target_date == now_actual.date() else "retrospective",
             "input_snapshot_sha256": ds.get("input_snapshot_sha256"),
+            "source_commit": _source_commit(),
         },
         paper_bt=paper_bt,
         paper_params=paper_params,

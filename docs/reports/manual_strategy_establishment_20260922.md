@@ -4,6 +4,8 @@
 
 2026-09-24から、`pca_sub_long_5d_manual_v1`を手動執行戦略として固定する。旧メタ戦略は採用しない。寄りgapを観測して同じ寄りで約定する処理は一切使わない。
 
+GitHub Pagesの日次`rule_406_no_flip`表示は研究比較であり、最終運用判断ではない。実運用判断の正本は`data/manual_strategy/preflight/<当日>.json`と、そこから参照されるSHA-256付き注文票とする。
+
 この採用は「将来利益の保証」ではない。固定5日条件は既存期間の探索を経ており、完全に独立した未使用期間の証拠はまだない。一方、注文可能時点に既知の米国入力だけでシグナルを作り、次のJPX営業日の寄りで発注するため、旧メタ版の先読み・同値寄り約定問題はない。利用者の目的を自動発注ではなく手動発注可能な実用戦略と定め、固定ルール、注文票、資金制約、台帳、停止条件を実装した。
 
 ## 変更禁止の固定ルール
@@ -53,6 +55,20 @@
 6. `preflight.status=READY`と入力commitがない注文票は`record-entry`で拒否する。
 7. レポートなし、締切超過、非営業日、入力欠損は`BLOCKED`または`SKIP`として日付別statusへ保存する。
 
+## GitHub Actions遅延への対処（2026-09-30）
+
+GitHub Actionsの05:45 JST cronは、9月29日・30日に08:55の注文締切までに結果を提供できなかった。外部schedulerの遅延を発注判断へ伝播させないため、quieter自身で06:00、07:00、08:00 JSTに日次レポートを生成する`juslag-local-daily-report.timer`を追加した。
+
+preflightは`origin/main`上のGitHub生成レポートと`data/reports`上のローカル生成レポートを同時に評価し、次の順で最良の入力を選ぶ。
+
+1. 当日を`execution_target_jp_date`とする。
+2. 08:55以前に生成されている。
+3. freshnessが合格している。
+4. `signal_reference_us_date`が最も新しい。
+5. 同じ参照日なら生成時刻が最も新しい。
+
+ローカル入力ではcode commit、report path、report SHA-256、生成時刻を注文票へ保存する。GitHub版が遅延または未生成でもローカル版が合格すればpreflightを継続できる。両方不合格なら従来どおり`BLOCKED`とする。
+
 ## 9月24日朝の実行手順
 
 1. `juslag-manual-preflight.timer`は08:15、08:30、08:45、08:50に再試行する。直近のserviceが成功したことを確認する。手動再実行は`PYTHONPATH=src .venv/bin/python scripts/ops/manual_strategy_preflight.py --fetch`。
@@ -78,6 +94,7 @@
 - 手動CLI: `scripts/ops/manual_strategy_orders.py`
 - 寄付き前プリフライト: `scripts/ops/manual_strategy_preflight.py`
 - 定時実行: `config/systemd/juslag-manual-preflight.{service,timer}`
+- ローカル日次生成: `config/systemd/juslag-local-daily-report.{service,timer}`
 - 資金・保有状態: `data/manual_strategy/state.json`
 - 9/24注文票: `data/manual_strategy/orders/2026-09-24-entry.json`
 - 約定入力様式: `data/manual_strategy/fills/*.template.json`

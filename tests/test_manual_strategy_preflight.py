@@ -17,6 +17,7 @@ def _report(report_date: str, generated: str, signal_day: str) -> dict:
     return {
         "date": report_date,
         "generated_at_utc": generated,
+        "run_provenance": {"source_commit": "c" * 40},
         "daily_signal": {
             "execution_target_jp_date": "2026-09-24",
             "signal_reference_us_date": signal_day,
@@ -73,6 +74,7 @@ def test_preflight_uses_newest_eligible_report_and_attests_sheet(tmp_path, monke
         state_path=state_path,
         output_path=output,
         status_path=status_path,
+        local_reports_dir=tmp_path / "no-local-reports",
     )
     sheet = json.loads(output.read_text(encoding="utf-8"))
     assert result["status"] == "READY"
@@ -91,8 +93,59 @@ def test_preflight_blocks_after_entry_deadline(tmp_path) -> None:
         state_path=Path("data/manual_strategy/state.json"),
         output_path=tmp_path / "orders.json",
         status_path=status_path,
+        local_reports_dir=tmp_path / "no-local-reports",
     )
     assert result["status"] == "BLOCKED"
     assert result["reason"] == "entry deadline has passed"
     assert not (tmp_path / "orders.json").exists()
     assert json.loads(status_path.read_text(encoding="utf-8"))["status"] == "BLOCKED"
+
+
+def test_preflight_uses_fresh_local_report_when_github_is_delayed(
+    tmp_path, monkeypatch
+) -> None:
+    reports_dir = tmp_path / "reports"
+    reports_dir.mkdir()
+    report_path = reports_dir / "2026-09-24.json"
+    report_path.write_text(
+        json.dumps(
+            _report("2026-09-24", "2026-09-23T21:00:00+00:00", "2026-09-23")
+        ),
+        encoding="utf-8",
+    )
+
+    def fake_git(*args: str) -> str:
+        if args[0] == "ls-tree":
+            return ""
+        raise AssertionError(args)
+
+    monkeypatch.setattr(preflight, "_git", fake_git)
+    monkeypatch.setattr(
+        preflight,
+        "_prices_from_local",
+        lambda report_path, before_date: {
+            f"{code}.T": 1000.0 for code in range(1617, 1634)
+        },
+    )
+    config_path = Path("config/manual_strategy.yaml")
+    state_path = tmp_path / "state.json"
+    state_path.write_text(
+        json.dumps(initial_state(load_manual_config(config_path))), encoding="utf-8"
+    )
+    output = tmp_path / "orders.json"
+    result = preflight.run_preflight(
+        as_of="2026-09-24",
+        now=preflight.datetime.fromisoformat("2026-09-24T08:30:00+09:00"),
+        ref="origin/main",
+        config_path=config_path,
+        state_path=state_path,
+        output_path=output,
+        status_path=tmp_path / "status.json",
+        local_reports_dir=reports_dir,
+    )
+    sheet = json.loads(output.read_text(encoding="utf-8"))
+    assert result["status"] == "READY"
+    assert result["source_kind"] == "local"
+    assert sheet["preflight"]["source_ref"] == "local"
+    assert sheet["preflight"]["source_commit"] == "c" * 40
+    assert len(sheet["preflight"]["source_report_sha256"]) == 64

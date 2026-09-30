@@ -28,6 +28,8 @@
 日次バッチの全体設計は `docs/daily_research_batch_architecture.md` を参照してください。
 GitHub Pagesの公開・簡易認証の運用は `docs/github_pages_operations.md` を参照してください。
 
+実運用戦略は`pca_sub_long_5d_manual_v1`であり、日次`rule_406_no_flip`は研究比較としてのみ残す。発注判断の正本は`data/manual_strategy/preflight/<当日>.json`とSHA-256付き注文票である。GitHub Actions遅延を避けるため、quieter上のローカル日次timerが06:00、07:00、08:00 JSTに再試行し、preflightはGitHub版とローカル版のうち締切前の最新入力を採用する。
+
 ## 4. 未実装・注意点
 
 - 売買コスト・スリッページ未考慮の古い検証経路が一部残っています

@@ -1,0 +1,14 @@
+[Unit]
+Description=Generate JUSLAG daily report locally before manual preflight
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/projects/JUSLAG
+Environment=PYTHONPATH=src
+ExecStart=%h/projects/JUSLAG/.venv/bin/python scripts/ops/daily_research.py
+TimeoutStartSec=45min
+
+[Install]
+WantedBy=default.target
