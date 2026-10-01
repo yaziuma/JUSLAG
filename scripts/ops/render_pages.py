@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""data/ 配下の日次リサーチ結果から閲覧用静的サイトを生成する。
+"""data/ 配下の日次運用結果から閲覧用静的サイトを生成する。
 
 実行例:
     uv run python scripts/ops/render_pages.py --out _site

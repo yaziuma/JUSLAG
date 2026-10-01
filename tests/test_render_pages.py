@@ -179,12 +179,15 @@ def test_render_site_produces_index_and_report_pages(tmp_path: Path) -> None:
     assert "候補なし" in index_html
 
     # 運用ダッシュボード（本日・履歴・分析）と履歴の段階表示
-    assert "最終運用判断" in index_html
-    assert "モデル作成条件" in index_html
-    assert "当日シグナル判定" in index_html
-    assert "モデル審査基準" in index_html
+    assert "実運用判断" in index_html
+    assert "承認画面で確認" in index_html
+    assert "実運用v2の正本は08:50 preflight・注文票・承認画面" in index_html
+    assert "旧方式の算定条件（発注には不使用）" in index_html
+    assert "旧方式の当日判定（発注には不使用）" in index_html
+    assert "旧方式の評価（発注には不使用）" in index_html
     assert "PCA SUB + rule_406_no_flip" in index_html
-    assert "参考注文案" in index_html
+    assert "旧方式の参考値" in index_html
+    assert "実運用v2の発注には使用しません" in index_html
     assert "tab === 'today'" in index_html
     assert "tab === 'history'" in index_html
     assert "tab === 'analysis'" in index_html

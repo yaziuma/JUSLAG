@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# JUSLAG 日次リサーチバッチのオーケストレーション（GitHub Actions / ローカル共用）
+# JUSLAG 日次運用バッチのオーケストレーション（GitHub Actions / ローカル共用）
 #
 # 環境変数:
 #   JUSLAG_SLACK_WEBHOOK           Slack Incoming Webhook URL（未設定なら通知スキップ）
@@ -41,7 +41,7 @@ notify_slack() {
 
 on_core_failure() {
   # JUSLAG本体の失敗: 保存も通知もせずワークフロー失敗（失敗通知のみ送る）
-  notify_slack "*JUSLAG 日次リサーチ失敗* (${JST_DATE})
+  notify_slack "*JUSLAG 日次運用失敗* (${JST_DATE})
 daily_research.py が異常終了しました。GitHub Actions のログを確認してください。" || true
   emit_output llm_status "not_run"
   emit_output slack_status "not_run"
@@ -76,7 +76,7 @@ if [ "${SKIP_LLM:-0}" != "1" ]; then
 以下の本日の分析結果JSONと前回サマリーをもとに、Slack投稿用の日本語サマリーを作成してください。
 
 要件:
-- 冒頭は「🤖 本日のJUSLAG定期リサーチ結果 (日付)」
+- 冒頭は「🤖 本日のJUSLAG運用結果 (日付)」
 - 含める内容: レジーム判定 / 主要シグナルとLONG・SHORT / 注目メタ戦略（Rule 406系）の判定 / 前回からの変化 / 判断上の注意点
 - 前回からの変化（レジーム変化、シグナル点灯・消灯、LONG/SHORT入れ替わり）を最優先で強調する
 - 見送り（skip）の場合はその分類と理由を明確に書く

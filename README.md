@@ -1,13 +1,13 @@
 # JUSLAG
 
-日米業種リードラグ戦略（Subspace-Regularized PCA）の研究用実装です。  
+日米業種リードラグ戦略（Subspace-Regularized PCA）の実運用実装です。
 本リポジトリは、PoC単一スクリプトを公開レビュー可能なPythonプロジェクト構成へ段階移行することを目的に整理されています。
 
 ## 1. プロジェクト概要
 
 - **対象**: 米国11業種ETF（説明変数）と日本TOPIX-17業種ETF（投資対象）
 - **狙い**: 米国終値情報から翌営業日の日本業種リターンを予測
-- **位置づけ**: 研究用・検証用（実運用保証なし）
+- **位置づけ**: 手動発注を前提とする実運用・検証システム（利益保証なし）
 
 ## 2. 戦略概要
 
@@ -22,13 +22,13 @@
 - モジュール分割（`src/juslag/`、オーケストレーションは `src/juslag/services/`）
 - paper_like / daily のモード分離
 - 静的閲覧サイト / 日次シグナル / バックテスト / Judge / レポート出力
-- 日次リサーチバッチ（GitHub Actions。データ取込、バックテスト、日次シグナル、履歴保存、LLM要約、Slack通知、結果のリポジトリ保存）
+- 日次運用バッチ（GitHub Actions。データ取込、バックテスト、日次シグナル、履歴保存、LLM要約、Slack通知、結果のリポジトリ保存）
 - 最低限テスト（prior / model / portfolio / metrics など）
 
 日次バッチの全体設計は `docs/daily_research_batch_architecture.md` を参照してください。
 GitHub Pagesの公開・簡易認証の運用は `docs/github_pages_operations.md` を参照してください。
 
-実運用戦略は2026-10-02から`pca_sub_long_5d_manual_v2`（上位20%、通常4銘柄）であり、日次`rule_406_no_flip`は研究比較としてのみ残す。発注判断の正本は`data/manual_strategy/preflight/<当日>.json`とSHA-256付き注文票である。GitHub Actions遅延を避けるため、quieter上のローカル日次timerが06:00、07:00、08:00、08:40 JSTに再試行する。さらに発注専用の軽量シグナルtimerが08:35、08:42、08:48に再取得し、preflightはGitHub版、ローカル日次版、軽量版のうち締切前の最新入力を採用する。終値のない場中・未確定行はfreshness判定から除外する。READY時には別プロジェクトのAndroid承認画面と互換な期限付き`OrderIntent`も生成するが、承認APIへの登録と実注文送信はまだ自動化していない。
+実運用戦略は2026-10-02から`pca_sub_long_5d_manual_v2`（上位20%、通常4銘柄）であり、日次`rule_406_no_flip`は旧方式の比較値としてのみ残す。発注判断の正本は`data/manual_strategy/preflight/<当日>.json`とSHA-256付き注文票である。GitHub Actions遅延を避けるため、quieter上のローカル日次timerが06:00、07:00、08:00、08:40 JSTに再試行する。さらに発注専用の軽量シグナルtimerが08:35、08:42、08:48に再取得し、preflightはGitHub版、ローカル日次版、軽量版のうち締切前の最新入力を採用する。終値のない場中・未確定行はfreshness判定から除外する。READY時には別プロジェクトのAndroid承認画面と互換な期限付き`OrderIntent`も生成するが、承認APIへの登録と実注文送信はまだ自動化していない。
 
 ローカル日次timerは、GitHub Variableと同一内容を管理する`config/production_backtest_settings.json`を`JUSLAG_BACKTEST_SETTINGS_FILE`として読み込む。設定変更時は両者を同時に更新する。
 
@@ -77,7 +77,7 @@ uv sync --extra dev
 
 `config/app.yaml` と `config/logging.yaml` をそれぞれ `config/app.example.yaml` / `config/logging.example.yaml` から作成して使ってください。実ファイルはコミットしません。
 
-### 日次リサーチバッチ
+### 日次運用バッチ
 
 平日 JST 8:00 に GitHub Actions（`.github/workflows/daily-juslag.yml`）が自動実行します。ローカルで試す場合:
 
@@ -152,7 +152,7 @@ GitHub Actionsの `SITE_PASSWORD` を変更した場合はローカル側も同�
 
 ## 9. 注意事項
 
-- 本コードは**研究用 / PoC**です
+- 本コードは手動発注を前提とする実運用システムです
 - 実運用収益を保証しません
 - 秘密情報やWebhook URLはコミットしないでください
 

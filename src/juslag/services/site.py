@@ -283,7 +283,7 @@ def _page(title: str, body: str, home_href: str) -> str:
         '<nav class="navbar sticky-top">\n'
         '  <div class="app-shell w-100 py-2 d-flex justify-content-between align-items-center">\n'
         f'    <a class="navbar-brand mb-0 h1 fw-semibold text-heading text-decoration-none" href="{_esc(home_href)}">'
-        "JUSLAG 日次リサーチ</a>\n"
+        "JUSLAG 運用</a>\n"
         "  </div>\n"
         "</nav>\n"
         f'<main class="app-shell py-3">\n{body}\n</main>\n'
@@ -525,8 +525,10 @@ def _render_index(
     tradeable = bool(latest_ds.get("tradeable"))
     final_actionable = _final_actionable(latest_report)
     judge_decision = latest_judge.get("overall_decision")
-    decision_text = "発注候補" if final_actionable else "見送り"
-    decision_class = "execute" if final_actionable else "blocked"
+    legacy_decision_text = "候補あり" if final_actionable else "候補なし"
+    decision_text = "承認画面で確認"
+    decision_class = "execute"
+    operation_reason = "実運用v2の正本は08:50 preflight・注文票・承認画面"
     if not tradeable:
         decision_reason = _cls_label(latest_ds.get("no_trade_classification"))
     elif judge_decision == "reject":
@@ -624,7 +626,7 @@ function dashboard() {{
   <div class="d-flex justify-content-between align-items-end gap-3 mb-2">
     <div>
       <div class="section-label mb-1">Operations dashboard</div>
-      <h1 class="h4 text-heading mb-0">日次リサーチ</h1>
+      <h1 class="h4 text-heading mb-0">日次運用</h1>
     </div>
     <div class="text-end small text-muted-soft">
       <div>最終更新</div><strong class="text-heading">{_esc(latest_report.get("date") or "-")}</strong>
@@ -641,19 +643,19 @@ function dashboard() {{
     <div class="surface-card decision-band {decision_class} p-3 p-md-4 mb-3">
       <div class="row align-items-center g-3">
         <div class="col-md-5">
-          <div class="section-label mb-2">最終運用判断</div>
+          <div class="section-label mb-2">実運用判断</div>
           <div class="d-flex align-items-center gap-3">
             <div class="decision-word">{decision_text}</div>
-            <span class="text-muted-soft">{_esc(decision_reason)}</span>
+            <span class="text-muted-soft">{_esc(operation_reason)}</span>
           </div>
         </div>
         <div class="col-6 col-md-2">
-          <div class="section-label mb-1">Judge</div>
-          <div class="metric-value">{_esc(score if score is not None else "-")}<small class="fs-6 text-muted-soft"> / 100</small></div>
+          <div class="section-label mb-1">運用戦略</div>
+          <div class="metric-value fs-6">v2</div>
         </div>
         <div class="col-6 col-md-2">
-          <div class="section-label mb-1">モデル審査</div>
-          <div class="metric-value fs-5">{_esc((judge_decision or "-").upper())}</div>
+          <div class="section-label mb-1">旧日次方式</div>
+          <div class="metric-value fs-6">{_esc(legacy_decision_text)}</div>
         </div>
         <div class="col-md-3 text-md-end">
           <a class="btn btn-sm btn-outline-light" href="{report_href}">詳細レポート</a>
@@ -663,7 +665,7 @@ function dashboard() {{
 
     <div class="explain-grid mb-3">
       <div class="explain-panel">
-        <div class="section-label mb-3">1. モデル作成条件</div>
+        <div class="section-label mb-3">1. 旧方式の算定条件（発注には不使用）</div>
         <div class="fact-list small">
           <div class="fact-row"><span class="text-muted-soft">モデル</span><strong>部分空間正則化PCA</strong></div>
           <div class="fact-row"><span class="text-muted-soft">標本期間</span><strong>{_esc(params.get("sample_start") or "-")} ～ { _esc(params.get("sample_end") or "-")}</strong></div>
@@ -673,7 +675,7 @@ function dashboard() {{
         </div>
       </div>
       <div class="explain-panel">
-        <div class="section-label mb-3">2. 当日シグナル判定</div>
+        <div class="section-label mb-3">2. 旧方式の当日判定（発注には不使用）</div>
         <div class="fact-list small">
           <div class="fact-row"><span class="text-muted-soft">適用ルール</span><strong>{_esc(strategy.get("rule_id") or "-")}</strong></div>
           <div class="fact-row"><span class="text-muted-soft">寄りgap</span><strong>{_percent(context["open_gap"] * 100) if context.get("open_gap") is not None else "未観測"} / 上限1.50%</strong></div>
@@ -683,21 +685,21 @@ function dashboard() {{
         </div>
       </div>
       <div class="explain-panel">
-        <div class="section-label mb-3">3. モデル審査基準</div>
+        <div class="section-label mb-3">3. 旧方式の評価（発注には不使用）</div>
         <div class="fact-list small">
           <div class="fact-row"><span class="text-muted-soft">審査対象</span><strong>{_esc(judge_strategy_name)}</strong></div>
           <div class="fact-row"><span class="text-muted-soft">税引後年率 ≥ 3%</span><strong>{_percent(metrics.get("net_after_tax_ar_pct"))}</strong></div>
           <div class="fact-row"><span class="text-muted-soft">R/R ≥ 0.30</span><strong>{_esc(metrics.get("net_after_tax_rr") if metrics.get("net_after_tax_rr") is not None else "-")}</strong></div>
           <div class="fact-row"><span class="text-muted-soft">MDD ≥ -25%</span><strong>{_percent(metrics.get("net_after_tax_mdd_pct"))}</strong></div>
           <div class="fact-row"><span class="text-muted-soft">コスト低下幅 &lt; 3%</span><strong>{_percent(metrics.get("cost_drag_pct"))}</strong></div>
-          <div class="fact-row"><span class="text-muted-soft">審査結果</span><strong>{_esc((judge_decision or "-").upper())}</strong></div>
+          <div class="fact-row"><span class="text-muted-soft">旧評価結果</span><strong>{_esc((judge_decision or "-").upper())}</strong></div>
         </div>
       </div>
     </div>
 
     <div class="surface-card p-3 p-md-4 mb-3">
       <div class="d-flex justify-content-between align-items-end mb-3 gap-3">
-        <div><div class="section-label mb-1">参考注文案</div><h2 class="h6 text-heading mb-0">Judgeゲート前のシグナル注文</h2></div>
+        <div><div class="section-label mb-1">旧方式の参考値</div><h2 class="h6 text-heading mb-0">実運用v2の発注には使用しません</h2></div>
         <span class="text-muted-soft small">基準価格ベース</span>
       </div>
       <div class="warning-note mb-3">{order_gate_html}</div>
@@ -772,7 +774,7 @@ function dashboard() {{
 </div>
 """
 
-    return _page("JUSLAG 日次リサーチ", body, "index.html")
+    return _page("JUSLAG 日次運用", body, "index.html")
 
 
 def _summary_table(report: dict) -> str:

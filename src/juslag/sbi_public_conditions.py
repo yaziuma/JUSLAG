@@ -16,7 +16,7 @@ HYPER_DIFF_URL = (
     "https://site0.sbisec.co.jp/marble/domestic/top/hssProductDiff.do"
     "?int_pr1=150110_dstock_tool%3Amarginsellhyper_tmn_52"
 )
-USER_AGENT = "JUSLAG-research-evidence/1.0"
+USER_AGENT = "JUSLAG-operation-evidence/1.0"
 
 
 def _last_number(text: str) -> float | None:

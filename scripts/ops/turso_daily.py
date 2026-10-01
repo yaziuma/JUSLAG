@@ -1,4 +1,4 @@
-"""Publish finalized JUSLAG research to Turso or read it back."""
+"""Publish finalized JUSLAG operation data to Turso or read it back."""
 from __future__ import annotations
 
 import argparse

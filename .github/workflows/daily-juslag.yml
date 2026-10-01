@@ -27,7 +27,7 @@ permissions:
   contents: write
 
 jobs:
-  research:
+  operation:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     outputs:
@@ -70,7 +70,7 @@ jobs:
           restore-keys: |
             juslag-prices-v1-
 
-      - name: Run daily research batch
+      - name: Run daily operation batch
         id: batch
         env:
           JUSLAG_SLACK_WEBHOOK: ${{ secrets.JUSLAG_SLACK_WEBHOOK }}
@@ -89,7 +89,7 @@ jobs:
           fi
           JST_DATE=$(TZ=Asia/Tokyo date +%F)
           git -c user.name="juslag-bot" -c user.email="actions@users.noreply.github.com" \
-            commit -m "chore(data): daily research ${JST_DATE} [skip ci]"
+            commit -m "chore(data): daily operation ${JST_DATE} [skip ci]"
           git pull --rebase
           git push
 
@@ -100,7 +100,7 @@ jobs:
         run: |
           if [ -n "$JUSLAG_SLACK_WEBHOOK" ]; then
             RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-            TEXT=$(printf '*JUSLAG 日次リサーチ失敗* (%s)\nGitHub Actions の実行が失敗しました: %s' \
+            TEXT=$(printf '*JUSLAG 日次運用失敗* (%s)\nGitHub Actions の実行が失敗しました: %s' \
               "$(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M JST')" "$RUN_URL")
             jq -n --arg text "$TEXT" '{text: $text}' \
               | curl -fsS --max-time 15 -H 'Content-Type: application/json' -d @- "$JUSLAG_SLACK_WEBHOOK" || true
@@ -114,7 +114,7 @@ jobs:
 
   turso:
     if: ${{ vars.JUSLAG_WRITE_TURSO == 'true' && !inputs.dry_run }}
-    needs: research
+    needs: operation
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
@@ -149,7 +149,7 @@ jobs:
           JUSLAG_WRITE_TURSO: "1"
           JUSLAG_TURSO_DATABASE_URL: ${{ vars.JUSLAG_TURSO_DATABASE_URL }}
           JUSLAG_TURSO_AUTH_TOKEN: ${{ secrets.JUSLAG_TURSO_AUTH_TOKEN }}
-          REPORT_DATE: ${{ needs.research.outputs.report_date }}
+          REPORT_DATE: ${{ needs.operation.outputs.report_date }}
         run: |
           test -n "$JUSLAG_TURSO_DATABASE_URL" || { echo "::error::Turso URL is missing"; exit 1; }
           test -n "$JUSLAG_TURSO_AUTH_TOKEN" || { echo "::error::Turso token is missing"; exit 1; }
@@ -179,7 +179,7 @@ jobs:
     # デプロイ先は GitHub Pages。StatiCrypt でHTML単位にパスワード保護してから公開する
     # （secrets.SITE_PASSWORD を設定すること）。
     if: ${{ vars.ENABLE_SITE_DEPLOY == 'true' }}
-    needs: research
+    needs: operation
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -216,7 +216,7 @@ jobs:
           salt=$(printf 'JUSLAG-staticrypt-v1:%s' "$site_date" | sha256sum | cut -c1-32)
           npx --yes staticrypt --recursive _site -d _site_protected -p "$SITE_PASSWORD" \
             --short --remember 1 --salt "$salt" \
-            --template-title "JUSLAG Research"
+            --template-title "JUSLAG Operation"
 
           # staticrypt -r _site -d _site_protected mirrors the input under _site_protected/_site/
           protected_dir="_site_protected/_site"

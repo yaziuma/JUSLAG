@@ -7,7 +7,7 @@
 
 ## 1. 概要
 
-日次リサーチ結果から静的サイトを生成し、StatiCryptで全HTMLを
+日次運用結果から静的サイトを生成し、StatiCryptで全HTMLを
 パスワード保護してGitHub Pagesへ公開する。
 
 認証はサーバー側ログインではなく、ブラウザ上でHTMLを復号する簡易認証である。
@@ -112,7 +112,7 @@ gh run list --workflow daily-juslag.yml --limit 1
 gh run watch RUN_ID --exit-status
 ```
 
-成功時は、`research`と`site`の両ジョブが成功し、`site`内の次の処理も成功する。
+成功時は、`operation`と`site`の両ジョブが成功し、`site`内の次の処理も成功する。
 
 - `Render static site`
 - `Password-protect site (StatiCrypt)`
@@ -187,7 +187,7 @@ Secret更新だけでは公開済みHTMLは変わらない。新しいパスワ�
 `site`ジョブが未実行または失敗している。最新Runを確認し、Pagesだけを
 `dry_run=true`で再公開する。
 
-### `research`は成功したが`site`がスキップされる
+### `operation`は成功したが`site`がスキップされる
 
 `ENABLE_SITE_DEPLOY`が`true`か確認する。
 

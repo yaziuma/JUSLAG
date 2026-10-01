@@ -18,6 +18,9 @@ concurrency:
   group: github-pages
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     if: ${{ vars.ENABLE_SITE_DEPLOY == 'true' }}
@@ -52,7 +55,7 @@ jobs:
           salt=$(printf 'JUSLAG-staticrypt-v1:%s' "$site_date" | sha256sum | cut -c1-32)
           npx --yes staticrypt --recursive _site -d _site_protected -p "$SITE_PASSWORD" \
             --short --remember 1 --salt "$salt" \
-            --template-title "JUSLAG Research"
+            --template-title "JUSLAG Operation"
 
           protected_dir="_site_protected/_site"
           test -d "$protected_dir" || { echo "::error::expected output dir $protected_dir not found"; exit 1; }

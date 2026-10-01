@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""JUSLAG 日次リサーチバッチ本体（HTTP/FastAPI非依存・ライブラリ直呼び出し）。
+"""JUSLAG 日次運用バッチ本体（HTTP/FastAPI非依存・ライブラリ直呼び出し）。
 
 手順:
   1. 一括データ取込（raw + adjusted + factors + actions） ※ --skip-fetch で省略可

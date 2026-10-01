@@ -30,9 +30,11 @@ def test_workflows_pin_runners_actions_and_timeouts() -> None:
 
 def test_write_permissions_are_limited_to_expected_jobs() -> None:
     allowed = {
-        ("daily-juslag.yml", "research", "contents"),
+        ("daily-juslag.yml", "operation", "contents"),
         ("daily-juslag.yml", "site", "pages"),
         ("daily-juslag.yml", "site", "id-token"),
+        ("pages-on-push.yml", "deploy", "pages"),
+        ("pages-on-push.yml", "deploy", "id-token"),
         ("opening-bars.yml", "capture", "contents"),
         ("sbi-public-conditions.yml", "capture", "contents"),
     }
