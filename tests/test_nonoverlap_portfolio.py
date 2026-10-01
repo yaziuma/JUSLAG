@@ -101,6 +101,28 @@ def test_nonoverlap_matches_production_ninety_percent_deployment() -> None:
     assert trades.iloc[0]["capital_after_yen"] == 1_090
 
 
+def test_nonoverlap_sizes_before_open_from_prior_close() -> None:
+    dates = pd.date_range("2025-01-01", periods=3)
+    signals = pd.DataFrame(
+        [[3.0, 2.0, 1.0]], index=dates[:1], columns=["A", "B", "C"]
+    )
+    opens = pd.DataFrame(110.0, index=dates, columns=signals.columns)
+    closes = opens.copy()
+    closes.loc[dates[1], "A"] = 121.0
+    sizing = pd.DataFrame(100.0, index=dates, columns=signals.columns)
+
+    trades = MODULE.simulate_nonoverlap(
+        signals, opens, closes, start="2025-01-01", end="2025-01-03",
+        horizon=1, initial_capital_yen=1_000, slippage_bps_per_side=0,
+        deployment_fraction=0.90, nominal_open=opens, sizing_prices=sizing,
+    )
+
+    # Nine units are fixed from the observable 100-yen prior close. The
+    # realized 110-yen open controls actual notional and P&L.
+    assert trades.iloc[0]["gross_notional_yen"] == 990
+    assert trades.iloc[0]["capital_after_yen"] == 1_099
+
+
 def test_nonoverlap_can_measure_delayed_entry_fallback() -> None:
     dates = pd.date_range("2025-01-01", periods=6)
     signals = pd.DataFrame(
