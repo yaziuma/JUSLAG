@@ -408,11 +408,17 @@ def _capital_simulation_card(report: dict) -> str:
     fixed = simulation.get("fixed_notional_yen") or initial
     data_json = _json_embed({"dates": dates, "returns": returns})
     strategy = _esc(simulation.get("strategy_name") or "-")
+    return_basis = simulation.get("return_basis")
+    basis_label = (
+        "売買コスト控除後・税引前"
+        if return_basis == "net_pre_tax_after_execution_costs"
+        else "税引後"
+    )
     card = f"""
 <div class="surface-card p-3 p-md-4 mb-3" id="capital-simulation-card">
   <div class="section-label mb-1">Capital simulation</div>
   <h2 class="h6 text-heading mb-2">複利運用 vs 固定額運用</h2>
-  <p class="small text-muted-soft mb-3">対象: {strategy} の税引後リターン。同一収益列で資金管理だけを比較します。</p>
+  <p class="small text-muted-soft mb-3">対象: {strategy} の{basis_label}リターン。同一収益列で資金管理だけを比較します。</p>
   <div class="capital-controls mb-3">
     <label class="small">初期資金（円）<input id="capital-initial" class="form-control form-control-sm history-search mt-1" type="number" min="1" step="10000" value="{_esc(initial)}"></label>
     <label class="small">固定運用額（円）<input id="capital-fixed" class="form-control form-control-sm history-search mt-1" type="number" min="1" step="10000" value="{_esc(fixed)}"></label>
@@ -439,8 +445,8 @@ def _capital_simulation_card(report: dict) -> str:
   if (storedInitial && Number(storedInitial) > 0) initialInput.value = storedInitial;
   if (storedFixed && Number(storedFixed) > 0) fixedInput.value = storedFixed;
   const yen = new Intl.NumberFormat('ja-JP', {style: 'currency', currency: 'JPY', maximumFractionDigits: 0});
-  function maxDrawdown(values) {
-    let peak = -Infinity, worst = 0;
+  function maxDrawdown(values, initial) {
+    let peak = initial, worst = 0;
     for (const value of values) {
       peak = Math.max(peak, value);
       if (peak > 0) worst = Math.min(worst, value / peak - 1);
@@ -462,8 +468,8 @@ def _capital_simulation_card(report: dict) -> str:
     }
     document.getElementById('capital-compound-final').textContent = yen.format(compound.at(-1) ?? initial);
     document.getElementById('capital-fixed-final').textContent = yen.format(fixed.at(-1) ?? initial);
-    document.getElementById('capital-compound-dd').textContent = `(${maxDrawdown(compound).toFixed(2)}%)`;
-    document.getElementById('capital-fixed-dd').textContent = `(${maxDrawdown(fixed).toFixed(2)}%)`;
+    document.getElementById('capital-compound-dd').textContent = `(${maxDrawdown(compound, initial).toFixed(2)}%)`;
+    document.getElementById('capital-fixed-dd').textContent = `(${maxDrawdown(fixed, initial).toFixed(2)}%)`;
     document.getElementById('capital-period').textContent = `${data.dates[0]} ～ ${data.dates.at(-1)} / ${data.returns.length}期間`;
     const ctx = canvas.getContext('2d');
     const width = canvas.width, height = canvas.height;
@@ -505,7 +511,11 @@ def _capital_simulation_card(report: dict) -> str:
     return card + script
 
 
-def _render_index(history: list[dict], reports: list[dict]) -> str:
+def _render_index(
+    history: list[dict],
+    reports: list[dict],
+    capital_simulation: dict | None = None,
+) -> str:
     rows = _index_rows(reports)
     latest_report = max(reports, key=lambda r: r.get("date") or "") if reports else {}
     latest_ds = latest_report.get("daily_signal") or {}
@@ -536,7 +546,12 @@ def _render_index(history: list[dict], reports: list[dict]) -> str:
     strategy = latest_ds.get("strategy_decision") or {}
     context = latest_ds.get("strategy_context") or {}
     comparison_html = _backtest_comparison(latest_report)
-    capital_simulation_html = _capital_simulation_card(latest_report)
+    capital_report = (
+        {"capital_simulation": capital_simulation}
+        if capital_simulation
+        else latest_report
+    )
+    capital_simulation_html = _capital_simulation_card(capital_report)
 
     def order_items(entries: list[dict] | None, side: str) -> str:
         if not entries:
@@ -998,10 +1013,18 @@ def _render_report_page(report: dict) -> str:
     return _page(f"JUSLAG 日次レポート {date}", "".join(parts), "../index.html")
 
 
-def render_site(history: list[dict], reports: list[dict], out_dir: Path) -> None:
+def render_site(
+    history: list[dict],
+    reports: list[dict],
+    out_dir: Path,
+    *,
+    capital_simulation: dict | None = None,
+) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "reports").mkdir(exist_ok=True)
-    (out_dir / "index.html").write_text(_render_index(history, reports), encoding="utf-8")
+    (out_dir / "index.html").write_text(
+        _render_index(history, reports, capital_simulation), encoding="utf-8"
+    )
     for report in reports:
         date = report.get("date")
         if not date:

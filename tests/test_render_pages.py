@@ -231,3 +231,28 @@ def test_same_open_gap_rule_cannot_be_final_actionable() -> None:
 
     report["backtest_comparison"]["current"]["same_open_gap_assumption"] = False
     assert _final_actionable(report) is True
+
+
+def test_manual_strategy_capital_simulation_overrides_research_backtest_on_index(
+    tmp_path: Path,
+) -> None:
+    reports_dir = tmp_path / "data" / "reports"
+    reports_dir.mkdir(parents=True)
+    _write_report(reports_dir, "2026-07-08", True)
+    manual = {
+        "strategy_name": "pca_sub_long_5d_manual_v2",
+        "return_basis": "net_pre_tax_after_execution_costs",
+        "initial_capital_yen": 1_000_000,
+        "fixed_notional_yen": 1_000_000,
+        "dates": ["2026-01-05"],
+        "returns": [0.01],
+    }
+    out_dir = tmp_path / "site"
+
+    render_site([], load_reports(reports_dir), out_dir, capital_simulation=manual)
+
+    index_html = (out_dir / "index.html").read_text(encoding="utf-8")
+    detail_html = (out_dir / "reports" / "2026-07-08.html").read_text(encoding="utf-8")
+    assert "pca_sub_long_5d_manual_v2" in index_html
+    assert "売買コスト控除後・税引前リターン" in index_html
+    assert "PCA SUB + rule_406_no_flip" in detail_html

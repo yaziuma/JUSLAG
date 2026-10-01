@@ -11,6 +11,7 @@ def simulate_capital_paths(
     initial_capital_yen: float = 1_000_000,
     fixed_notional_yen: float | None = None,
     strategy_name: str = "strategy",
+    return_basis: str = "net_after_tax",
 ) -> dict[str, object]:
     """Compare reinvested capital with constant-notional P&L on identical returns."""
     if not math.isfinite(initial_capital_yen) or initial_capital_yen <= 0:
@@ -25,13 +26,13 @@ def simulate_capital_paths(
 
     compound = initial_capital_yen * (1.0 + clean).cumprod()
     fixed = initial_capital_yen + fixed_notional * clean.cumsum()
-    compound_dd = compound / compound.cummax() - 1.0
-    fixed_dd = fixed / fixed.cummax() - 1.0
+    compound_dd = compound / compound.cummax().clip(lower=initial_capital_yen) - 1.0
+    fixed_dd = fixed / fixed.cummax().clip(lower=initial_capital_yen) - 1.0
 
     return {
         "schema_version": 1,
         "strategy_name": strategy_name,
-        "return_basis": "net_after_tax",
+        "return_basis": return_basis,
         "initial_capital_yen": round(initial_capital_yen, 2),
         "fixed_notional_yen": round(fixed_notional, 2),
         "dates": [pd.Timestamp(day).date().isoformat() for day in clean.index],

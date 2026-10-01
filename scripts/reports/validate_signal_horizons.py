@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 from juslag.cache import DEFAULT_DB_PATH, PriceCache
+from juslag.capital_simulation import simulate_capital_paths
 from juslag.config import JP_CYCLICAL, JP_TICKERS, JP_TRADING_UNITS, US_CYCLICAL, US_TICKERS
 from juslag.data_loader import build_joint_cc, compute_returns, repair_known_bad_prices
 from juslag.manual_strategy import load_manual_config
@@ -672,6 +673,11 @@ def main() -> None:
                         help="Override the strategy config for sensitivity analysis")
     parser.add_argument("--permutations", type=int, default=0,
                         help="Matched random-score portfolios (0 disables)")
+    parser.add_argument(
+        "--capital-simulation-output",
+        type=Path,
+        help="Write the executable manual-strategy capital comparison as JSON",
+    )
     args = parser.parse_args()
     assumptions = production_assumptions(load_manual_config(args.strategy_config))
     args.slippage_bps = (
@@ -880,6 +886,36 @@ def main() -> None:
             deployment_fraction=args.deployment_fraction,
             q=args.selection_quantile,
         )
+        capital_returns = pd.Series(
+            fixed_long_trades["net_pre_tax_return"].to_numpy(),
+            index=pd.DatetimeIndex(fixed_long_trades["exit_date"]),
+        )
+        capital_simulation = simulate_capital_paths(
+            capital_returns,
+            initial_capital_yen=args.capital_yen,
+            fixed_notional_yen=args.capital_yen,
+            strategy_name=assumptions["strategy_id"],
+            return_basis="net_pre_tax_after_execution_costs",
+        )
+        capital_simulation["execution_assumptions"] = {
+            "selection_quantile": args.selection_quantile,
+            "holding_jpx_sessions": assumptions["holding_sessions"],
+            "deployment_fraction": args.deployment_fraction,
+            "slippage_bps_per_side": args.slippage_bps,
+            "quantity_sizing": "previous_jpx_raw_close",
+            "entry_valuation": "realized_jpx_open",
+            "long_only": True,
+            "nonoverlapping_batches": True,
+        }
+        capital_simulation["validation"] = {
+            "eval_start": args.eval_start,
+            "validation_end": args.end,
+            "last_signal": signals.index.max().date().isoformat(),
+            "last_exit": fixed_long_trades["exit_date"].max().date().isoformat(),
+            "trade_batches": len(fixed_long_trades),
+            "strategy_config": str(args.strategy_config),
+        }
+        output["capital_simulation"] = capital_simulation
         output["same_notional_sector_equal_weight_comparison"] = exposure_matched_sector_comparison(
             fixed_long_trades, jp_open, jp_close,
         )
@@ -910,6 +946,18 @@ def main() -> None:
                 deployment_fraction=args.deployment_fraction,
             )
         output["portfolio_limitations"] = "Exploratory: prior horizon selection used the same sample; short inventory, spread and actual fills unobserved."
+    if args.capital_simulation_output:
+        if "capital_simulation" not in output:
+            raise SystemExit("--capital-simulation-output requires --nonoverlap")
+        args.capital_simulation_output.parent.mkdir(parents=True, exist_ok=True)
+        temporary = args.capital_simulation_output.with_suffix(
+            args.capital_simulation_output.suffix + ".tmp"
+        )
+        temporary.write_text(
+            json.dumps(output["capital_simulation"], ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        temporary.replace(args.capital_simulation_output)
     print(json.dumps(output, ensure_ascii=False, indent=2))
 
 

@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 from juslag.services.site import load_history, load_reports, render_site
@@ -20,7 +21,13 @@ def main() -> None:
 
     history = load_history(args.data_dir / "history.jsonl")
     reports = load_reports(args.data_dir / "reports")
-    render_site(history, reports, args.out)
+    capital_path = args.data_dir / "manual_strategy" / "capital_simulation.json"
+    capital_simulation = (
+        json.loads(capital_path.read_text(encoding="utf-8"))
+        if capital_path.is_file()
+        else None
+    )
+    render_site(history, reports, args.out, capital_simulation=capital_simulation)
     print(f"rendered {len(reports)} report(s) -> {args.out}")
 
 
