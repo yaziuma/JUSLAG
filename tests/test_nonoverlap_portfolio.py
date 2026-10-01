@@ -37,6 +37,25 @@ def test_nonoverlap_limits_capital_and_skips_overlapping_signals() -> None:
     assert dates[2] not in set(trades["signal_date"])
 
 
+def test_nonoverlap_matches_production_ninety_percent_deployment() -> None:
+    dates = pd.date_range("2025-01-01", periods=3)
+    signals = pd.DataFrame(
+        [[3.0, 2.0, 1.0]], index=dates[:1], columns=["A", "B", "C"]
+    )
+    opens = pd.DataFrame(100.0, index=dates, columns=signals.columns)
+    closes = opens.copy()
+    closes.loc[dates[1], "A"] = 110.0
+
+    trades = MODULE.simulate_nonoverlap(
+        signals, opens, closes, start="2025-01-01", end="2025-01-03",
+        horizon=1, initial_capital_yen=1_000, slippage_bps_per_side=0,
+        deployment_fraction=0.90,
+    )
+
+    assert trades.iloc[0]["gross_notional_yen"] == 900
+    assert trades.iloc[0]["capital_after_yen"] == 1_090
+
+
 def test_nonoverlap_can_measure_delayed_entry_fallback() -> None:
     dates = pd.date_range("2025-01-01", periods=6)
     signals = pd.DataFrame(

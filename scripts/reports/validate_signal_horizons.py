@@ -92,6 +92,7 @@ def simulate_nonoverlap(
     tax_state: dict | None = None,
     annual_tax_settlement: bool = False,
     entry_delay_sessions: int = 0,
+    deployment_fraction: float = 1.0,
 ) -> pd.DataFrame:
     """One position batch at a time, integer units, fixed gross budget."""
     if (
@@ -99,6 +100,7 @@ def simulate_nonoverlap(
         or initial_capital_yen <= 0
         or not 0 < q < 0.5
         or entry_delay_sessions < 0
+        or not 0 < deployment_fraction <= 1
     ):
         raise ValueError("Invalid portfolio parameters")
     dates = jp_open.index.intersection(jp_close.index).sort_values()
@@ -141,7 +143,7 @@ def simulate_nonoverlap(
             if capital <= 0:
                 break
         sides = [(t, 1) for t in longs] + [(t, -1) for t in shorts if t not in longs]
-        budget_per_side = capital / len(sides)
+        budget_per_side = capital * deployment_fraction / len(sides)
         gross_pnl = 0.0
         gross_notional = 0.0
         short_notional = 0.0
@@ -244,6 +246,8 @@ def walk_forward_nonoverlap(
     horizons: tuple[int, ...] = (1, 2, 3, 5),
     nominal_open: pd.DataFrame | None = None,
     annual_tax_settlement: bool = False,
+    deployment_fraction: float = 1.0,
+    q: float = 0.3,
 ) -> dict:
     """Select holding period using only prior years, then trade the next year."""
     first_year = pd.Timestamp(start).year
@@ -261,7 +265,8 @@ def walk_forward_nonoverlap(
                 signals, jp_open, jp_close, start=train_start, end=train_end,
                 horizon=horizon, initial_capital_yen=initial_capital_yen,
                 slippage_bps_per_side=slippage_bps_per_side, allow_short=allow_short,
-                nominal_open=nominal_open,
+                nominal_open=nominal_open, deployment_fraction=deployment_fraction,
+                q=q,
             )
             if not train.empty:
                 scores[horizon] = float(train["capital_after_yen"].iloc[-1])
@@ -280,6 +285,8 @@ def walk_forward_nonoverlap(
             slippage_bps_per_side=slippage_bps_per_side, allow_short=allow_short,
             nominal_open=nominal_open,
             tax_state=tax_state, annual_tax_settlement=annual_tax_settlement,
+            deployment_fraction=deployment_fraction,
+            q=q,
         )
         before = capital
         if not test.empty:
@@ -314,6 +321,7 @@ def walk_forward_quantile_nonoverlap(
     quantiles: tuple[float, ...] = (0.2, 0.25, 0.3, 0.35, 0.4),
     nominal_open: pd.DataFrame | None = None,
     horizon: int = 5,
+    deployment_fraction: float = 1.0,
 ) -> dict:
     """Choose selection breadth from prior years only, then trade the next year."""
     first_year = pd.Timestamp(start).year
@@ -330,7 +338,7 @@ def walk_forward_quantile_nonoverlap(
                 signals, jp_open, jp_close, start=train_start, end=train_end,
                 horizon=horizon, q=q, initial_capital_yen=initial_capital_yen,
                 slippage_bps_per_side=slippage_bps_per_side,
-                nominal_open=nominal_open,
+                nominal_open=nominal_open, deployment_fraction=deployment_fraction,
             )
             if not train.empty:
                 scores[q] = float(train["capital_after_yen"].iloc[-1])
@@ -343,7 +351,7 @@ def walk_forward_quantile_nonoverlap(
             signals, jp_open, jp_close, start=test_start, end=test_end,
             horizon=horizon, q=selected, initial_capital_yen=capital,
             slippage_bps_per_side=slippage_bps_per_side,
-            nominal_open=nominal_open,
+            nominal_open=nominal_open, deployment_fraction=deployment_fraction,
         )
         before = capital
         if not test.empty:
@@ -369,6 +377,7 @@ def benchmark_same_schedule(
     initial_capital_yen: float,
     slippage_bps_per_side: float,
     nominal_open: pd.DataFrame | None = None,
+    deployment_fraction: float = 1.0,
 ) -> pd.DataFrame:
     """Equal-weight JP ETF basket on exactly the strategy's entry/exit dates."""
     capital = initial_capital_yen
@@ -387,7 +396,7 @@ def benchmark_same_schedule(
         if exit_price[selected].isna().any():
             raise ValueError(f"Missing benchmark exit prices for {exit_date}")
         units = pd.Series({
-            ticker: int((capital / len(selected)) // (entry[ticker] * trading_unit_on(ticker, entry_date)))
+            ticker: int((capital * deployment_fraction / len(selected)) // (entry[ticker] * trading_unit_on(ticker, entry_date)))
             * trading_unit_on(ticker, entry_date)
             for ticker in selected
         })
@@ -472,6 +481,7 @@ def permutation_benchmark(
     repetitions: int = 100,
     seed: int = 20260918,
     q: float = 0.3,
+    deployment_fraction: float = 1.0,
 ) -> dict:
     """Shuffle each day's sector scores, preserving score distribution and cost model."""
     if repetitions < 1:
@@ -479,7 +489,7 @@ def permutation_benchmark(
     actual = simulate_nonoverlap(
         signals, jp_open, jp_close, nominal_open=nominal_open, start=start, end=end,
         initial_capital_yen=initial_capital_yen, slippage_bps_per_side=slippage_bps_per_side,
-        q=q,
+        q=q, deployment_fraction=deployment_fraction,
     )
     if actual.empty:
         raise ValueError("No actual trades to compare")
@@ -493,7 +503,7 @@ def permutation_benchmark(
         trades = simulate_nonoverlap(
             shuffled, jp_open, jp_close, nominal_open=nominal_open, start=start, end=end,
             initial_capital_yen=initial_capital_yen, slippage_bps_per_side=slippage_bps_per_side,
-            q=q,
+            q=q, deployment_fraction=deployment_fraction,
         )
         final_capitals.append(float(trades["capital_after_yen"].iloc[-1]))
         exposures.append(float((trades["gross_notional_yen"] / trades["capital_before_yen"]).mean()))
@@ -599,9 +609,17 @@ def main() -> None:
     parser.add_argument("--max-abs-ticker-return", type=float, default=0.30)
     parser.add_argument("--nonoverlap", action="store_true", help="Run fixed-capital, nonoverlapping 5-session portfolio")
     parser.add_argument("--capital-yen", type=float, default=1_000_000)
+    parser.add_argument("--deployment-fraction", type=float, default=0.90,
+                        help="Fraction of capital deployed per batch (production default: 0.90)")
+    parser.add_argument("--selection-quantile", type=float, default=0.20,
+                        help="Long selection breadth (production default: top 20%%)")
     parser.add_argument("--permutations", type=int, default=0,
                         help="Matched random-score portfolios (0 disables)")
     args = parser.parse_args()
+    if not 0 < args.deployment_fraction <= 1:
+        raise SystemExit("--deployment-fraction must be in (0, 1]")
+    if not 0 < args.selection_quantile < 0.5:
+        raise SystemExit("--selection-quantile must be in (0, 0.5)")
 
     cache = PriceCache(args.db)
     us = cache.load(list(US_TICKERS), args.start, args.end, args.mode)
@@ -634,6 +652,8 @@ def main() -> None:
         "joint_rows": quality["joint_rows"],
         "last_signal": signals.index.max().date().isoformat(),
         "slippage_bps_per_side": args.slippage_bps,
+        "deployment_fraction": args.deployment_fraction,
+        "selection_quantile": args.selection_quantile,
         "horizons": summary,
     }
     if args.nonoverlap:
@@ -653,7 +673,9 @@ def main() -> None:
                 trades = simulate_nonoverlap(signals, jp_open, jp_close, start=args.eval_start,
                                              end=args.end, initial_capital_yen=args.capital_yen,
                                              slippage_bps_per_side=slippage, allow_short=allow_short,
-                                             nominal_open=nominal_open)
+                                             nominal_open=nominal_open,
+                                             deployment_fraction=args.deployment_fraction,
+                                             q=args.selection_quantile)
                 portfolio[label][f"{slippage:g}bps_per_side"] = summarize_nonoverlap(trades, args.capital_yen)
         output["nonoverlap_5_session"] = portfolio
         output["entry_delay_sensitivity_long_only"] = {
@@ -663,6 +685,8 @@ def main() -> None:
                     initial_capital_yen=args.capital_yen,
                     slippage_bps_per_side=args.slippage_bps,
                     nominal_open=nominal_open, entry_delay_sessions=delay,
+                    deployment_fraction=args.deployment_fraction,
+                    q=args.selection_quantile,
                 ),
                 args.capital_yen,
             )
@@ -675,6 +699,7 @@ def main() -> None:
                     q=q, initial_capital_yen=args.capital_yen,
                     slippage_bps_per_side=args.slippage_bps,
                     nominal_open=nominal_open,
+                    deployment_fraction=args.deployment_fraction,
                 ),
                 args.capital_yen,
             )
@@ -686,28 +711,50 @@ def main() -> None:
                     signals, jp_open, jp_close, start=args.eval_start, end=args.end,
                     q=q, initial_capital_yen=args.capital_yen,
                     slippage_bps_per_side=slippage, nominal_open=nominal_open,
+                    deployment_fraction=args.deployment_fraction,
                 ),
                 args.capital_yen,
             )
             for q in (0.2, 0.3)
             for slippage in (5.0, 10.0, 20.0)
         }
+        output["selection_quantile_annual_tax_reinvestment_long_only"] = {}
+        for q in (0.2, 0.3):
+            taxed = simulate_nonoverlap(
+                signals, jp_open, jp_close, start=args.eval_start, end=args.end,
+                q=q, initial_capital_yen=args.capital_yen,
+                slippage_bps_per_side=args.slippage_bps, nominal_open=nominal_open,
+                annual_tax_settlement=True,
+                deployment_fraction=args.deployment_fraction,
+            )
+            output["selection_quantile_annual_tax_reinvestment_long_only"][
+                f"top_{int(q * 100)}pct"
+            ] = summarize_after_tax(
+                taxed,
+                args.capital_yen,
+                float(taxed.get("tax_paid_before_yen", pd.Series(dtype=float)).sum())
+                + float(taxed.get("tax_paid_final_yen", pd.Series(dtype=float)).sum()),
+            )
         output["walk_forward_selection_quantile_long_only"] = walk_forward_quantile_nonoverlap(
             signals, jp_open, jp_close, start=args.eval_start, end=args.end,
             initial_capital_yen=args.capital_yen,
             slippage_bps_per_side=args.slippage_bps,
             nominal_open=nominal_open,
+            deployment_fraction=args.deployment_fraction,
         )
         output["walk_forward_fixed_30pct_long_only"] = walk_forward_quantile_nonoverlap(
             signals, jp_open, jp_close, start=args.eval_start, end=args.end,
             initial_capital_yen=args.capital_yen,
             slippage_bps_per_side=args.slippage_bps,
             quantiles=(0.3,), nominal_open=nominal_open,
+            deployment_fraction=args.deployment_fraction,
         )
         after_tax_trades = simulate_nonoverlap(
             signals, jp_open, jp_close, start=args.eval_start, end=args.end,
             initial_capital_yen=args.capital_yen, slippage_bps_per_side=args.slippage_bps,
             nominal_open=nominal_open, annual_tax_settlement=True,
+            deployment_fraction=args.deployment_fraction,
+            q=args.selection_quantile,
         )
         output["long_only_annual_tax_reinvestment"] = summarize_after_tax(
             after_tax_trades, args.capital_yen,
@@ -720,17 +767,23 @@ def main() -> None:
                 initial_capital_yen=args.capital_yen,
                 slippage_bps_per_side=args.slippage_bps, allow_short=allow_short,
                 nominal_open=nominal_open,
+                deployment_fraction=args.deployment_fraction,
+                q=args.selection_quantile,
             ) for label, allow_short in (("long_only", False), ("optimistic_short", True))
         }
         output["walk_forward_long_only_annual_tax_reinvestment"] = walk_forward_nonoverlap(
             signals, jp_open, jp_close, start=args.eval_start, end=args.end,
             initial_capital_yen=args.capital_yen, slippage_bps_per_side=args.slippage_bps,
             nominal_open=nominal_open, annual_tax_settlement=True,
+            deployment_fraction=args.deployment_fraction,
+            q=args.selection_quantile,
         )
         fixed_long_trades = simulate_nonoverlap(
             signals, jp_open, jp_close, start=args.eval_start, end=args.end,
             initial_capital_yen=args.capital_yen,
             slippage_bps_per_side=args.slippage_bps, nominal_open=nominal_open,
+            deployment_fraction=args.deployment_fraction,
+            q=args.selection_quantile,
         )
         output["same_notional_sector_equal_weight_comparison"] = exposure_matched_sector_comparison(
             fixed_long_trades, jp_open, jp_close,
@@ -739,7 +792,8 @@ def main() -> None:
             benchmark_same_schedule(fixed_long_trades, jp_open, jp_close,
                                     initial_capital_yen=args.capital_yen,
                                     slippage_bps_per_side=args.slippage_bps,
-                                    nominal_open=nominal_open),
+                                    nominal_open=nominal_open,
+                                    deployment_fraction=args.deployment_fraction),
             args.capital_yen,
         )
         if args.permutations:
@@ -747,12 +801,15 @@ def main() -> None:
                 signals, jp_open, jp_close, nominal_open=nominal_open,
                 start=args.eval_start, end=args.end, initial_capital_yen=args.capital_yen,
                 slippage_bps_per_side=args.slippage_bps, repetitions=args.permutations,
+                deployment_fraction=args.deployment_fraction,
+                q=args.selection_quantile,
             )
             output["score_permutation_benchmark_top20"] = permutation_benchmark(
                 signals, jp_open, jp_close, nominal_open=nominal_open,
                 start=args.eval_start, end=args.end, initial_capital_yen=args.capital_yen,
                 slippage_bps_per_side=args.slippage_bps, repetitions=args.permutations,
                 q=0.2,
+                deployment_fraction=args.deployment_fraction,
             )
         output["portfolio_limitations"] = "Exploratory: prior horizon selection used the same sample; short inventory, spread and actual fills unobserved."
     print(json.dumps(output, ensure_ascii=False, indent=2))
