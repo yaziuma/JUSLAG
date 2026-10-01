@@ -1,0 +1,72 @@
+name: pages-on-push
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/pages-on-push.yml"
+      - "data/history.jsonl"
+      - "data/manual_strategy/capital_simulation.json"
+      - "data/reports/**"
+      - "scripts/ops/render_pages.py"
+      - "src/juslag/services/site.py"
+      - "pyproject.toml"
+      - "uv.lock"
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ vars.ENABLE_SITE_DEPLOY == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Render static site
+        run: uv run python scripts/ops/render_pages.py --out _site
+
+      - name: Password-protect site (StatiCrypt)
+        env:
+          SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
+        run: |
+          test -n "$SITE_PASSWORD" || { echo "::error::secrets.SITE_PASSWORD is not set"; exit 1; }
+          site_date=$(TZ=Asia/Tokyo date +%F)
+          salt=$(printf 'JUSLAG-staticrypt-v1:%s' "$site_date" | sha256sum | cut -c1-32)
+          npx --yes staticrypt --recursive _site -d _site_protected -p "$SITE_PASSWORD" \
+            --short --remember 1 --salt "$salt" \
+            --template-title "JUSLAG Research"
+
+          protected_dir="_site_protected/_site"
+          test -d "$protected_dir" || { echo "::error::expected output dir $protected_dir not found"; exit 1; }
+          test "$(find _site -name '*.html' | wc -l)" = \
+            "$(find "$protected_dir" -name '*.html' | wc -l)"
+          while IFS= read -r file; do
+            grep -q 'staticrypt' "$file" || { echo "::error::$file was not encrypted"; exit 1; }
+          done < <(find "$protected_dir" -name '*.html')
+
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        with:
+          path: _site_protected/_site
+
+      - id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
