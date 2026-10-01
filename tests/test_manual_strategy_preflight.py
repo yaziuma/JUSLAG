@@ -76,7 +76,7 @@ def test_preflight_uses_newest_eligible_report_and_attests_sheet(tmp_path, monke
     intent_path = tmp_path / "intent.json"
     result = preflight.run_preflight(
         as_of="2026-10-02",
-        now=preflight.datetime.fromisoformat("2026-10-02T08:30:00+09:00"),
+        now=preflight.datetime.fromisoformat("2026-10-02T08:50:00+09:00"),
         ref="origin/main",
         config_path=config_path,
         state_path=state_path,
@@ -96,6 +96,43 @@ def test_preflight_uses_newest_eligible_report_and_attests_sheet(tmp_path, monke
     assert intent["intent_kind"] == "ENTRY"
     assert intent["expires_at"] == "2026-10-02T08:55:00+09:00"
     assert all(order["custody_account"] == "SPECIFIED" for order in intent["orders"])
+
+
+def test_preflight_withholds_execution_intent_until_final_run(
+    tmp_path, monkeypatch
+) -> None:
+    reports_dir = tmp_path / "signals"
+    reports_dir.mkdir()
+    snapshot = reports_dir / "2026-10-02.json"
+    snapshot.write_text(
+        json.dumps(_report("2026-10-02", "2026-10-01T23:40:00+00:00", "2026-10-01")),
+        encoding="utf-8",
+    )
+    snapshot.with_name("2026-10-02.prices.csv").write_text(_csv(), encoding="utf-8")
+    monkeypatch.setattr(preflight, "_git", lambda *args: "" if args[0] == "ls-tree" else None)
+    config_path = Path("config/manual_strategy.yaml")
+    state_path = tmp_path / "state.json"
+    state_path.write_text(
+        json.dumps(initial_state(load_manual_config(config_path))), encoding="utf-8"
+    )
+    intent_path = tmp_path / "intent.json"
+
+    result = preflight.run_preflight(
+        as_of="2026-10-02",
+        now=preflight.datetime.fromisoformat("2026-10-02T08:45:00+09:00"),
+        ref="origin/main",
+        config_path=config_path,
+        state_path=state_path,
+        output_path=tmp_path / "orders.json",
+        status_path=tmp_path / "status.json",
+        intent_output_path=intent_path,
+        local_reports_dir=tmp_path / "no-reports",
+        signal_reports_dir=reports_dir,
+    )
+
+    assert result["status"] == "READY"
+    assert result["execution_intent_pending_until_jst"] == "08:50"
+    assert not intent_path.exists()
 
 
 def test_preflight_blocks_after_entry_deadline(tmp_path) -> None:

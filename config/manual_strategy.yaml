@@ -24,6 +24,7 @@ execution_intent:
   executor_id: quieter-sbi-1
   account_alias: sbi-primary
   custody_account: SPECIFIED
+  release_time_jst: "08:50"
 risk:
   maximum_drawdown_pct: -25
   require_all_17_tickers: true

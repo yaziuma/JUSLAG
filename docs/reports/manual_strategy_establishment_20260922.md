@@ -71,7 +71,7 @@ preflightは`origin/main`上のGitHub生成レポートと`data/reports`上の�
 
 ローカル入力ではcode commit、report path、report SHA-256、生成時刻を注文票へ保存する。GitHub版が遅延または未生成でもローカル版が合格すればpreflightを継続できる。両方不合格なら従来どおり`BLOCKED`とする。
 
-READY時は注文票と同時に`data/manual_strategy/intents/<日付>-intent.json`を生成する。これは別プロジェクト`juslag-execution`の`OrderIntent` schema v2と互換で、銘柄、数量、現物、寄成／引成、特定口座、最大元本、08:55／15:20の失効時刻、元commitを固定する。現段階では承認APIへ自動登録せず、SBIへの送信も行わない。08:45版と08:50版が異なる可能性があるため、将来の連携処理は最終採用intentだけを登録し、古いintentを承認可能なまま残してはならない。
+READY時は注文票を毎回更新し、最終preflight時刻の08:50以降に限って`data/manual_strategy/intents/<日付>-intent.json`を生成する。これは別プロジェクト`juslag-execution`の`OrderIntent` schema v2と互換で、銘柄、数量、現物、寄成／引成、特定口座、最大元本、08:55／15:20の失効時刻、元commitを固定する。現段階では承認APIへ自動登録せず、SBIへの送信も行わない。08:45版と08:50版が異なる可能性があるため、早い時刻のintentは生成せず、最終採用intentだけを連携対象にする。
 
 ## 9月24日朝の実行手順
 

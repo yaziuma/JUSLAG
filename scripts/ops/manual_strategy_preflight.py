@@ -150,6 +150,7 @@ def run_preflight(
     signal_reports_dir: Path = Path("data/manual_strategy/signals"),
 ) -> dict:
     config = load_manual_config(config_path)
+    intent_release = time.fromisoformat(config["execution_intent"]["release_time_jst"])
     status: dict = {
         "schema_version": 1,
         "strategy_id": config["strategy_id"],
@@ -220,7 +221,12 @@ def run_preflight(
         sheet.pop("sheet_sha256", None)
         sheet["sheet_sha256"] = fingerprint(sheet)
         _write_atomic(output_path, sheet)
-        if intent_output_path is not None and sheet["action"] in {"ENTRY", "EXIT"}:
+        release_intent = (
+            intent_output_path is not None
+            and sheet["action"] in {"ENTRY", "EXIT"}
+            and now.astimezone(JST).timetz().replace(tzinfo=None) >= intent_release
+        )
+        if release_intent:
             intent = build_execution_intent(
                 sheet,
                 config,
@@ -237,10 +243,14 @@ def run_preflight(
             source_report=report_path,
             source_kind=source_kind,
         )
-        if intent_output_path is not None and sheet["action"] in {"ENTRY", "EXIT"}:
+        if release_intent:
             status.update(
                 execution_intent=str(intent_output_path),
                 execution_intent_sha256=_file_sha256(str(intent_output_path)),
+            )
+        elif intent_output_path is not None and sheet["action"] in {"ENTRY", "EXIT"}:
+            status["execution_intent_pending_until_jst"] = intent_release.isoformat(
+                timespec="minutes"
             )
         return status
     except Exception as exc:
