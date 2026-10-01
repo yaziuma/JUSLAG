@@ -105,6 +105,28 @@ def test_walk_forward_selection_does_not_read_test_year_returns() -> None:
     assert first["folds"][0]["selected_horizon"] == second["folds"][0]["selected_horizon"]
 
 
+def test_walk_forward_quantile_selection_does_not_read_test_year_returns() -> None:
+    dates = pd.DatetimeIndex([f"{year}-01-{day:02d}" for year in (2022, 2023) for day in range(3, 12)])
+    signals = pd.DataFrame(
+        [[5.0, 4.0, 3.0, 2.0, 1.0]] * len(dates),
+        index=dates,
+        columns=["A", "B", "C", "D", "E"],
+    )
+    opens = pd.DataFrame(100.0, index=dates, columns=signals.columns)
+    closes = opens.copy()
+    changed = closes.copy()
+    changed.loc["2023", "A"] = 150.0
+
+    kwargs = dict(
+        start="2022-01-01", end="2023-12-31", initial_capital_yen=1_000,
+        slippage_bps_per_side=0, quantiles=(0.2, 0.4), horizon=1,
+    )
+    first = MODULE.walk_forward_quantile_nonoverlap(signals, opens, closes, **kwargs)
+    second = MODULE.walk_forward_quantile_nonoverlap(signals, opens, changed, **kwargs)
+
+    assert first["folds"][0]["selected_quantile"] == second["folds"][0]["selected_quantile"]
+
+
 def test_equal_weight_benchmark_uses_same_trade_schedule() -> None:
     dates = pd.date_range("2025-01-01", periods=4)
     prices = pd.DataFrame(100.0, index=dates, columns=["A", "B"])
@@ -264,3 +286,18 @@ def test_permutation_benchmark_is_reproducible() -> None:
     assert first == second
     assert first["repetitions"] == 5
     assert 0 < first["one_sided_empirical_p"] <= 1
+
+
+def test_permutation_benchmark_passes_selection_quantile() -> None:
+    dates = pd.date_range("2025-01-01", periods=6)
+    signals = pd.DataFrame(
+        [[5.0, 4.0, 3.0, 2.0, 1.0]] * 4,
+        index=dates[:4], columns=["A", "B", "C", "D", "E"],
+    )
+    prices = pd.DataFrame(100.0, index=dates, columns=signals.columns)
+    result = MODULE.permutation_benchmark(
+        signals, prices, prices, nominal_open=prices,
+        start="2025-01-01", end="2025-01-06", initial_capital_yen=1_000,
+        slippage_bps_per_side=0, repetitions=2, q=0.2,
+    )
+    assert result["repetitions"] == 2

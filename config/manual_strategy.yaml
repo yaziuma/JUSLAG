@@ -1,11 +1,11 @@
 schema_version: 1
-strategy_id: pca_sub_long_5d_manual_v1
-effective_from: "2026-09-24"
+strategy_id: pca_sub_long_5d_manual_v2
+effective_from: "2026-10-02"
 signal_model:
   window_l: 60
   k_factors: 3
   lambda_reg: 0.9
-  selection_quantile: 0.30
+  selection_quantile: 0.20
 portfolio:
   initial_capital_yen: 1000000
   deployment_fraction: 0.90

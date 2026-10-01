@@ -19,7 +19,7 @@ def _report(report_date: str, generated: str, signal_day: str) -> dict:
         "generated_at_utc": generated,
         "run_provenance": {"source_commit": "c" * 40},
         "daily_signal": {
-            "execution_target_jp_date": "2026-09-24",
+            "execution_target_jp_date": "2026-10-02",
             "signal_reference_us_date": signal_day,
             "freshness": {"freshness_ok": True},
             "rows": [{"ticker": f"{code}.T", "signal": float(code)} for code in range(1617, 1634)],
@@ -43,7 +43,7 @@ def test_preflight_uses_newest_eligible_report_and_attests_sheet(tmp_path, monke
         ),
         # Generated after the entry deadline and therefore ineligible.
         "data/reports/2026-09-24.json": _report(
-            "2026-09-24", "2026-09-24T01:00:00+00:00", "2026-09-23"
+            "2026-09-24", "2026-10-02T00:00:00+00:00", "2026-09-23"
         ),
     }
 
@@ -67,8 +67,8 @@ def test_preflight_uses_newest_eligible_report_and_attests_sheet(tmp_path, monke
     output = tmp_path / "orders.json"
     status_path = tmp_path / "status.json"
     result = preflight.run_preflight(
-        as_of="2026-09-24",
-        now=preflight.datetime.fromisoformat("2026-09-24T08:30:00+09:00"),
+        as_of="2026-10-02",
+        now=preflight.datetime.fromisoformat("2026-10-02T08:30:00+09:00"),
         ref="origin/main",
         config_path=config_path,
         state_path=state_path,
@@ -86,8 +86,8 @@ def test_preflight_uses_newest_eligible_report_and_attests_sheet(tmp_path, monke
 def test_preflight_blocks_after_entry_deadline(tmp_path) -> None:
     status_path = tmp_path / "status.json"
     result = preflight.run_preflight(
-        as_of="2026-09-24",
-        now=preflight.datetime.fromisoformat("2026-09-24T09:00:00+09:00"),
+        as_of="2026-10-02",
+        now=preflight.datetime.fromisoformat("2026-10-02T09:00:00+09:00"),
         ref="origin/main",
         config_path=Path("config/manual_strategy.yaml"),
         state_path=Path("data/manual_strategy/state.json"),
@@ -134,8 +134,8 @@ def test_preflight_uses_fresh_local_report_when_github_is_delayed(
     )
     output = tmp_path / "orders.json"
     result = preflight.run_preflight(
-        as_of="2026-09-24",
-        now=preflight.datetime.fromisoformat("2026-09-24T08:30:00+09:00"),
+        as_of="2026-10-02",
+        now=preflight.datetime.fromisoformat("2026-10-02T08:30:00+09:00"),
         ref="origin/main",
         config_path=config_path,
         state_path=state_path,
@@ -180,8 +180,8 @@ def test_preflight_prefers_newer_lightweight_signal_snapshot(tmp_path, monkeypat
     )
     output = tmp_path / "orders.json"
     result = preflight.run_preflight(
-        as_of="2026-09-24",
-        now=preflight.datetime.fromisoformat("2026-09-24T08:50:00+09:00"),
+        as_of="2026-10-02",
+        now=preflight.datetime.fromisoformat("2026-10-02T08:50:00+09:00"),
         ref="origin/main",
         config_path=config_path,
         state_path=state_path,

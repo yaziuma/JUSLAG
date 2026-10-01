@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import copy
+import json
+from pathlib import Path
 
 import pytest
 
@@ -8,9 +10,13 @@ from juslag.manual_strategy import (
     build_order_sheet,
     fifth_session,
     initial_state,
+    load_manual_config,
     record_entry,
     record_exit,
 )
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _config() -> dict:
@@ -119,3 +125,22 @@ def test_entry_rejects_missing_broker_evidence_and_drawdown_blocks_new_batch() -
     stopped["drawdown_pct"] = -25
     with pytest.raises(ValueError, match="drawdown stop"):
         build_order_sheet(_report(), stopped, config, prices, "2026-09-24")
+
+
+def test_production_v2_selects_top_20_percent_and_state_is_migrated() -> None:
+    config = load_manual_config(ROOT / "config/manual_strategy.yaml")
+    state = json.loads((ROOT / "data/manual_strategy/state.json").read_text(encoding="utf-8"))
+    report = _report()
+    report["daily_signal"]["execution_target_jp_date"] = "2026-10-02"
+    prices = {f"{code}.T": 10_000.0 for code in range(1617, 1634)}
+
+    sheet = build_order_sheet(report, state, config, prices, "2026-10-02")
+
+    assert config["strategy_id"] == "pca_sub_long_5d_manual_v2"
+    assert config["signal_model"]["selection_quantile"] == 0.20
+    assert state["strategy_id"] == config["strategy_id"]
+    assert state["open_batch"] is None
+    assert state["history"] == []
+    assert [row["ticker"] for row in sheet["orders"]] == [
+        "1633.T", "1632.T", "1631.T", "1630.T"
+    ]

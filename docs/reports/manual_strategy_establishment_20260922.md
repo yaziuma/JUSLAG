@@ -4,6 +4,8 @@
 
 2026-09-24から、`pca_sub_long_5d_manual_v1`を手動執行戦略として固定する。旧メタ戦略は採用しない。寄りgapを観測して同じ寄りで約定する処理は一切使わない。
 
+このv1は実約定0件のまま2026-10-01で終了した。選別幅のウォークフォワード再検証後、2026-10-02からは`pca_sub_long_5d_manual_v2`（上位20%、通常4銘柄）を正本とする。その他の執行・保有・停止条件は同一。根拠は`manual_strategy_recheck_20261001.md`に記録した。
+
 GitHub Pagesの日次`rule_406_no_flip`表示は研究比較であり、最終運用判断ではない。実運用判断の正本は`data/manual_strategy/preflight/<当日>.json`と、そこから参照されるSHA-256付き注文票とする。
 
 この採用は「将来利益の保証」ではない。固定5日条件は既存期間の探索を経ており、完全に独立した未使用期間の証拠はまだない。一方、注文可能時点に既知の米国入力だけでシグナルを作り、次のJPX営業日の寄りで発注するため、旧メタ版の先読み・同値寄り約定問題はない。利用者の目的を自動発注ではなく手動発注可能な実用戦略と定め、固定ルール、注文票、資金制約、台帳、停止条件を実装した。
@@ -14,7 +16,7 @@ GitHub Pagesの日次`rule_406_no_flip`表示は研究比較であり、最終�
 | --- | --- |
 | シグナル | PCA SUB、窓60、3因子、正則化0.9 |
 | 対象 | TOPIX-17業種ETF 17銘柄 |
-| 買付 | シグナル上位30%（同値を含む）、現物ロングのみ |
+| 買付 | v1は上位30%（通常5銘柄）、v2は上位20%（通常4銘柄）。同値を含む現物ロングのみ |
 | 発注 | 対象JPX営業日の08:55 JSTまでにSBIで寄成 |
 | 資金 | 台帳資金の90%を選択銘柄へ均等配分、売買単位未満切捨て |
 | 保有 | 約定日を第1営業日として5 JPX営業日、バッチ非重複 |
@@ -73,7 +75,7 @@ preflightは`origin/main`上のGitHub生成レポートと`data/reports`上の�
 
 1. `juslag-manual-preflight.timer`は08:15、08:30、08:45、08:50に再試行する。直近のserviceが成功したことを確認する。手動再実行は`PYTHONPATH=src .venv/bin/python scripts/ops/manual_strategy_preflight.py --fetch`。
 2. `data/manual_strategy/preflight/<当日>.json`が`status=READY`で、その`sheet_sha256`が注文票と一致することを確認する。`BLOCKED`、`SKIP`、status不在なら発注しない。
-3. `action=ENTRY`、5銘柄、合計推定元本が台帳資金以下、`entry_date=<当日>`、決済予定日を確認する。どれか不一致なら発注しない。
+3. `action=ENTRY`、v2では通常4銘柄、合計推定元本が台帳資金以下、`entry_date=<当日>`、決済予定日を確認する。どれか不一致なら発注しない。
 4. SBIで各銘柄を「現物買・寄成・数量指定」で入力し、08:55までに発注する。預り区分は実際に保有する口座区分を選ぶ。注文確認画面のコード・売買・数量・条件をJSONと一件ずつ照合する。
 5. 受付番号と受付時刻を保存する。寄り後、約定価格・約定数量・約定時刻・手数料を`data/manual_strategy/fills/2026-09-24-entry.template.json`へ記入する。`fill_price=0`や仮の受付番号のまま台帳へ登録してはならない。
 6. `PYTHONPATH=src .venv/bin/python scripts/ops/manual_strategy_orders.py record-entry --sheet data/manual_strategy/orders/2026-09-24-entry.json --fills <記入済み約定JSON>`を実行する。予定数量と完全一致しない場合は登録が拒否されるため、未約定・一部約定を先にSBI画面で解消する。

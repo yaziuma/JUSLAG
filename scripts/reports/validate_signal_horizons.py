@@ -302,6 +302,65 @@ def walk_forward_nonoverlap(
     return {"folds": folds, "combined": summarize_nonoverlap(combined, initial_capital_yen)}
 
 
+def walk_forward_quantile_nonoverlap(
+    signals: pd.DataFrame,
+    jp_open: pd.DataFrame,
+    jp_close: pd.DataFrame,
+    *,
+    start: str,
+    end: str,
+    initial_capital_yen: float,
+    slippage_bps_per_side: float,
+    quantiles: tuple[float, ...] = (0.2, 0.25, 0.3, 0.35, 0.4),
+    nominal_open: pd.DataFrame | None = None,
+    horizon: int = 5,
+) -> dict:
+    """Choose selection breadth from prior years only, then trade the next year."""
+    first_year = pd.Timestamp(start).year
+    last_year = pd.Timestamp(end).year
+    capital = initial_capital_yen
+    folds = []
+    all_trades = []
+    for year in range(first_year + 1, last_year + 1):
+        train_start = f"{max(first_year, year - 2)}-01-01"
+        train_end = f"{year - 1}-12-31"
+        scores = {}
+        for q in quantiles:
+            train = simulate_nonoverlap(
+                signals, jp_open, jp_close, start=train_start, end=train_end,
+                horizon=horizon, q=q, initial_capital_yen=initial_capital_yen,
+                slippage_bps_per_side=slippage_bps_per_side,
+                nominal_open=nominal_open,
+            )
+            if not train.empty:
+                scores[q] = float(train["capital_after_yen"].iloc[-1])
+        if not scores:
+            continue
+        selected = max(sorted(scores), key=scores.get)
+        test_start = f"{year}-01-01"
+        test_end = min(pd.Timestamp(end), pd.Timestamp(f"{year}-12-31")).date().isoformat()
+        test = simulate_nonoverlap(
+            signals, jp_open, jp_close, start=test_start, end=test_end,
+            horizon=horizon, q=selected, initial_capital_yen=capital,
+            slippage_bps_per_side=slippage_bps_per_side,
+            nominal_open=nominal_open,
+        )
+        before = capital
+        if not test.empty:
+            capital = float(test["capital_after_yen"].iloc[-1])
+            all_trades.append(test)
+        folds.append({
+            "test_year": year,
+            "training_start": train_start,
+            "training_end": train_end,
+            "selected_quantile": selected,
+            "test_trades": len(test),
+            "net_pre_tax_pct": round((capital / before - 1) * 100, 2),
+        })
+    combined = pd.concat(all_trades, ignore_index=True) if all_trades else pd.DataFrame()
+    return {"folds": folds, "combined": summarize_nonoverlap(combined, initial_capital_yen)}
+
+
 def benchmark_same_schedule(
     trades: pd.DataFrame,
     jp_open: pd.DataFrame,
@@ -412,6 +471,7 @@ def permutation_benchmark(
     slippage_bps_per_side: float,
     repetitions: int = 100,
     seed: int = 20260918,
+    q: float = 0.3,
 ) -> dict:
     """Shuffle each day's sector scores, preserving score distribution and cost model."""
     if repetitions < 1:
@@ -419,6 +479,7 @@ def permutation_benchmark(
     actual = simulate_nonoverlap(
         signals, jp_open, jp_close, nominal_open=nominal_open, start=start, end=end,
         initial_capital_yen=initial_capital_yen, slippage_bps_per_side=slippage_bps_per_side,
+        q=q,
     )
     if actual.empty:
         raise ValueError("No actual trades to compare")
@@ -432,6 +493,7 @@ def permutation_benchmark(
         trades = simulate_nonoverlap(
             shuffled, jp_open, jp_close, nominal_open=nominal_open, start=start, end=end,
             initial_capital_yen=initial_capital_yen, slippage_bps_per_side=slippage_bps_per_side,
+            q=q,
         )
         final_capitals.append(float(trades["capital_after_yen"].iloc[-1]))
         exposures.append(float((trades["gross_notional_yen"] / trades["capital_before_yen"]).mean()))
@@ -606,6 +668,42 @@ def main() -> None:
             )
             for delay in (0, 1, 2)
         }
+        output["selection_quantile_sensitivity_long_only"] = {
+            f"top_{int(q * 100)}pct": summarize_nonoverlap(
+                simulate_nonoverlap(
+                    signals, jp_open, jp_close, start=args.eval_start, end=args.end,
+                    q=q, initial_capital_yen=args.capital_yen,
+                    slippage_bps_per_side=args.slippage_bps,
+                    nominal_open=nominal_open,
+                ),
+                args.capital_yen,
+            )
+            for q in (0.2, 0.25, 0.3, 0.35, 0.4)
+        }
+        output["selection_quantile_cost_sensitivity_long_only"] = {
+            f"top_{int(q * 100)}pct_{slippage:g}bps": summarize_nonoverlap(
+                simulate_nonoverlap(
+                    signals, jp_open, jp_close, start=args.eval_start, end=args.end,
+                    q=q, initial_capital_yen=args.capital_yen,
+                    slippage_bps_per_side=slippage, nominal_open=nominal_open,
+                ),
+                args.capital_yen,
+            )
+            for q in (0.2, 0.3)
+            for slippage in (5.0, 10.0, 20.0)
+        }
+        output["walk_forward_selection_quantile_long_only"] = walk_forward_quantile_nonoverlap(
+            signals, jp_open, jp_close, start=args.eval_start, end=args.end,
+            initial_capital_yen=args.capital_yen,
+            slippage_bps_per_side=args.slippage_bps,
+            nominal_open=nominal_open,
+        )
+        output["walk_forward_fixed_30pct_long_only"] = walk_forward_quantile_nonoverlap(
+            signals, jp_open, jp_close, start=args.eval_start, end=args.end,
+            initial_capital_yen=args.capital_yen,
+            slippage_bps_per_side=args.slippage_bps,
+            quantiles=(0.3,), nominal_open=nominal_open,
+        )
         after_tax_trades = simulate_nonoverlap(
             signals, jp_open, jp_close, start=args.eval_start, end=args.end,
             initial_capital_yen=args.capital_yen, slippage_bps_per_side=args.slippage_bps,
@@ -649,6 +747,12 @@ def main() -> None:
                 signals, jp_open, jp_close, nominal_open=nominal_open,
                 start=args.eval_start, end=args.end, initial_capital_yen=args.capital_yen,
                 slippage_bps_per_side=args.slippage_bps, repetitions=args.permutations,
+            )
+            output["score_permutation_benchmark_top20"] = permutation_benchmark(
+                signals, jp_open, jp_close, nominal_open=nominal_open,
+                start=args.eval_start, end=args.end, initial_capital_yen=args.capital_yen,
+                slippage_bps_per_side=args.slippage_bps, repetitions=args.permutations,
+                q=0.2,
             )
         output["portfolio_limitations"] = "Exploratory: prior horizon selection used the same sample; short inventory, spread and actual fills unobserved."
     print(json.dumps(output, ensure_ascii=False, indent=2))
