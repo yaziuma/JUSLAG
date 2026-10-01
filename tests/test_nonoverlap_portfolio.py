@@ -12,6 +12,51 @@ MODULE = module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 
 
+def test_production_assumptions_come_from_manual_strategy_config() -> None:
+    config = {
+        "strategy_id": "v2",
+        "signal_model": {
+            "window_l": 60, "k_factors": 3, "lambda_reg": 0.9,
+            "selection_quantile": 0.2,
+        },
+        "portfolio": {
+            "initial_capital_yen": 1_000_000, "deployment_fraction": 0.9,
+            "long_only": True, "nonoverlapping_batches": True,
+        },
+        "execution": {
+            "holding_jpx_sessions": 5, "assumed_slippage_bps_per_side": 5,
+        },
+    }
+
+    assumptions = MODULE.production_assumptions(config)
+
+    assert assumptions["strategy_id"] == "v2"
+    assert assumptions["selection_quantile"] == 0.2
+    assert assumptions["deployment_fraction"] == 0.9
+    assert assumptions["holding_sessions"] == 5
+    assert assumptions["slippage_bps_per_side"] == 5
+
+
+def test_production_assumptions_reject_strategy_shape_drift() -> None:
+    config = {
+        "strategy_id": "drifted",
+        "signal_model": {
+            "window_l": 60, "k_factors": 3, "lambda_reg": 0.9,
+            "selection_quantile": 0.2,
+        },
+        "portfolio": {
+            "initial_capital_yen": 1_000_000, "deployment_fraction": 0.9,
+            "long_only": True, "nonoverlapping_batches": True,
+        },
+        "execution": {
+            "holding_jpx_sessions": 4, "assumed_slippage_bps_per_side": 5,
+        },
+    }
+
+    with pytest.raises(ValueError, match="5-session"):
+        MODULE.production_assumptions(config)
+
+
 def test_nonoverlap_limits_capital_and_skips_overlapping_signals() -> None:
     dates = pd.date_range("2025-01-01", periods=8)
     signals = pd.DataFrame(

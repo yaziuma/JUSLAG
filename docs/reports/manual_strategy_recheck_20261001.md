@@ -20,6 +20,7 @@
 
 - 実行日: 2026-10-01
 - コマンド: `PYTHONPATH=src .venv/bin/python scripts/reports/validate_signal_horizons.py --end 2026-10-01 --mode adjusted --nonoverlap --permutations 100`
+- 戦略条件の正本: `config/manual_strategy.yaml`（戦略ID、PCA条件、上位20%、資金90%、5営業日、5bpsを検証CLIが直接読む。明示的な感応度overrideを除き別既定値を持たない）
 - シグナル最終日: 2026-09-30
 - 評価開始: 2022-01-01
 - 初期資金: 1,000,000円

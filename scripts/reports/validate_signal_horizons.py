@@ -11,8 +11,37 @@ import pandas as pd
 from juslag.cache import DEFAULT_DB_PATH, PriceCache
 from juslag.config import JP_CYCLICAL, JP_TICKERS, JP_TRADING_UNITS, US_CYCLICAL, US_TICKERS
 from juslag.data_loader import build_joint_cc, compute_returns, repair_known_bad_prices
+from juslag.manual_strategy import load_manual_config
 from juslag.prior import build_prior_eigenvectors, build_prior_exposure
 from juslag.signal import generate_signals
+
+
+def production_assumptions(config: dict) -> dict:
+    """Extract assumptions shared by live order sizing and portfolio validation."""
+    assumptions = {
+        "strategy_id": str(config["strategy_id"]),
+        "window_l": int(config["signal_model"]["window_l"]),
+        "k_factors": int(config["signal_model"]["k_factors"]),
+        "lambda_reg": float(config["signal_model"]["lambda_reg"]),
+        "selection_quantile": float(config["signal_model"]["selection_quantile"]),
+        "initial_capital_yen": float(config["portfolio"]["initial_capital_yen"]),
+        "deployment_fraction": float(config["portfolio"]["deployment_fraction"]),
+        "holding_sessions": int(config["execution"]["holding_jpx_sessions"]),
+        "slippage_bps_per_side": float(
+            config["execution"]["assumed_slippage_bps_per_side"]
+        ),
+    }
+    if not config["portfolio"].get("long_only"):
+        raise ValueError("production validation requires a long-only strategy")
+    if not config["portfolio"].get("nonoverlapping_batches"):
+        raise ValueError("production validation requires nonoverlapping batches")
+    if assumptions["holding_sessions"] != 5:
+        raise ValueError("this validation report requires a 5-session holding period")
+    if not 0 < assumptions["selection_quantile"] < 0.5:
+        raise ValueError("selection_quantile must be in (0, 0.5)")
+    if not 0 < assumptions["deployment_fraction"] <= 1:
+        raise ValueError("deployment_fraction must be in (0, 1]")
+    return assumptions
 
 
 def estimate_annual_tax_yen(trades: pd.DataFrame, tax_rate: float = 0.20315) -> float:
@@ -599,23 +628,43 @@ def measure_horizons(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--strategy-config", type=Path,
+                        default=Path("config/manual_strategy.yaml"))
     parser.add_argument("--db", type=Path, default=DEFAULT_DB_PATH)
     parser.add_argument("--start", default="2018-07-01")
     parser.add_argument("--end", default="2026-09-17")
     parser.add_argument("--pretrain-end", default="2021-12-31")
     parser.add_argument("--eval-start", default="2022-01-01")
     parser.add_argument("--mode", choices=("raw", "adjusted"), default="adjusted")
-    parser.add_argument("--slippage-bps", type=float, default=5.0)
+    parser.add_argument("--slippage-bps", type=float,
+                        help="Override the strategy config for sensitivity analysis")
     parser.add_argument("--max-abs-ticker-return", type=float, default=0.30)
     parser.add_argument("--nonoverlap", action="store_true", help="Run fixed-capital, nonoverlapping 5-session portfolio")
-    parser.add_argument("--capital-yen", type=float, default=1_000_000)
-    parser.add_argument("--deployment-fraction", type=float, default=0.90,
-                        help="Fraction of capital deployed per batch (production default: 0.90)")
-    parser.add_argument("--selection-quantile", type=float, default=0.20,
-                        help="Long selection breadth (production default: top 20%%)")
+    parser.add_argument("--capital-yen", type=float,
+                        help="Override the strategy config for sensitivity analysis")
+    parser.add_argument("--deployment-fraction", type=float,
+                        help="Override the strategy config for sensitivity analysis")
+    parser.add_argument("--selection-quantile", type=float,
+                        help="Override the strategy config for sensitivity analysis")
     parser.add_argument("--permutations", type=int, default=0,
                         help="Matched random-score portfolios (0 disables)")
     args = parser.parse_args()
+    assumptions = production_assumptions(load_manual_config(args.strategy_config))
+    args.slippage_bps = (
+        assumptions["slippage_bps_per_side"]
+        if args.slippage_bps is None else args.slippage_bps
+    )
+    args.capital_yen = (
+        assumptions["initial_capital_yen"] if args.capital_yen is None else args.capital_yen
+    )
+    args.deployment_fraction = (
+        assumptions["deployment_fraction"]
+        if args.deployment_fraction is None else args.deployment_fraction
+    )
+    args.selection_quantile = (
+        assumptions["selection_quantile"]
+        if args.selection_quantile is None else args.selection_quantile
+    )
     if not 0 < args.deployment_fraction <= 1:
         raise SystemExit("--deployment-fraction must be in (0, 1]")
     if not 0 < args.selection_quantile < 0.5:
@@ -638,7 +687,12 @@ def main() -> None:
     if pretrain.empty:
         raise SystemExit("No pretraining rows")
     c0 = build_prior_exposure(pretrain, v0)
-    signals = generate_signals(us_cc, jp_cc, c0, l=60, k=3, lam=0.9)
+    signals = generate_signals(
+        us_cc, jp_cc, c0,
+        l=assumptions["window_l"],
+        k=assumptions["k_factors"],
+        lam=assumptions["lambda_reg"],
+    )
     summary = measure_horizons(
         signals, jp_open, jp_close,
         start=args.eval_start, end=args.end,
@@ -646,6 +700,8 @@ def main() -> None:
         max_abs_ticker_return=args.max_abs_ticker_return,
     )
     output = {
+        "strategy_id": assumptions["strategy_id"],
+        "strategy_config": str(args.strategy_config),
         "mode": args.mode,
         "eval_start": args.eval_start,
         "pretrain_end": args.pretrain_end,
