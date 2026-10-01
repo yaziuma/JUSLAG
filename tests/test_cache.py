@@ -66,6 +66,31 @@ def test_summary_and_freshness_are_mode_specific(tmp_path: Path) -> None:
     assert "1306.T" in adjusted_freshness["missing_tickers"]
 
 
+def test_freshness_ignores_in_progress_row_without_close(tmp_path: Path) -> None:
+    cache = PriceCache(tmp_path / "prices.db")
+    complete = pd.to_datetime(["2026-09-29"])
+    partial = pd.to_datetime(["2026-09-30"])
+    cache.upsert(
+        "SPY",
+        pd.Series([100.0], index=complete),
+        pd.Series([101.0], index=complete),
+        price_mode="raw",
+    )
+    cache.upsert(
+        "SPY",
+        pd.Series([102.0], index=partial),
+        pd.Series([float("nan")], index=partial),
+        price_mode="raw",
+    )
+
+    freshness = cache.freshness_report(
+        ["SPY"], required_latest_date="2026-09-30", price_mode="raw"
+    )
+    assert freshness["freshness_ok"] is False
+    assert freshness["latest_date"] == "2026-09-29"
+    assert freshness["stale_tickers"] == ["SPY"]
+
+
 def test_summary_allows_jp_holiday_but_not_missing_prior_session(tmp_path: Path) -> None:
     cache = PriceCache(tmp_path / "prices.db")
     us_date = pd.to_datetime(["2026-05-04"])

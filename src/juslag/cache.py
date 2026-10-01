@@ -159,10 +159,17 @@ class PriceCache:
         return len(rows)
 
     def stats(self, price_mode: PriceMode) -> pd.DataFrame:
-        """Return per-ticker row counts and date range for inspection by mode."""
+        """Return per-ticker row counts and complete-close date range by mode.
+
+        Providers may publish an in-progress row containing only the session open.
+        Such a row must not make freshness checks pass because signals require a
+        completed close-to-close return.
+        """
         with sqlite3.connect(self.db_path) as conn:
             rows = conn.execute(
-                "SELECT ticker, COUNT(*) as rows, MIN(date) as first, MAX(date) as last "
+                "SELECT ticker, COUNT(*) as rows, "
+                "MIN(CASE WHEN close IS NOT NULL THEN date END) as first, "
+                "MAX(CASE WHEN close IS NOT NULL THEN date END) as last "
                 "FROM prices WHERE price_mode = ? GROUP BY ticker ORDER BY ticker",
                 (price_mode,),
             ).fetchall()

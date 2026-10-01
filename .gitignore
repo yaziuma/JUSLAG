@@ -14,6 +14,7 @@
 !config/app.ci.yaml
 !config/a_evaluation_gate.yaml
 !config/manual_strategy.yaml
+!config/production_backtest_settings.json
 !config/systemd/
 !config/systemd/*.service
 !config/systemd/*.timer

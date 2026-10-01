@@ -1,0 +1,27 @@
+{
+  "name": "本番適用 SBIゼロ革命・日計り信用",
+  "form": {
+    "sample_start": "2018-07-01",
+    "sample_end": "2026-12-31",
+    "pretrain_end": "2021-12-31",
+    "window_l": 60,
+    "k_factors": 3,
+    "lambda_reg": 0.9,
+    "quantile_q": 0.3,
+    "min_long_signal": 0.0,
+    "max_short_signal": 0.0,
+    "fill_policy": "strict",
+    "price_mode": "raw",
+    "commission_bps_per_side": 0.0,
+    "slippage_bps_per_side": 5.0,
+    "short_borrow_rate_annual": 0.0,
+    "allow_short": true,
+    "short_constraint_mode": "ignore",
+    "unshortable_tickers": [],
+    "tax_enabled": true,
+    "tax_rate": 0.20315,
+    "tax_model": "annual_net",
+    "tax_loss_carryforward_years": 3,
+    "strategy_rule_id": "rule_406_no_flip"
+  }
+}
