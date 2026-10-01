@@ -19,6 +19,11 @@ execution:
   exit: fifth_jpx_session_close_market
   exit_order_deadline_jst: "15:20"
   assumed_slippage_bps_per_side: 5
+execution_intent:
+  schema_version: 2
+  executor_id: quieter-sbi-1
+  account_alias: sbi-primary
+  custody_account: SPECIFIED
 risk:
   maximum_drawdown_pct: -25
   require_all_17_tickers: true

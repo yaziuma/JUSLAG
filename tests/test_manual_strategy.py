@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import copy
 import json
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pytest
 
 from juslag.manual_strategy import (
+    build_execution_intent,
     build_order_sheet,
     fifth_session,
     initial_state,
@@ -144,3 +147,24 @@ def test_production_v2_selects_top_20_percent_and_state_is_migrated() -> None:
     assert [row["ticker"] for row in sheet["orders"]] == [
         "1633.T", "1632.T", "1631.T", "1630.T"
     ]
+
+    sheet["preflight"] = {"status": "READY", "source_commit": "a" * 40}
+    sheet["sheet_sha256"] = "b" * 64
+    intent = build_execution_intent(
+        sheet,
+        config,
+        source_commit="a" * 40,
+        valid_from=datetime(2026, 10, 2, 8, 50, tzinfo=ZoneInfo("Asia/Tokyo")),
+    )
+    assert intent["schema_version"] == 2
+    assert "/" not in intent["intent_id"]
+    assert intent["strategy_id"] == "pca_sub_long_5d_manual_v2"
+    assert intent["executor_id"] == "quieter-sbi-1"
+    assert intent["account_alias"] == "sbi-primary"
+    assert intent["expires_at"] == "2026-10-02T08:55:00+09:00"
+    assert [row["ticker"] for row in intent["orders"]] == [
+        "1633.T", "1632.T", "1631.T", "1630.T"
+    ]
+    assert all(row["side"] == "BUY" for row in intent["orders"])
+    assert all(row["order_type"] == "MARKET_ON_OPEN" for row in intent["orders"])
+    assert all(row["custody_account"] == "SPECIFIED" for row in intent["orders"])

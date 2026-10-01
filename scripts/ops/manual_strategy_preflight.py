@@ -15,7 +15,12 @@ import pandas as pd
 import pandas_market_calendars as mcal
 
 from juslag.config import JP_TICKERS
-from juslag.manual_strategy import build_order_sheet, fingerprint, load_manual_config
+from juslag.manual_strategy import (
+    build_execution_intent,
+    build_order_sheet,
+    fingerprint,
+    load_manual_config,
+)
 
 JST = ZoneInfo("Asia/Tokyo")
 
@@ -140,6 +145,7 @@ def run_preflight(
     state_path: Path,
     output_path: Path,
     status_path: Path,
+    intent_output_path: Path | None = None,
     local_reports_dir: Path = Path("data/reports"),
     signal_reports_dir: Path = Path("data/manual_strategy/signals"),
 ) -> dict:
@@ -214,6 +220,14 @@ def run_preflight(
         sheet.pop("sheet_sha256", None)
         sheet["sheet_sha256"] = fingerprint(sheet)
         _write_atomic(output_path, sheet)
+        if intent_output_path is not None and sheet["action"] in {"ENTRY", "EXIT"}:
+            intent = build_execution_intent(
+                sheet,
+                config,
+                source_commit=source_commit,
+                valid_from=now.astimezone(JST),
+            )
+            _write_atomic(intent_output_path, intent)
         status.update(
             status="READY",
             action=sheet["action"],
@@ -223,6 +237,11 @@ def run_preflight(
             source_report=report_path,
             source_kind=source_kind,
         )
+        if intent_output_path is not None and sheet["action"] in {"ENTRY", "EXIT"}:
+            status.update(
+                execution_intent=str(intent_output_path),
+                execution_intent_sha256=_file_sha256(str(intent_output_path)),
+            )
         return status
     except Exception as exc:
         status["reason"] = str(exc)
@@ -240,6 +259,7 @@ def main() -> None:
     parser.add_argument("--state", type=Path, default=Path("data/manual_strategy/state.json"))
     parser.add_argument("--output", type=Path)
     parser.add_argument("--status", type=Path)
+    parser.add_argument("--intent-output", type=Path)
     parser.add_argument("--fetch", action="store_true")
     parser.add_argument(
         "--signal-reports-dir", type=Path, default=Path("data/manual_strategy/signals")
@@ -250,6 +270,9 @@ def main() -> None:
     )
     output = args.output or Path(f"data/manual_strategy/orders/{args.as_of}-entry.json")
     status_path = args.status or Path(f"data/manual_strategy/preflight/{args.as_of}.json")
+    intent_output = args.intent_output or Path(
+        f"data/manual_strategy/intents/{args.as_of}-intent.json"
+    )
     if args.fetch:
         subprocess.run(["git", "fetch", "origin", "main"], check=True)
     status = run_preflight(
@@ -260,6 +283,7 @@ def main() -> None:
         state_path=args.state,
         output_path=output,
         status_path=status_path,
+        intent_output_path=intent_output,
         signal_reports_dir=args.signal_reports_dir,
     )
     print(json.dumps(status, ensure_ascii=False))

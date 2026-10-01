@@ -73,6 +73,7 @@ def test_preflight_uses_newest_eligible_report_and_attests_sheet(tmp_path, monke
     state_path.write_text(json.dumps(initial_state(config)), encoding="utf-8")
     output = tmp_path / "orders.json"
     status_path = tmp_path / "status.json"
+    intent_path = tmp_path / "intent.json"
     result = preflight.run_preflight(
         as_of="2026-10-02",
         now=preflight.datetime.fromisoformat("2026-10-02T08:30:00+09:00"),
@@ -81,13 +82,20 @@ def test_preflight_uses_newest_eligible_report_and_attests_sheet(tmp_path, monke
         state_path=state_path,
         output_path=output,
         status_path=status_path,
+        intent_output_path=intent_path,
         local_reports_dir=tmp_path / "no-local-reports",
     )
     sheet = json.loads(output.read_text(encoding="utf-8"))
+    intent = json.loads(intent_path.read_text(encoding="utf-8"))
     assert result["status"] == "READY"
     assert sheet["signal_reference_us_date"] == "2026-09-21"
     assert sheet["preflight"]["source_report"] == "data/reports/2026-09-23.json"
     assert sheet["preflight"]["source_commit"] == "b" * 40
+    assert result["execution_intent"] == str(intent_path)
+    assert len(result["execution_intent_sha256"]) == 64
+    assert intent["intent_kind"] == "ENTRY"
+    assert intent["expires_at"] == "2026-10-02T08:55:00+09:00"
+    assert all(order["custody_account"] == "SPECIFIED" for order in intent["orders"])
 
 
 def test_preflight_blocks_after_entry_deadline(tmp_path) -> None:

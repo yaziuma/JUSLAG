@@ -71,6 +71,8 @@ preflightは`origin/main`上のGitHub生成レポートと`data/reports`上の�
 
 ローカル入力ではcode commit、report path、report SHA-256、生成時刻を注文票へ保存する。GitHub版が遅延または未生成でもローカル版が合格すればpreflightを継続できる。両方不合格なら従来どおり`BLOCKED`とする。
 
+READY時は注文票と同時に`data/manual_strategy/intents/<日付>-intent.json`を生成する。これは別プロジェクト`juslag-execution`の`OrderIntent` schema v2と互換で、銘柄、数量、現物、寄成／引成、特定口座、最大元本、08:55／15:20の失効時刻、元commitを固定する。現段階では承認APIへ自動登録せず、SBIへの送信も行わない。08:45版と08:50版が異なる可能性があるため、将来の連携処理は最終採用intentだけを登録し、古いintentを承認可能なまま残してはならない。
+
 ## 9月24日朝の実行手順
 
 1. `juslag-manual-preflight.timer`は08:15、08:30、08:45、08:50に再試行する。直近のserviceが成功したことを確認する。手動再実行は`PYTHONPATH=src .venv/bin/python scripts/ops/manual_strategy_preflight.py --fetch`。
@@ -99,6 +101,7 @@ preflightは`origin/main`上のGitHub生成レポートと`data/reports`上の�
 - 注文・台帳ロジック: `src/juslag/manual_strategy.py`
 - 手動CLI: `scripts/ops/manual_strategy_orders.py`
 - 寄付き前プリフライト: `scripts/ops/manual_strategy_preflight.py`
+- Android承認連携用intent: `data/manual_strategy/intents/<日付>-intent.json`（生成のみ。自動登録・発注は未接続）
 - 定時実行: `config/systemd/juslag-manual-preflight.{service,timer}`
 - ローカル日次生成: `config/systemd/juslag-local-daily-report.{service,timer}`
 - 資金・保有状態: `data/manual_strategy/state.json`

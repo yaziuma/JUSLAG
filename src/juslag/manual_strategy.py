@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import re
+from datetime import datetime, time
 from pathlib import Path
 from typing import Any
 
@@ -51,6 +53,63 @@ def fingerprint(payload: object) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
+def build_execution_intent(
+    sheet: dict[str, Any],
+    config: dict[str, Any],
+    *,
+    source_commit: str,
+    valid_from: datetime,
+) -> dict[str, Any]:
+    """Map an attested manual sheet to the execution project's immutable schema v2."""
+    if sheet.get("action") not in {"ENTRY", "EXIT"}:
+        raise ValueError("only ENTRY or EXIT sheets can become execution intents")
+    if not re.fullmatch(r"[0-9a-f]{40}", source_commit):
+        raise ValueError("execution intent requires a full source commit")
+    intent_config = config["execution_intent"]
+    as_of = str(sheet["as_of"])
+    deadline_key = (
+        "entry_order_deadline_jst"
+        if sheet["action"] == "ENTRY"
+        else "exit_order_deadline_jst"
+    )
+    expires_at = datetime.combine(
+        datetime.fromisoformat(as_of).date(),
+        time.fromisoformat(config["execution"][deadline_key]),
+        tzinfo=valid_from.tzinfo,
+    )
+    if valid_from.tzinfo is None or expires_at <= valid_from:
+        raise ValueError("execution intent validity window is not usable")
+    side = "BUY" if sheet["action"] == "ENTRY" else "SELL"
+    order_type = "MARKET_ON_OPEN" if sheet["action"] == "ENTRY" else "MARKET_ON_CLOSE"
+    orders = [
+        {
+            "ticker": row.get("ticker") or f'{row["stock_code"]}.T',
+            "side": side,
+            "quantity": int(row["quantity"]),
+            "cash_margin": "CASH",
+            "custody_account": intent_config["custody_account"],
+            "order_type": order_type,
+        }
+        for row in sheet["orders"]
+    ]
+    return {
+        "schema_version": int(intent_config["schema_version"]),
+        "intent_id": (
+            f'{config["strategy_id"]}-{as_of.replace("-", "")}-'
+            f'{sheet["action"].lower()}-{sheet["sheet_sha256"][:16]}'
+        ),
+        "strategy_id": config["strategy_id"],
+        "source_commit": source_commit,
+        "executor_id": intent_config["executor_id"],
+        "account_alias": intent_config["account_alias"],
+        "intent_kind": sheet["action"],
+        "valid_from": valid_from.isoformat(),
+        "expires_at": expires_at.isoformat(),
+        "maximum_total_notional_yen": int(sheet["capital_yen"]),
+        "orders": orders,
+    }
+
+
 def build_order_sheet(
     report: dict[str, Any],
     state: dict[str, Any],
@@ -82,6 +141,7 @@ def build_order_sheet(
             "strategy_id": config["strategy_id"],
             "as_of": as_of,
             "action": "EXIT",
+            "capital_yen": state["capital_yen"],
             "planned_exit_date": open_batch["exit_date"],
             "overdue": as_of > open_batch["exit_date"],
             "orders": orders,
