@@ -101,7 +101,8 @@ def _fill_small_gaps(df: pd.DataFrame, rolling_window: int = 5) -> pd.DataFrame:
 
 
 def _fetch_group_with_cache(
-    tickers: list[str], start: str, end: str, cache: PriceCache, price_mode: PriceMode = "adjusted"
+    tickers: list[str], start: str, end: str, cache: PriceCache,
+    price_mode: PriceMode = "adjusted", *, refresh: bool = True,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Fetch open/close prices for a ticker group using SQLite cache + incremental download.
 
@@ -109,6 +110,15 @@ def _fetch_group_with_cache(
     2. Download only the delta from (min_latest - 7d) to end and upsert to cache.
     3. Load full [start, end) from cache and return (close_df, open_df).
     """
+    if not refresh:
+        cached = cache.load(tickers, start, end, price_mode=price_mode)
+        close_frames = [cached[t]["close"].rename(t) for t in tickers if t in cached]
+        open_frames = [cached[t]["open"].rename(t) for t in tickers if t in cached]
+        return (
+            pd.concat(close_frames, axis=1) if close_frames else pd.DataFrame(),
+            pd.concat(open_frames, axis=1) if open_frames else pd.DataFrame(),
+        )
+
     ranges = [cache.date_range(t, price_mode=price_mode) for t in tickers]
     earliest_list = [r[0] for r in ranges if r[0] is not None]
     latest_list = [r[1] for r in ranges if r[1] is not None]
@@ -207,14 +217,16 @@ def fetch_data(
     end: str,
     price_mode: PriceMode = "adjusted",
     cache: PriceCache | None = None,
+    *,
+    refresh: bool = True,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Fetch Open/Close prices using SQLite cache — only downloads missing date ranges."""
     active_cache = cache or _cache
     us_close, _ = _fetch_group_with_cache(
-        us_tickers, start, end, active_cache, price_mode=price_mode
+        us_tickers, start, end, active_cache, price_mode=price_mode, refresh=refresh
     )
     jp_close, jp_open = _fetch_group_with_cache(
-        jp_tickers, start, end, active_cache, price_mode=price_mode
+        jp_tickers, start, end, active_cache, price_mode=price_mode, refresh=refresh
     )
 
     us_close = us_close.reindex(columns=us_tickers).dropna(how="all").dropna(axis=1, how="all")

@@ -12,7 +12,7 @@ def test_fetch_data_uses_explicit_cache_for_both_markets(monkeypatch) -> None:
     observed = []
     dates = pd.to_datetime(["2026-01-05"])
 
-    def fake_group(tickers, start, end, cache, price_mode):
+    def fake_group(tickers, start, end, cache, price_mode, *, refresh=True):
         observed.append(cache)
         frame = pd.DataFrame({ticker: [100.0] for ticker in tickers}, index=dates)
         return frame, frame
@@ -262,3 +262,24 @@ def test_fetch_group_retries_incomplete_latest_close_per_ticker(monkeypatch) -> 
 
     assert saved["DIA"][-1] == ("2026-09-30", 202.0)
     assert saved["SPY"][-1] == ("2026-09-30", 101.0)
+
+
+def test_fetch_group_cache_only_never_calls_provider(monkeypatch) -> None:
+    class StubCache:
+        def load(self, tickers, start, end, price_mode: str):
+            idx = pd.to_datetime(["2026-09-30"])
+            return {
+                ticker: pd.DataFrame({"open": [100.0], "close": [101.0]}, index=idx)
+                for ticker in tickers
+            }
+
+    def fail_download(*args, **kwargs):
+        raise AssertionError("provider must not be called in cache-only mode")
+
+    monkeypatch.setattr("juslag.data_loader.yf.download", fail_download)
+    close, open_ = _fetch_group_with_cache(
+        ["SPY"], "2026-09-20", "2026-10-01", StubCache(), refresh=False
+    )
+
+    assert close.at[pd.Timestamp("2026-09-30"), "SPY"] == 101.0
+    assert open_.at[pd.Timestamp("2026-09-30"), "SPY"] == 100.0

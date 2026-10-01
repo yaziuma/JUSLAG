@@ -70,6 +70,7 @@ def run_backtest_service(
     *,
     research_rule: StrategyRule | None = None,
     include_strategy_rule_detail: bool = False,
+    refresh_prices: bool = True,
 ) -> dict[str, object]:
     if research_rule is not None and params.strategy_rule_id != research_rule.rule_id:
         raise ValueError("research_rule.rule_id must match params.strategy_rule_id")
@@ -80,6 +81,7 @@ def run_backtest_service(
         params.sample_end,
         price_mode=params.price_mode,
         cache=cache,
+        refresh=refresh_prices,
     )
     us_cc, jp_oc, jp_cc = compute_returns(us_close, jp_close, jp_open)
 

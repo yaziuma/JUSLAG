@@ -327,6 +327,7 @@ def run_daily_signal_service(
     now_jst: datetime | None = None,
     actual_run_jst: datetime | None = None,
     active_rule_id: str | None = None,
+    refresh_prices: bool = True,
     generate_signals_fn=generate_signals,
     get_rule_fn=get_rule,
     pick_overnight_gap_fn=pick_overnight_gap,
@@ -347,6 +348,7 @@ def run_daily_signal_service(
         sample_end,
         price_mode="raw",
         cache=cache,
+        refresh=refresh_prices,
     )
     input_snapshot_sha256 = price_input_fingerprint(us_close, jp_close, jp_open)
     us_cc, jp_oc_daily, jp_cc = compute_returns(us_close, jp_close, jp_open)

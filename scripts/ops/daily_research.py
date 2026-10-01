@@ -121,7 +121,9 @@ def main(argv: list[str] | None = None) -> None:
 
     # --- 3. バックテスト（本番適用設定） ---
     params, settings_name = load_production_backtest_params()
-    bt = run_backtest_service(params, cache, analysis_status=analysis_status)
+    bt = run_backtest_service(
+        params, cache, analysis_status=analysis_status, refresh_prices=False
+    )
     paper_params = params.model_copy(
         update={
             "price_mode": "adjusted",
@@ -131,7 +133,9 @@ def main(argv: list[str] | None = None) -> None:
             "max_short_signal": 1.0e9,
         }
     )
-    paper_bt = run_backtest_service(paper_params, cache, analysis_status=analysis_status)
+    paper_bt = run_backtest_service(
+        paper_params, cache, analysis_status=analysis_status, refresh_prices=False
+    )
 
     # --- 4. 本日のシグナル ---
     ds = run_daily_signal_service(
@@ -142,6 +146,7 @@ def main(argv: list[str] | None = None) -> None:
         now_jst=now_jst,
         actual_run_jst=now_actual,
         active_rule_id=params.strategy_rule_id or None,
+        refresh_prices=False,
     )
 
     # --- 5. 戦略履歴の保存 ---
