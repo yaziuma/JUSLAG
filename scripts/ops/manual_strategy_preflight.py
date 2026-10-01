@@ -116,6 +116,21 @@ def _is_jpx_session(day: str) -> bool:
     return not mcal.get_calendar("JPX").schedule(day, day).empty
 
 
+def _matches_signal_model(report: dict, config: dict) -> bool:
+    observed = (report.get("daily_signal") or {}).get("signal_model") or {}
+    expected = config["signal_model"]
+    try:
+        return (
+            int(observed.get("window_l")) == int(expected["window_l"])
+            and int(observed.get("k_factors")) == int(expected["k_factors"])
+            and float(observed.get("lambda_reg")) == float(expected["lambda_reg"])
+            and float(observed.get("selection_quantile"))
+            == float(expected["selection_quantile"])
+        )
+    except (TypeError, ValueError):
+        return False
+
+
 def run_preflight(
     *,
     as_of: str,
@@ -154,8 +169,11 @@ def run_preflight(
             for row in _candidate_local_reports(signal_reports_dir, as_of, deadline)
         ]
         candidates = remote_candidates + local_candidates + signal_candidates
+        candidates = [row for row in candidates if _matches_signal_model(row[2], config)]
         if not candidates:
-            raise ValueError("no fresh adjusted pre-open report targets this JPX session")
+            raise ValueError(
+                "no fresh adjusted pre-open report matches the manual signal model"
+            )
         _, report_path, report, source_kind = max(
             candidates,
             key=lambda row: (

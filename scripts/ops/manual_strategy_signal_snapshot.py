@@ -13,6 +13,7 @@ from zoneinfo import ZoneInfo
 from juslag.cache import PriceCache
 from juslag.config import AppConfig, JP_TICKERS, US_TICKERS
 from juslag.data_loader import fetch_data
+from juslag.manual_strategy import load_manual_config
 from juslag.services.daily_signal import run_daily_signal_service
 
 JST = ZoneInfo("Asia/Tokyo")
@@ -51,6 +52,7 @@ def main() -> None:
     )
     sample_end = (datetime.fromisoformat(target_date).date() + timedelta(days=1)).isoformat()
     cfg = AppConfig.load(ROOT / "config" / "app.yaml")
+    manual_cfg = load_manual_config(ROOT / "config" / "manual_strategy.yaml")
     cache = PriceCache()
 
     # Signal rankings must use the same adjusted-return series as the
@@ -72,6 +74,10 @@ def main() -> None:
         log_path=None,
         refresh_prices=False,
         price_mode="adjusted",
+        window_l=int(manual_cfg["signal_model"]["window_l"]),
+        k_factors=int(manual_cfg["signal_model"]["k_factors"]),
+        lambda_reg=float(manual_cfg["signal_model"]["lambda_reg"]),
+        quantile_q=float(manual_cfg["signal_model"]["selection_quantile"]),
     )
 
     since = (datetime.fromisoformat(target_date).date() - timedelta(days=7)).isoformat()
@@ -91,6 +97,7 @@ def main() -> None:
             "input_snapshot_sha256": signal.get("input_snapshot_sha256"),
             "signal_price_mode": "adjusted",
             "sizing_price_mode": "raw",
+            "manual_strategy_id": manual_cfg["strategy_id"],
         },
         "daily_signal": signal,
     }

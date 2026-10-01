@@ -632,6 +632,12 @@ def run_daily_signal_service(
 
     return {
         "signal_price_mode": price_mode,
+        "signal_model": {
+            "window_l": eff_window_l,
+            "k_factors": eff_k,
+            "lambda_reg": eff_lambda,
+            "selection_quantile": eff_q,
+        },
         "reference_date": str(reference_date),
         "signal_reference_us_date": str(reference_date) if pd.notna(reference_date) else None,
         "execution_target_jp_date": str(execution_target_jp_date.date()) if execution_target_jp_date is not None else None,

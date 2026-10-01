@@ -38,6 +38,7 @@ from juslag.services.fetch_all import run_fetch_all
 from juslag.services.notify import build_slack_summary
 from juslag.services.settings import load_production_backtest_params
 from juslag.services.store import build_strategy_history_entry
+from juslag.manual_strategy import load_manual_config
 
 _JST = ZoneInfo("Asia/Tokyo")
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -84,6 +85,7 @@ def main(argv: list[str] | None = None) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     cfg = AppConfig.load(_REPO_ROOT / "config" / "app.yaml")
+    manual_cfg = load_manual_config(_REPO_ROOT / "config" / "manual_strategy.yaml")
     cache = PriceCache()
 
     # --- 1. データ取込 ---
@@ -148,6 +150,10 @@ def main(argv: list[str] | None = None) -> None:
         active_rule_id=params.strategy_rule_id or None,
         refresh_prices=False,
         price_mode="adjusted",
+        window_l=int(manual_cfg["signal_model"]["window_l"]),
+        k_factors=int(manual_cfg["signal_model"]["k_factors"]),
+        lambda_reg=float(manual_cfg["signal_model"]["lambda_reg"]),
+        quantile_q=float(manual_cfg["signal_model"]["selection_quantile"]),
     )
 
     # --- 5. 戦略履歴の保存 ---
