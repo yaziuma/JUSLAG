@@ -147,6 +147,7 @@ def main(argv: list[str] | None = None) -> None:
         actual_run_jst=now_actual,
         active_rule_id=params.strategy_rule_id or None,
         refresh_prices=False,
+        price_mode="adjusted",
     )
 
     # --- 5. 戦略履歴の保存 ---

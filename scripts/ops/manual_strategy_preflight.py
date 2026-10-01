@@ -43,6 +43,8 @@ def _candidate_reports(
         daily = report.get("daily_signal", {})
         if daily.get("execution_target_jp_date") != as_of:
             continue
+        if daily.get("signal_price_mode") != "adjusted":
+            continue
         generated = datetime.fromisoformat(report["generated_at_utc"]).astimezone(JST)
         if generated > deadline or not daily.get("freshness", {}).get("freshness_ok"):
             continue
@@ -58,6 +60,8 @@ def _candidate_local_reports(
         report = json.loads(path.read_text(encoding="utf-8"))
         daily = report.get("daily_signal", {})
         if daily.get("execution_target_jp_date") != as_of:
+            continue
+        if daily.get("signal_price_mode") != "adjusted":
             continue
         generated = datetime.fromisoformat(report["generated_at_utc"]).astimezone(JST)
         if generated > deadline or not daily.get("freshness", {}).get("freshness_ok"):
@@ -151,7 +155,7 @@ def run_preflight(
         ]
         candidates = remote_candidates + local_candidates + signal_candidates
         if not candidates:
-            raise ValueError("no fresh pre-open report targets this JPX session")
+            raise ValueError("no fresh adjusted pre-open report targets this JPX session")
         _, report_path, report, source_kind = max(
             candidates,
             key=lambda row: (

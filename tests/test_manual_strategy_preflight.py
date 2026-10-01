@@ -19,6 +19,7 @@ def _report(report_date: str, generated: str, signal_day: str) -> dict:
         "generated_at_utc": generated,
         "run_provenance": {"source_commit": "c" * 40},
         "daily_signal": {
+            "signal_price_mode": "adjusted",
             "execution_target_jp_date": "2026-10-02",
             "signal_reference_us_date": signal_day,
             "freshness": {"freshness_ok": True},
@@ -99,6 +100,33 @@ def test_preflight_blocks_after_entry_deadline(tmp_path) -> None:
     assert result["reason"] == "entry deadline has passed"
     assert not (tmp_path / "orders.json").exists()
     assert json.loads(status_path.read_text(encoding="utf-8"))["status"] == "BLOCKED"
+
+
+def test_preflight_rejects_raw_signal_prices(tmp_path, monkeypatch) -> None:
+    report = _report("2026-10-02", "2026-10-01T23:00:00+00:00", "2026-10-01")
+    report["daily_signal"]["signal_price_mode"] = "raw"
+
+    def fake_git(*args: str) -> str:
+        if args[0] == "ls-tree":
+            return "data/reports/2026-10-02.json\n"
+        if args[0] == "show":
+            return json.dumps(report)
+        raise AssertionError(args)
+
+    monkeypatch.setattr(preflight, "_git", fake_git)
+    result = preflight.run_preflight(
+        as_of="2026-10-02",
+        now=preflight.datetime.fromisoformat("2026-10-02T08:30:00+09:00"),
+        ref="origin/main",
+        config_path=Path("config/manual_strategy.yaml"),
+        state_path=Path("data/manual_strategy/state.json"),
+        output_path=tmp_path / "orders.json",
+        status_path=tmp_path / "status.json",
+        local_reports_dir=tmp_path / "no-local-reports",
+    )
+
+    assert result["status"] == "BLOCKED"
+    assert result["reason"] == "no fresh adjusted pre-open report targets this JPX session"
 
 
 def test_preflight_uses_fresh_local_report_when_github_is_delayed(

@@ -328,10 +328,13 @@ def run_daily_signal_service(
     actual_run_jst: datetime | None = None,
     active_rule_id: str | None = None,
     refresh_prices: bool = True,
+    price_mode: str = "raw",
     generate_signals_fn=generate_signals,
     get_rule_fn=get_rule,
     pick_overnight_gap_fn=pick_overnight_gap,
 ) -> dict[str, object]:
+    if price_mode not in {"raw", "adjusted"}:
+        raise ValueError("price_mode must be raw or adjusted")
     now_jst = now_jst if now_jst is not None else datetime.now(_JST)
     eff_window_l = window_l if window_l is not None else cfg.strategy.window_l
     eff_k = k_factors if k_factors is not None else cfg.strategy.k_factors
@@ -346,7 +349,7 @@ def run_daily_signal_service(
         list(JP_TICKERS.keys()),
         cfg.daily.sample_start,
         sample_end,
-        price_mode="raw",
+        price_mode=price_mode,
         cache=cache,
         refresh=refresh_prices,
     )
@@ -363,7 +366,7 @@ def run_daily_signal_service(
         fill_policy="strict",
         sample_start=cfg.daily.sample_start,
         sample_end=sample_end,
-        price_mode="raw",
+        price_mode=price_mode,
     )
     pretrain_data = joint_cc.loc[: cfg.daily.pretrain_end]
     c0 = build_prior_exposure(pretrain_data, v0)
@@ -507,13 +510,13 @@ def run_daily_signal_service(
         list(US_TICKERS.keys()),
         list(JP_TICKERS.keys()),
         str(reference_date) if pd.notna(reference_date) else None,
-        "raw",
+        price_mode,
     )
     cache_summary = cache.summary(
         list(US_TICKERS.keys()),
         list(JP_TICKERS.keys()),
         required_latest_date=str(reference_date) if pd.notna(reference_date) else None,
-        price_mode="raw",
+        price_mode=price_mode,
         required_latest_jp_date=freshness["required_jp_date"],
     )
     quality.update(freshness)
@@ -628,6 +631,7 @@ def run_daily_signal_service(
         )
 
     return {
+        "signal_price_mode": price_mode,
         "reference_date": str(reference_date),
         "signal_reference_us_date": str(reference_date) if pd.notna(reference_date) else None,
         "execution_target_jp_date": str(execution_target_jp_date.date()) if execution_target_jp_date is not None else None,

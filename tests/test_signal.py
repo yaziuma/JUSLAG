@@ -126,6 +126,23 @@ def test_daily_generation_uses_latest_us_only_session(monkeypatch) -> None:
     assert observed[-1] > observed[-2]
 
 
+def test_historical_signal_does_not_read_same_day_jp_return(monkeypatch) -> None:
+    dates = pd.bdate_range("2025-01-02", periods=6)
+    us_cc = pd.DataFrame({"US": [0.01, 0.02, 0.03, 0.04, 0.05, 0.06]}, index=dates)
+    jp_cc = pd.DataFrame({"JP": [-0.01, -0.02, -0.03, -0.04, -0.05, -0.06]}, index=dates)
+
+    def deterministic_signal(_window, latest_us, *_args, **_kwargs):
+        return np.array([latest_us[0]])
+
+    monkeypatch.setattr(signal_module, "compute_signal_at_t", deterministic_signal)
+    baseline = signal_module.generate_signals(us_cc, jp_cc, np.eye(2), l=3)
+    changed = jp_cc.copy()
+    changed.loc[dates[-1], "JP"] = 999.0
+    rerun = signal_module.generate_signals(us_cc, changed, np.eye(2), l=3)
+
+    assert baseline.loc[dates[-1], "JP"] == rerun.loc[dates[-1], "JP"]
+
+
 def test_get_todays_signal_live_without_future_jp_prices(monkeypatch) -> None:
     idx = pd.bdate_range("2026-01-01", "2026-04-13")
     us_cc = pd.DataFrame({"US1": np.linspace(0.001, 0.003, len(idx))}, index=idx)

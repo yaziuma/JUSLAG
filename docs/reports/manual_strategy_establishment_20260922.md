@@ -81,6 +81,8 @@ preflightは`origin/main`上のGitHub生成レポートと`data/reports`上の�
 6. `PYTHONPATH=src .venv/bin/python scripts/ops/manual_strategy_orders.py record-entry --sheet data/manual_strategy/orders/2026-09-24-entry.json --fills <記入済み約定JSON>`を実行する。予定数量と完全一致しない場合は登録が拒否されるため、未約定・一部約定を先にSBI画面で解消する。
 7. 9月30日15:20までに同数量を「現物売・引成」で発注する。約定後、決済テンプレートへ実績を記入し、`record-exit --fills <記入済み決済JSON>`で損益・費用・DDを更新する。
 
+注文候補の順位はadjusted価格から計算し、数量だけをraw名目価格から算定する。`daily_signal.signal_price_mode=adjusted`でないレポートはpreflightが拒否する。これにより分配金・分割の見かけの変動をシグナルに混ぜず、同時に実際の購入可能数量をraw価格で求める。
+
 当日寄付き前にSBI側が寄成を受け付けない、取引規制、特別気配等を表示する、買付余力が不足する、注文内容を照合できない場合は、その銘柄だけでなくバッチ全体を発注しない。寄成発注後の特別気配は注文取消しによる裁量変更をせず、SBIの注文状態を保存して運用記録に残す。
 
 ## 検証結果と限界

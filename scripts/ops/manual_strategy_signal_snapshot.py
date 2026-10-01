@@ -53,6 +53,13 @@ def main() -> None:
     cfg = AppConfig.load(ROOT / "config" / "app.yaml")
     cache = PriceCache()
 
+    # Signal rankings must use the same adjusted-return series as the
+    # validation. Raw prices are fetched separately and exported only for
+    # executable order sizing.
+    fetch_data(
+        list(US_TICKERS), list(JP_TICKERS), cfg.daily.sample_start, sample_end,
+        price_mode="adjusted", cache=cache, refresh=True,
+    )
     fetch_data(
         list(US_TICKERS), list(JP_TICKERS), cfg.daily.sample_start, sample_end,
         price_mode="raw", cache=cache, refresh=True,
@@ -64,6 +71,7 @@ def main() -> None:
         actual_run_jst=actual_now,
         log_path=None,
         refresh_prices=False,
+        price_mode="adjusted",
     )
 
     since = (datetime.fromisoformat(target_date).date() - timedelta(days=7)).isoformat()
@@ -81,6 +89,8 @@ def main() -> None:
             "run_started_at_utc": actual_now.astimezone(timezone.utc).isoformat(),
             "analysis_as_of_jst": analysis_now.isoformat(),
             "input_snapshot_sha256": signal.get("input_snapshot_sha256"),
+            "signal_price_mode": "adjusted",
+            "sizing_price_mode": "raw",
         },
         "daily_signal": signal,
     }
