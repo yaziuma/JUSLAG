@@ -1,0 +1,14 @@
+[Unit]
+Description=Refresh the lightweight JUSLAG manual-order signal snapshot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/projects/JUSLAG
+Environment=PYTHONPATH=src
+ExecStart=%h/projects/JUSLAG/.venv/bin/python scripts/ops/manual_strategy_signal_snapshot.py
+TimeoutStartSec=5min
+
+[Install]
+WantedBy=default.target

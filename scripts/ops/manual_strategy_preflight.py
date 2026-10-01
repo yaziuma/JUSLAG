@@ -77,9 +77,18 @@ def _prices_from_ref(ref: str, report_path: str, before_date: str) -> dict[str, 
     return {str(row.ticker): float(row.close) for row in latest.itertuples()}
 
 
+def _local_prices_path(report_path: str) -> Path:
+    report = Path(report_path)
+    report_date = report.stem
+    return (
+        report.with_name(f"{report_date}.prices.csv")
+        if report.parent.name == "signals"
+        else Path("data/raw") / report_date / "prices_tail_raw.csv"
+    )
+
+
 def _prices_from_local(report_path: str, before_date: str) -> dict[str, float]:
-    report_date = Path(report_path).stem
-    raw_path = Path("data/raw") / report_date / "prices_tail_raw.csv"
+    raw_path = _local_prices_path(report_path)
     frame = pd.read_csv(raw_path)
     frame = frame[(frame["ticker"].isin(JP_TICKERS)) & (frame["date"] < before_date)]
     latest = frame.sort_values("date").groupby("ticker").tail(1)
@@ -113,6 +122,7 @@ def run_preflight(
     output_path: Path,
     status_path: Path,
     local_reports_dir: Path = Path("data/reports"),
+    signal_reports_dir: Path = Path("data/manual_strategy/signals"),
 ) -> dict:
     config = load_manual_config(config_path)
     status: dict = {
@@ -135,7 +145,11 @@ def run_preflight(
             (*row, "local")
             for row in _candidate_local_reports(local_reports_dir, as_of, deadline)
         ]
-        candidates = remote_candidates + local_candidates
+        signal_candidates = [
+            (*row, "local_signal")
+            for row in _candidate_local_reports(signal_reports_dir, as_of, deadline)
+        ]
+        candidates = remote_candidates + local_candidates + signal_candidates
         if not candidates:
             raise ValueError("no fresh pre-open report targets this JPX session")
         _, report_path, report, source_kind = max(
@@ -166,7 +180,12 @@ def run_preflight(
             "source_commit": source_commit,
             "source_report": report_path,
             "source_report_sha256": (
-                _file_sha256(report_path) if source_kind == "local" else None
+                _file_sha256(report_path) if source_kind != "git" else None
+            ),
+            "source_prices_sha256": (
+                _file_sha256(str(_local_prices_path(report_path)))
+                if source_kind == "local_signal"
+                else None
             ),
             "source_report_generated_at_utc": report["generated_at_utc"],
         }
@@ -200,6 +219,9 @@ def main() -> None:
     parser.add_argument("--output", type=Path)
     parser.add_argument("--status", type=Path)
     parser.add_argument("--fetch", action="store_true")
+    parser.add_argument(
+        "--signal-reports-dir", type=Path, default=Path("data/manual_strategy/signals")
+    )
     args = parser.parse_args()
     now = (
         datetime.fromisoformat(args.now_jst).astimezone(JST) if args.now_jst else datetime.now(JST)
@@ -216,6 +238,7 @@ def main() -> None:
         state_path=args.state,
         output_path=output,
         status_path=status_path,
+        signal_reports_dir=args.signal_reports_dir,
     )
     print(json.dumps(status, ensure_ascii=False))
     if status["status"] == "BLOCKED":

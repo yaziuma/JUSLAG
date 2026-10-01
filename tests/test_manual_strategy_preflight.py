@@ -149,3 +149,52 @@ def test_preflight_uses_fresh_local_report_when_github_is_delayed(
     assert sheet["preflight"]["source_ref"] == "local"
     assert sheet["preflight"]["source_commit"] == "c" * 40
     assert len(sheet["preflight"]["source_report_sha256"]) == 64
+
+
+def test_preflight_prefers_newer_lightweight_signal_snapshot(tmp_path, monkeypatch) -> None:
+    reports_dir = tmp_path / "reports"
+    signals_dir = tmp_path / "signals"
+    reports_dir.mkdir()
+    signals_dir.mkdir()
+    (reports_dir / "2026-09-24.json").write_text(
+        json.dumps(_report("2026-09-24", "2026-09-23T21:00:00+00:00", "2026-09-22")),
+        encoding="utf-8",
+    )
+    snapshot = signals_dir / "2026-09-24.json"
+    snapshot.write_text(
+        json.dumps(_report("2026-09-24", "2026-09-23T23:48:00+00:00", "2026-09-23")),
+        encoding="utf-8",
+    )
+    snapshot.with_name("2026-09-24.prices.csv").write_text(_csv(), encoding="utf-8")
+
+    monkeypatch.setattr(preflight, "_git", lambda *args: "" if args[0] == "ls-tree" else None)
+    monkeypatch.setattr(
+        preflight,
+        "_prices_from_local",
+        lambda report_path, before_date: {f"{code}.T": 1000.0 for code in range(1617, 1634)},
+    )
+    config_path = Path("config/manual_strategy.yaml")
+    state_path = tmp_path / "state.json"
+    state_path.write_text(
+        json.dumps(initial_state(load_manual_config(config_path))), encoding="utf-8"
+    )
+    output = tmp_path / "orders.json"
+    result = preflight.run_preflight(
+        as_of="2026-09-24",
+        now=preflight.datetime.fromisoformat("2026-09-24T08:50:00+09:00"),
+        ref="origin/main",
+        config_path=config_path,
+        state_path=state_path,
+        output_path=output,
+        status_path=tmp_path / "status.json",
+        local_reports_dir=reports_dir,
+        signal_reports_dir=signals_dir,
+    )
+
+    sheet = json.loads(output.read_text(encoding="utf-8"))
+    assert result["status"] == "READY"
+    assert result["source_kind"] == "local_signal"
+    assert sheet["signal_reference_us_date"] == "2026-09-23"
+    assert sheet["preflight"]["source_report"] == str(snapshot)
+    assert len(sheet["preflight"]["source_report_sha256"]) == 64
+    assert len(sheet["preflight"]["source_prices_sha256"]) == 64

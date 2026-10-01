@@ -23,3 +23,15 @@ def test_service_loads_tracked_production_settings() -> None:
         "config/production_backtest_settings.json" in service
     )
     assert (ROOT / "config/production_backtest_settings.json").is_file()
+
+
+def test_lightweight_signal_snapshot_retries_close_to_cutoff() -> None:
+    timer = (ROOT / "config/systemd/juslag-manual-signal-snapshot.timer").read_text(
+        encoding="utf-8"
+    )
+    for clock in ("08:35:00", "08:42:00", "08:48:00"):
+        assert f"OnCalendar=Mon..Fri *-*-* {clock}" in timer
+    service = (ROOT / "config/systemd/juslag-manual-signal-snapshot.service").read_text(
+        encoding="utf-8"
+    )
+    assert "scripts/ops/manual_strategy_signal_snapshot.py" in service

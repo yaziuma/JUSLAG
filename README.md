@@ -28,7 +28,7 @@
 日次バッチの全体設計は `docs/daily_research_batch_architecture.md` を参照してください。
 GitHub Pagesの公開・簡易認証の運用は `docs/github_pages_operations.md` を参照してください。
 
-実運用戦略は`pca_sub_long_5d_manual_v1`であり、日次`rule_406_no_flip`は研究比較としてのみ残す。発注判断の正本は`data/manual_strategy/preflight/<当日>.json`とSHA-256付き注文票である。GitHub Actions遅延を避けるため、quieter上のローカル日次timerが06:00、07:00、08:00、08:40 JSTに再試行し、preflightはGitHub版とローカル版のうち締切前の最新入力を採用する。終値のない場中・未確定行はfreshness判定から除外する。
+実運用戦略は`pca_sub_long_5d_manual_v1`であり、日次`rule_406_no_flip`は研究比較としてのみ残す。発注判断の正本は`data/manual_strategy/preflight/<当日>.json`とSHA-256付き注文票である。GitHub Actions遅延を避けるため、quieter上のローカル日次timerが06:00、07:00、08:00、08:40 JSTに再試行する。さらに発注専用の軽量シグナルtimerが08:35、08:42、08:48に再取得し、preflightはGitHub版、ローカル日次版、軽量版のうち締切前の最新入力を採用する。終値のない場中・未確定行はfreshness判定から除外する。
 
 ローカル日次timerは、GitHub Variableと同一内容を管理する`config/production_backtest_settings.json`を`JUSLAG_BACKTEST_SETTINGS_FILE`として読み込む。設定変更時は両者を同時に更新する。
 
