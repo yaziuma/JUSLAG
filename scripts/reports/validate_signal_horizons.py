@@ -91,9 +91,15 @@ def simulate_nonoverlap(
     nominal_open: pd.DataFrame | None = None,
     tax_state: dict | None = None,
     annual_tax_settlement: bool = False,
+    entry_delay_sessions: int = 0,
 ) -> pd.DataFrame:
     """One position batch at a time, integer units, fixed gross budget."""
-    if horizon < 1 or initial_capital_yen <= 0 or not 0 < q < 0.5:
+    if (
+        horizon < 1
+        or initial_capital_yen <= 0
+        or not 0 < q < 0.5
+        or entry_delay_sessions < 0
+    ):
         raise ValueError("Invalid portfolio parameters")
     dates = jp_open.index.intersection(jp_close.index).sort_values()
     if nominal_open is None:
@@ -111,7 +117,10 @@ def simulate_nonoverlap(
             break
         if signal_date < last_exit:
             continue
-        entry_pos = dates.searchsorted(signal_date, side="right")
+        # delay=0 is the first JPX open after the US signal date. A positive
+        # delay models a deliberately stale-signal fallback when the newest US
+        # close is unavailable before the Japanese pre-open deadline.
+        entry_pos = dates.searchsorted(signal_date, side="right") + entry_delay_sessions
         exit_pos = entry_pos + horizon - 1
         if exit_pos >= len(dates):
             continue
@@ -585,6 +594,18 @@ def main() -> None:
                                              nominal_open=nominal_open)
                 portfolio[label][f"{slippage:g}bps_per_side"] = summarize_nonoverlap(trades, args.capital_yen)
         output["nonoverlap_5_session"] = portfolio
+        output["entry_delay_sensitivity_long_only"] = {
+            f"{delay}_extra_jpx_sessions": summarize_nonoverlap(
+                simulate_nonoverlap(
+                    signals, jp_open, jp_close, start=args.eval_start, end=args.end,
+                    initial_capital_yen=args.capital_yen,
+                    slippage_bps_per_side=args.slippage_bps,
+                    nominal_open=nominal_open, entry_delay_sessions=delay,
+                ),
+                args.capital_yen,
+            )
+            for delay in (0, 1, 2)
+        }
         after_tax_trades = simulate_nonoverlap(
             signals, jp_open, jp_close, start=args.eval_start, end=args.end,
             initial_capital_yen=args.capital_yen, slippage_bps_per_side=args.slippage_bps,

@@ -213,3 +213,52 @@ def test_fetch_group_recovers_missing_head_trading_day(monkeypatch) -> None:
     _fetch_group_with_cache(["SPY"], "2010-01-01", "2026-09-19", StubCache())
 
     assert saved == ["2010-01-02"]
+
+
+def test_fetch_group_retries_incomplete_latest_close_per_ticker(monkeypatch) -> None:
+    saved: dict[str, list[tuple[str, float | None]]] = {}
+
+    class StubCache:
+        def date_range(self, ticker: str, price_mode: str):
+            return None, None
+
+        def upsert(self, ticker, open_s, close_s, price_mode: str):
+            saved.setdefault(ticker, []).extend(
+                (str(day.date()), None if pd.isna(close_s.get(day)) else float(close_s.get(day)))
+                for day in open_s.index.union(close_s.index)
+            )
+            return len(open_s.index.union(close_s.index))
+
+        def load(self, tickers, start, end, price_mode: str):
+            return {}
+
+    dates = pd.to_datetime(["2026-09-29", "2026-09-30"])
+
+    def fake_download(*args, **kwargs):
+        columns = pd.MultiIndex.from_product([['Close', 'Open'], ['SPY', 'DIA']])
+        return pd.DataFrame(
+            [[100.0, 200.0, 99.0, 199.0], [101.0, float('nan'), 100.0, 201.0]],
+            index=dates,
+            columns=columns,
+        )
+
+    class StubTicker:
+        def __init__(self, ticker: str):
+            assert ticker == "DIA"
+
+        def history(self, **kwargs):
+            assert kwargs["auto_adjust"] is True
+            return pd.DataFrame(
+                {"Open": [201.0], "Close": [202.0]},
+                index=pd.DatetimeIndex(["2026-09-30"], tz="America/New_York"),
+            )
+
+    monkeypatch.setattr("juslag.data_loader.yf.download", fake_download)
+    monkeypatch.setattr("juslag.data_loader.yf.Ticker", StubTicker)
+
+    _fetch_group_with_cache(
+        ["SPY", "DIA"], "2026-09-20", "2026-10-01", StubCache(), price_mode="adjusted"
+    )
+
+    assert saved["DIA"][-1] == ("2026-09-30", 202.0)
+    assert saved["SPY"][-1] == ("2026-09-30", 101.0)

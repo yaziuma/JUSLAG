@@ -158,6 +158,39 @@ def _fetch_group_with_cache(
                 n = cache.upsert(ticker, open_raw[ticker], close_raw[ticker], price_mode=price_mode)
                 logger.debug("Upserted %d rows for %s", n, ticker)
 
+        # A bulk Yahoo response can expose the current session's open while its
+        # close is still null even after the session has completed. Retry only
+        # affected symbols through yfinance's per-symbol history path. This is
+        # an independent request path, while retaining identical adjustment
+        # semantics and the cache's observation audit trail.
+        latest = close_raw.index.max()
+        incomplete = [
+            ticker
+            for ticker in tickers
+            if ticker not in close_raw.columns or pd.isna(close_raw.at[latest, ticker])
+        ]
+        for ticker in incomplete:
+            try:
+                retry = yf.Ticker(ticker).history(
+                    start=dl_start,
+                    end=end,
+                    auto_adjust=(price_mode == "adjusted"),
+                    actions=False,
+                    repair=False,
+                    keepna=True,
+                    raise_errors=True,
+                )
+                if retry.empty or "Open" not in retry or "Close" not in retry:
+                    continue
+                retry = retry.copy()
+                retry.index = pd.DatetimeIndex(retry.index).tz_localize(None)
+                n = cache.upsert(
+                    ticker, retry["Open"], retry["Close"], price_mode=price_mode
+                )
+                logger.info("Individual retry upserted %d rows for %s", n, ticker)
+            except Exception as exc:  # provider failures must not discard the bulk result
+                logger.warning("Individual price retry failed for %s: %s", ticker, exc)
+
     cached = cache.load(tickers, start, end, price_mode=price_mode)
     close_frames = [cached[t]["close"].rename(t) for t in tickers if t in cached]
     open_frames = [cached[t]["open"].rename(t) for t in tickers if t in cached]

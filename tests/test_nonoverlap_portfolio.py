@@ -37,6 +37,38 @@ def test_nonoverlap_limits_capital_and_skips_overlapping_signals() -> None:
     assert dates[2] not in set(trades["signal_date"])
 
 
+def test_nonoverlap_can_measure_delayed_entry_fallback() -> None:
+    dates = pd.date_range("2025-01-01", periods=6)
+    signals = pd.DataFrame(
+        [[3.0, 2.0, 1.0]], index=dates[:1], columns=["A", "B", "C"]
+    )
+    opens = pd.DataFrame(100.0, index=dates, columns=signals.columns)
+    closes = opens.copy()
+    closes.loc[dates[2], "A"] = 110.0
+
+    trades = MODULE.simulate_nonoverlap(
+        signals, opens, closes, start="2025-01-01", end="2025-01-06",
+        horizon=1, initial_capital_yen=1_000, slippage_bps_per_side=0,
+        entry_delay_sessions=1,
+    )
+
+    assert trades.iloc[0]["entry_date"] == dates[2]
+    assert trades.iloc[0]["exit_date"] == dates[2]
+    assert trades.iloc[0]["capital_after_yen"] == 1_100
+
+
+def test_nonoverlap_rejects_negative_entry_delay() -> None:
+    dates = pd.date_range("2025-01-01", periods=3)
+    signals = pd.DataFrame([[3.0, 2.0, 1.0]], index=dates[:1], columns=["A", "B", "C"])
+    prices = pd.DataFrame(100.0, index=dates, columns=signals.columns)
+
+    with pytest.raises(ValueError, match="Invalid portfolio parameters"):
+        MODULE.simulate_nonoverlap(
+            signals, prices, prices, start="2025-01-01", end="2025-01-03",
+            entry_delay_sessions=-1,
+        )
+
+
 def test_short_scenario_charges_borrow_and_slippage() -> None:
     dates = pd.date_range("2025-01-01", periods=4)
     signals = pd.DataFrame([[3.0, 2.0, 1.0]], index=dates[:1], columns=["A", "B", "C"])
