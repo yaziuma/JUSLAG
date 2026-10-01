@@ -4,6 +4,7 @@ import pandas as pd
 from pydantic import BaseModel, Field
 
 from juslag.cache import PriceCache
+from juslag.capital_simulation import simulate_capital_paths
 from juslag.config import AppConfig, ExecutionCostConfig, JP_CYCLICAL, JP_TICKERS, TaxConfig, US_CYCLICAL, US_TICKERS
 from juslag.data_loader import build_joint_cc, compute_returns, fetch_data
 from juslag.judge import JudgeInput, judge_backtest
@@ -298,6 +299,12 @@ def run_backtest_service(
         "adjusted_series_warning": analysis_status.get("adjusted_series_warning") if analysis_status else None,
         "adjusted_series_verification_reason": analysis_status.get("adjusted_series_verification_reason") if analysis_status else None,
         "strategy_rule_id": params.strategy_rule_id,
+        "capital_simulation": simulate_capital_paths(
+            meta_after_tax
+            if meta_after_tax is not None and not meta_after_tax.empty and judge_strategy_name == meta_rule_name
+            else net_after_tax,
+            strategy_name=judge_strategy_name,
+        ),
     }
     if include_strategy_rule_detail:
         result["strategy_rule_daily"] = (

@@ -16,6 +16,12 @@ def _fixture_bt() -> dict:
         },
         "cost_breakdown": {"commission_total": 1.0, "slippage_total": float("nan")},
         "eval_start": "2022-01-01",
+        "capital_simulation": {
+            "initial_capital_yen": 1000000,
+            "fixed_notional_yen": 1000000,
+            "dates": ["2026-01-05"],
+            "returns": [0.01],
+        },
     }
 
 
@@ -92,6 +98,7 @@ def test_build_daily_report_schema_and_shape() -> None:
     assert report["backtest"]["judge"]["overall_score"] == 82
     assert report["backtest"]["performance_sets"]["net_after_tax"][0]["AR(%)"] == 12.3
     assert report["backtest"]["eval_start"] == "2022-01-01"
+    assert report["capital_simulation"]["returns"] == [0.01]
 
     assert report["daily_signal"]["tradeable"] is True
 

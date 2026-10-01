@@ -38,6 +38,13 @@ def _write_report(reports_dir: Path, date: str, tradeable: bool) -> None:
                 "actions": ["継続モニタリングしてください。"],
             },
         },
+        "capital_simulation": {
+            "strategy_name": "PCA SUB + rule_406_no_flip",
+            "initial_capital_yen": 1000000,
+            "fixed_notional_yen": 1000000,
+            "dates": ["2026-01-05", "2026-01-06"],
+            "returns": [0.01, -0.005],
+        },
         "backtest_comparison": {
             "current": {
                 "strategy_name": "PCA SUB + rule_406_no_flip",
@@ -187,6 +194,11 @@ def test_render_site_produces_index_and_report_pages(tmp_path: Path) -> None:
     assert "この成績は執行可能性未検証" in index_html
     assert "共通コスト設定" in index_html
     assert "adjusted" in index_html
+    assert "複利運用 vs 固定額運用" in index_html
+    assert "capital-comparison-chart" in index_html
+    assert "capital-initial" in index_html
+    assert "capital-fixed" in index_html
+    assert "資金制約は含みません" in index_html
 
     # CDNアセット（B-FADスタック: Bootstrap 5 + Alpine.js, ビルド不要）
     assert "cdn.jsdelivr.net/npm/bootstrap@" in index_html
@@ -203,6 +215,7 @@ def test_render_site_produces_index_and_report_pages(tmp_path: Path) -> None:
     assert "テスト判定理由テキスト" in report_html
     assert "論文準拠 vs 現行運用" in report_html
     assert "シグナル候補" in report_html
+    assert "複利運用 vs 固定額運用" in report_html
 
     # サイト全体にJSONファイルは出力しない（HTML単位でパスワード保護するため）
     assert not any(out_dir.rglob("*.json"))

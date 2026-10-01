@@ -157,6 +157,10 @@ pre.raw {
 details > summary { cursor: pointer; margin: 8px 0; color: var(--text-muted); }
 .regime-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(8px, 1fr)); gap: 3px; }
 .regime-cell { width: 100%; height: 34px; border-radius: 2px; }
+.capital-controls { display: grid; grid-template-columns: repeat(2, minmax(180px, 260px)); gap: 12px; }
+.capital-chart { width: 100%; height: 300px; display: block; background: rgba(255,255,255,.015); border-radius: 6px; }
+.capital-legend { display: flex; flex-wrap: wrap; gap: 18px; }
+.capital-swatch { width: 18px; height: 3px; display: inline-block; vertical-align: middle; margin-right: 6px; }
 .btn-group .btn.active { color: #fff; }
 @media (max-width: 767px) {
   body { font-size: 14px; }
@@ -171,6 +175,8 @@ details > summary { cursor: pointer; margin: 8px 0; color: var(--text-muted); }
   .surface-card { border-radius: 6px; }
   .order-row { grid-template-columns: 74px 1fr auto; gap: 8px; }
   .order-row .order-price, .order-row .order-method { display: none; }
+  .capital-controls { grid-template-columns: 1fr; }
+  .capital-chart { height: 240px; }
 }
 """
 
@@ -392,6 +398,113 @@ def _backtest_comparison(report: dict) -> str:
     )
 
 
+def _capital_simulation_card(report: dict) -> str:
+    simulation = report.get("capital_simulation") or {}
+    returns = simulation.get("returns") or []
+    dates = simulation.get("dates") or []
+    if not returns or len(returns) != len(dates):
+        return ""
+    initial = simulation.get("initial_capital_yen") or 1_000_000
+    fixed = simulation.get("fixed_notional_yen") or initial
+    data_json = _json_embed({"dates": dates, "returns": returns})
+    strategy = _esc(simulation.get("strategy_name") or "-")
+    card = f"""
+<div class="surface-card p-3 p-md-4 mb-3" id="capital-simulation-card">
+  <div class="section-label mb-1">Capital simulation</div>
+  <h2 class="h6 text-heading mb-2">複利運用 vs 固定額運用</h2>
+  <p class="small text-muted-soft mb-3">対象: {strategy} の税引後リターン。同一収益列で資金管理だけを比較します。</p>
+  <div class="capital-controls mb-3">
+    <label class="small">初期資金（円）<input id="capital-initial" class="form-control form-control-sm history-search mt-1" type="number" min="1" step="10000" value="{_esc(initial)}"></label>
+    <label class="small">固定運用額（円）<input id="capital-fixed" class="form-control form-control-sm history-search mt-1" type="number" min="1" step="10000" value="{_esc(fixed)}"></label>
+  </div>
+  <div class="row g-3 mb-3">
+    <div class="col-md-6"><div class="section-label">複利 最終資金 / 最大DD</div><div class="metric-value fs-5"><span id="capital-compound-final">-</span> <small class="text-muted-soft" id="capital-compound-dd"></small></div></div>
+    <div class="col-md-6"><div class="section-label">固定額 最終資金 / 最大DD</div><div class="metric-value fs-5"><span id="capital-fixed-final">-</span> <small class="text-muted-soft" id="capital-fixed-dd"></small></div></div>
+  </div>
+  <canvas id="capital-comparison-chart" class="capital-chart" width="1000" height="300" aria-label="複利運用と固定額運用の資産曲線"></canvas>
+  <div class="capital-legend small mt-2"><span><i class="capital-swatch" style="background:#58a6ff"></i>複利</span><span><i class="capital-swatch" style="background:#d29922"></i>固定額</span><span class="text-muted-soft" id="capital-period"></span></div>
+  <p class="small text-muted-soft mt-3 mb-0">固定額運用は毎期間同じ元本へ収益率を適用する比較モデルです。残高不足による発注停止などの資金制約は含みません。</p>
+</div>
+"""
+    script = r"""
+<script>
+(() => {
+  const data = __CAPITAL_DATA__;
+  const initialInput = document.getElementById('capital-initial');
+  const fixedInput = document.getElementById('capital-fixed');
+  const canvas = document.getElementById('capital-comparison-chart');
+  if (!initialInput || !fixedInput || !canvas) return;
+  const storedInitial = localStorage.getItem('juslag.capital.initial');
+  const storedFixed = localStorage.getItem('juslag.capital.fixed');
+  if (storedInitial && Number(storedInitial) > 0) initialInput.value = storedInitial;
+  if (storedFixed && Number(storedFixed) > 0) fixedInput.value = storedFixed;
+  const yen = new Intl.NumberFormat('ja-JP', {style: 'currency', currency: 'JPY', maximumFractionDigits: 0});
+  function maxDrawdown(values) {
+    let peak = -Infinity, worst = 0;
+    for (const value of values) {
+      peak = Math.max(peak, value);
+      if (peak > 0) worst = Math.min(worst, value / peak - 1);
+    }
+    return worst * 100;
+  }
+  function draw() {
+    const initial = Number(initialInput.value);
+    const fixedNotional = Number(fixedInput.value);
+    if (!(initial > 0) || !(fixedNotional > 0)) return;
+    let compoundBalance = initial, fixedBalance = initial;
+    const compound = [], fixed = [];
+    for (const value of data.returns) {
+      const rate = Number(value) || 0;
+      compoundBalance *= 1 + rate;
+      fixedBalance += fixedNotional * rate;
+      compound.push(compoundBalance);
+      fixed.push(fixedBalance);
+    }
+    document.getElementById('capital-compound-final').textContent = yen.format(compound.at(-1) ?? initial);
+    document.getElementById('capital-fixed-final').textContent = yen.format(fixed.at(-1) ?? initial);
+    document.getElementById('capital-compound-dd').textContent = `(${maxDrawdown(compound).toFixed(2)}%)`;
+    document.getElementById('capital-fixed-dd').textContent = `(${maxDrawdown(fixed).toFixed(2)}%)`;
+    document.getElementById('capital-period').textContent = `${data.dates[0]} ～ ${data.dates.at(-1)} / ${data.returns.length}期間`;
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width, height = canvas.height;
+    const pad = {left: 70, right: 18, top: 18, bottom: 34};
+    const values = compound.concat(fixed);
+    let lo = Math.min(...values), hi = Math.max(...values);
+    if (hi === lo) { hi += 1; lo -= 1; }
+    const x = i => pad.left + (width - pad.left - pad.right) * i / Math.max(1, compound.length - 1);
+    const y = v => pad.top + (height - pad.top - pad.bottom) * (hi - v) / (hi - lo);
+    ctx.clearRect(0, 0, width, height);
+    ctx.strokeStyle = '#30363d'; ctx.fillStyle = '#8b949e'; ctx.font = '12px sans-serif';
+    for (let i = 0; i <= 4; i++) {
+      const value = lo + (hi - lo) * i / 4;
+      const yy = y(value);
+      ctx.beginPath(); ctx.moveTo(pad.left, yy); ctx.lineTo(width - pad.right, yy); ctx.stroke();
+      ctx.fillText(yen.format(value), 4, yy + 4);
+    }
+    function line(points, color) {
+      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+      points.forEach((value, i) => i ? ctx.lineTo(x(i), y(value)) : ctx.moveTo(x(i), y(value)));
+      ctx.stroke();
+    }
+    line(compound, '#58a6ff'); line(fixed, '#d29922');
+    ctx.fillStyle = '#8b949e';
+    ctx.fillText(data.dates[0] || '', pad.left, height - 10);
+    const last = data.dates.at(-1) || '';
+    ctx.fillText(last, width - pad.right - ctx.measureText(last).width, height - 10);
+  }
+  initialInput.addEventListener('input', () => {
+    localStorage.setItem('juslag.capital.initial', initialInput.value); draw();
+  });
+  fixedInput.addEventListener('input', () => {
+    localStorage.setItem('juslag.capital.fixed', fixedInput.value); draw();
+  });
+  draw();
+})();
+</script>
+""".replace("__CAPITAL_DATA__", data_json)
+    return card + script
+
+
 def _render_index(history: list[dict], reports: list[dict]) -> str:
     rows = _index_rows(reports)
     latest_report = max(reports, key=lambda r: r.get("date") or "") if reports else {}
@@ -423,6 +536,7 @@ def _render_index(history: list[dict], reports: list[dict]) -> str:
     strategy = latest_ds.get("strategy_decision") or {}
     context = latest_ds.get("strategy_context") or {}
     comparison_html = _backtest_comparison(latest_report)
+    capital_simulation_html = _capital_simulation_card(latest_report)
 
     def order_items(entries: list[dict] | None, side: str) -> str:
         if not entries:
@@ -613,6 +727,7 @@ function dashboard() {{
 
   <section x-show="tab === 'analysis'" x-cloak>
     {comparison_html}
+    {capital_simulation_html}
     <div class="analysis-grid mb-3">
       <div class="surface-card p-3 p-md-4">
         <div class="section-label mb-3">Judge score trend</div>
@@ -858,6 +973,7 @@ def _render_report_page(report: dict) -> str:
 
     parts.append(_judge_card(judge))
     parts.append(_backtest_comparison(report))
+    parts.append(_capital_simulation_card(report))
     parts.append(_candidate_signal_stats_card(ds))
     parts.append(_signal_rows_table(ds))
 

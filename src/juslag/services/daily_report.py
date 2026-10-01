@@ -84,6 +84,7 @@ def build_daily_report(
             "cost_breakdown": bt.get("cost_breakdown"),
             "eval_start": bt.get("eval_start"),
         },
+        "capital_simulation": bt.get("capital_simulation"),
         "daily_signal": ds,
         "fetch": {
             "status": fetch_result.get("status"),
