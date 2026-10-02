@@ -1,0 +1,8 @@
+[Unit]
+Description=Queue JUSLAG %i operations check to the owning Codex thread
+
+[Service]
+Type=oneshot
+EnvironmentFile=%h/.config/juslag/codex-monitor.env
+WorkingDirectory=/home/quieter/projects/JUSLAG
+ExecStart=/home/quieter/projects/JUSLAG/scripts/ops/queue_codex_operations_check.sh %i

@@ -1,0 +1,17 @@
+[Unit]
+Description=Trigger Codex checks at JUSLAG operational checkpoints
+
+[Timer]
+OnCalendar=Sun *-*-* 19:00:00 Asia/Tokyo
+OnCalendar=Mon..Fri *-*-* 07:30:00 Asia/Tokyo
+OnCalendar=Mon..Fri *-*-* 08:40:00 Asia/Tokyo
+OnCalendar=Mon..Fri *-*-* 08:49:00 Asia/Tokyo
+OnCalendar=Mon..Fri *-*-* 08:52:00 Asia/Tokyo
+OnCalendar=Mon..Fri *-*-* 08:56:00 Asia/Tokyo
+OnCalendar=Mon..Fri *-*-* 09:10:00 Asia/Tokyo
+OnCalendar=Mon..Fri *-*-* 15:35:00 Asia/Tokyo
+Persistent=true
+Unit=juslag-codex-monitor@scheduled.service
+
+[Install]
+WantedBy=timers.target
