@@ -1,4 +1,4 @@
-"""Capture recent JP ETF intraday bars with observation timestamps for A2 research."""
+"""Capture recent JP ETF intraday bars with operational observation timestamps."""
 
 from __future__ import annotations
 

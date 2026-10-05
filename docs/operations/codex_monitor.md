@@ -5,11 +5,11 @@ JUSLAGの運用確認は、人がログを見に行く方式ではなく、syste
 確認時刻（Asia/Tokyo）は次の通り。
 
 - 日曜19:00: 翌週の事前確認
-- 平日07:30、08:40、08:43: 寄付き前、最終signal、intent公開直後
-- 平日08:50、08:56、09:10、09:42: 承認期限前、期限直後、寄付き後、開始値取得再試行後
+- 平日07:30、08:40: 寄付き前、最終signal生成後
+- 平日08:56、09:42: 承認期限直後、開始値取得再試行後
 - 平日15:35: 引け後の実績・失敗確認
 
-タイマーはユーザー権限で動き、sudoを必要としない。対象スレッドIDは`~/.config/juslag/codex-monitor.env`へ0600で保存する。
+タイマーはユーザー権限で動き、sudoを必要としない。対象スレッドIDは`~/.config/juslag/codex-monitor.env`へ0600で保存する。`codex queue`は実行中ターンの後ろに蓄積するため、中間時刻の過剰な投入は行わず、`Persistent=false`で停止中の過去分も後送しない。各要求にはトリガー時刻`queued_at`を含める。
 
 ```bash
 bash scripts/ops/install_codex_monitor.sh '<thread-id>'
