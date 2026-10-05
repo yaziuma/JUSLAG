@@ -28,7 +28,9 @@ def test_store_capture_preserves_observation_versions(tmp_path: Path) -> None:
     MODULE.store_capture(db, bars, second)
 
     with sqlite3.connect(db) as conn:
-        rows = conn.execute("SELECT close, observed_at_utc FROM intraday_bars ORDER BY observed_at_utc").fetchall()
+        rows = conn.execute(
+            "SELECT close, observed_at_utc FROM intraday_bars ORDER BY observed_at_utc"
+        ).fetchall()
     assert rows == [(101.0, first.isoformat()), (103.0, second.isoformat())]
 
 
@@ -43,11 +45,39 @@ def test_zero_row_ticker_is_incomplete_coverage() -> None:
     assert MODULE.missing_tickers(counts) == ["1621.T"]
 
 
+def test_download_retries_only_missing_tickers(monkeypatch) -> None:
+    index = pd.DatetimeIndex(["2026-09-18 09:00:00+09:00"])
+    calls = []
+
+    def frame(tickers):
+        columns = pd.MultiIndex.from_product([tickers, ["Open", "High", "Low", "Close", "Volume"]])
+        return pd.DataFrame([[100] * len(columns)], index=index, columns=columns)
+
+    first = list(MODULE.JP_TICKERS)[:-1]
+    missing = list(MODULE.JP_TICKERS)[-1]
+
+    def fake_download(tickers, **kwargs):
+        calls.append(list(tickers))
+        return frame(first if len(calls) == 1 else [missing])
+
+    monkeypatch.setattr(MODULE.yf, "download", fake_download)
+    monkeypatch.setattr(MODULE.time, "sleep", lambda _: None)
+
+    bars = MODULE.download_with_retries("1d")
+
+    assert calls == [list(MODULE.JP_TICKERS), [missing]]
+    assert MODULE._tickers_with_valid_rows(bars) == set(MODULE.JP_TICKERS)
+
+
 def test_opening_snapshot_keeps_todays_versions_and_is_idempotent(tmp_path: Path) -> None:
-    index = pd.DatetimeIndex([
-        "2026-09-17 09:10:00+09:00", "2026-09-18 09:00:00+09:00",
-        "2026-09-18 09:10:00+09:00", "2026-09-18 09:35:00+09:00",
-    ])
+    index = pd.DatetimeIndex(
+        [
+            "2026-09-17 09:10:00+09:00",
+            "2026-09-18 09:00:00+09:00",
+            "2026-09-18 09:10:00+09:00",
+            "2026-09-18 09:35:00+09:00",
+        ]
+    )
     columns = pd.MultiIndex.from_product([["1625.T"], ["Open", "High", "Low", "Close", "Volume"]])
     bars = pd.DataFrame([[100, 101, 99, 100, 1000]] * 4, index=index, columns=columns)
     first = datetime(2026, 9, 18, 0, 16, tzinfo=timezone.utc)
