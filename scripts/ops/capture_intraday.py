@@ -168,14 +168,14 @@ def download_with_retries(period: str, attempts: int = 3) -> pd.DataFrame:
             auto_adjust=False,
             group_by="ticker",
             progress=False,
-            threads=True,
+            threads=len(missing) > 1,
         )
         bars = fetched if bars.empty else bars.combine_first(fetched)
         missing = sorted(set(JP_TICKERS) - _tickers_with_valid_rows(bars))
         if not missing:
             break
         if attempt + 1 < attempts:
-            time.sleep(1)
+            time.sleep(5 * (attempt + 1))
     return bars
 
 

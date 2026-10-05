@@ -61,11 +61,13 @@ def test_download_retries_only_missing_tickers(monkeypatch) -> None:
         return frame(first if len(calls) == 1 else [missing])
 
     monkeypatch.setattr(MODULE.yf, "download", fake_download)
-    monkeypatch.setattr(MODULE.time, "sleep", lambda _: None)
+    sleeps = []
+    monkeypatch.setattr(MODULE.time, "sleep", sleeps.append)
 
     bars = MODULE.download_with_retries("1d")
 
     assert calls == [list(MODULE.JP_TICKERS), [missing]]
+    assert sleeps == [5]
     assert MODULE._tickers_with_valid_rows(bars) == set(MODULE.JP_TICKERS)
 
 
