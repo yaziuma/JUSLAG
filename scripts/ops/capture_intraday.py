@@ -105,6 +105,11 @@ def append_opening_snapshot(snapshot_dir: Path, rows: list[dict], observed_at_ut
     return path
 
 
+def missing_tickers(counts: dict[str, int]) -> list[str]:
+    """Treat present columns with zero valid rows as missing coverage."""
+    return sorted(ticker for ticker in JP_TICKERS if counts.get(ticker, 0) <= 0)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--db", type=Path, default=Path("data/intraday/prices.sqlite"))
@@ -125,8 +130,9 @@ def main() -> None:
         raise SystemExit("No valid intraday bars returned; no data saved")
     print(f"observed_at_utc={observed_at.isoformat()} tickers={len(counts)} "
           f"bars={sum(counts.values())} db={args.db}")
-    if len(counts) != len(JP_TICKERS):
-        raise SystemExit(f"Incomplete ticker coverage: {sorted(set(JP_TICKERS) - set(counts))}")
+    missing = missing_tickers(counts)
+    if missing:
+        raise SystemExit(f"Incomplete ticker coverage: {missing}")
 
 
 if __name__ == "__main__":

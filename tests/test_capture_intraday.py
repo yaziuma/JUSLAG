@@ -37,6 +37,12 @@ def test_store_capture_requires_aware_observation_time(tmp_path: Path) -> None:
         MODULE.store_capture(tmp_path / "intraday.sqlite", pd.DataFrame(), datetime(2026, 9, 18))
 
 
+def test_zero_row_ticker_is_incomplete_coverage() -> None:
+    counts = {ticker: 1 for ticker in MODULE.JP_TICKERS}
+    counts["1621.T"] = 0
+    assert MODULE.missing_tickers(counts) == ["1621.T"]
+
+
 def test_opening_snapshot_keeps_todays_versions_and_is_idempotent(tmp_path: Path) -> None:
     index = pd.DatetimeIndex([
         "2026-09-17 09:10:00+09:00", "2026-09-18 09:00:00+09:00",
