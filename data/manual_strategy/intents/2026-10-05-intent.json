@@ -1,0 +1,46 @@
+{
+  "schema_version": 2,
+  "intent_id": "pca_sub_long_5d_manual_v2-20261005-entry-5c562a7e0e37f7b5",
+  "strategy_id": "pca_sub_long_5d_manual_v2",
+  "source_commit": "f8e20702e90b6af55ac824f5661a84317ae7c896",
+  "executor_id": "quieter-sbi-1",
+  "account_alias": "sbi-primary",
+  "intent_kind": "ENTRY",
+  "valid_from": "2026-10-05T08:50:01.489407+09:00",
+  "expires_at": "2026-10-05T08:55:00+09:00",
+  "maximum_total_notional_yen": 1000000,
+  "orders": [
+    {
+      "ticker": "1621.T",
+      "side": "BUY",
+      "quantity": 7,
+      "cash_margin": "CASH",
+      "custody_account": "SPECIFIED",
+      "order_type": "MARKET_ON_OPEN"
+    },
+    {
+      "ticker": "1630.T",
+      "side": "BUY",
+      "quantity": 6,
+      "cash_margin": "CASH",
+      "custody_account": "SPECIFIED",
+      "order_type": "MARKET_ON_OPEN"
+    },
+    {
+      "ticker": "1617.T",
+      "side": "BUY",
+      "quantity": 4,
+      "cash_margin": "CASH",
+      "custody_account": "SPECIFIED",
+      "order_type": "MARKET_ON_OPEN"
+    },
+    {
+      "ticker": "1627.T",
+      "side": "BUY",
+      "quantity": 18,
+      "cash_margin": "CASH",
+      "custody_account": "SPECIFIED",
+      "order_type": "MARKET_ON_OPEN"
+    }
+  ]
+}
