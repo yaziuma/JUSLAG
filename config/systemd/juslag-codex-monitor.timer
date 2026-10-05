@@ -9,6 +9,7 @@ OnCalendar=Mon..Fri *-*-* 08:43:00 Asia/Tokyo
 OnCalendar=Mon..Fri *-*-* 08:50:00 Asia/Tokyo
 OnCalendar=Mon..Fri *-*-* 08:56:00 Asia/Tokyo
 OnCalendar=Mon..Fri *-*-* 09:10:00 Asia/Tokyo
+OnCalendar=Mon..Fri *-*-* 09:42:00 Asia/Tokyo
 OnCalendar=Mon..Fri *-*-* 15:35:00 Asia/Tokyo
 Persistent=true
 Unit=juslag-codex-monitor@scheduled.service
