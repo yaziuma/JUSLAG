@@ -519,7 +519,8 @@ def _render_index(
     rows = _index_rows(reports)
     latest_report = max(reports, key=lambda r: r.get("date") or "") if reports else {}
     latest_ds = latest_report.get("daily_signal") or {}
-    latest_judge = (latest_report.get("backtest") or {}).get("judge") or {}
+    manual_judge = (capital_simulation or {}).get("judge") or {}
+    latest_judge = manual_judge or (latest_report.get("backtest") or {}).get("judge") or {}
     latest_plan = latest_ds.get("execution_plan") or {}
     latest_history = history[-1] if history else {}
     tradeable = bool(latest_ds.get("tradeable"))
@@ -542,7 +543,11 @@ def _render_index(
     score = latest_judge.get("overall_score")
     score_pct = max(0, min(100, score)) if isinstance(score, (int, float)) else 0
     backtest = latest_report.get("backtest") or {}
-    judge_strategy_name = backtest.get("judge_strategy_name") or "PCA SUB"
+    judge_strategy_name = (
+        (capital_simulation or {}).get("strategy_name")
+        if manual_judge
+        else backtest.get("judge_strategy_name") or "PCA SUB"
+    )
     params = backtest.get("params") or {}
     metrics = latest_judge.get("metrics_snapshot") or {}
     strategy = latest_ds.get("strategy_decision") or {}

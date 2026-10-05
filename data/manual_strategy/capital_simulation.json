@@ -953,5 +953,99 @@
     "last_exit": "2026-09-29",
     "trade_batches": 229,
     "strategy_config": "config/manual_strategy.yaml"
+  },
+  "judge": {
+    "overall_decision": "pass",
+    "overall_score": 78,
+    "summary": "pca_sub_long_5d_manual_v2 は主要閾値を満たしており、実践投入候補です。",
+    "category_scores": {
+      "profitability": 30,
+      "stability": 20,
+      "cost_resilience": 3,
+      "executability": 10,
+      "data_reliability": 15
+    },
+    "category_decisions": {
+      "profitability": "pass",
+      "stability": "pass",
+      "cost_resilience": "warn",
+      "executability": "pass",
+      "data_reliability": "pass"
+    },
+    "reasons": [
+      {
+        "code": "HIGH_COST_DRAG",
+        "severity": "warn",
+        "message": "Gross から Net Pre-Tax への低下幅が大きく、コスト耐性が弱いです。"
+      }
+    ],
+    "metrics_snapshot": {
+      "gross_ar_pct": 23.35,
+      "gross_risk_pct": 13.61,
+      "gross_rr": 1.715,
+      "gross_mdd_pct": -14.06,
+      "net_pre_tax_ar_pct": 19.31,
+      "net_pre_tax_rr": 1.43,
+      "net_pre_tax_mdd_pct": -14.62,
+      "net_after_tax_ar_pct": 15.39,
+      "net_after_tax_risk_pct": 14.25,
+      "net_after_tax_rr": 1.08,
+      "net_after_tax_mdd_pct": -14.62,
+      "n_days": 1230.0,
+      "cost_drag_pct": 4.040000000000003,
+      "tax_drag_pct": 3.919999999999998,
+      "profitability_components": {
+        "ar_score": 30,
+        "rr_penalty": 0
+      },
+      "stability_components": {
+        "mdd_score": 20,
+        "rr_penalty": 0
+      },
+      "cost_resilience_components": {
+        "market_cost_score": 0,
+        "tax_score": 3
+      },
+      "decision_gate_summary": {
+        "has_critical_warn": false,
+        "warn_count": 1,
+        "reject_reasons": []
+      }
+    },
+    "actions": [
+      "commission/slippage/borrow 前提を見直してください。"
+    ]
+  },
+  "performance_sets": {
+    "gross": [
+      {
+        "Strategy": "Gross",
+        "AR(%)": 23.35,
+        "Risk(%)": 13.61,
+        "R/R": 1.715,
+        "MDD(%)": -14.06,
+        "N_days": 1230
+      }
+    ],
+    "net_pre_tax": [
+      {
+        "Strategy": "Net Pre-Tax",
+        "AR(%)": 19.31,
+        "Risk(%)": 13.51,
+        "R/R": 1.43,
+        "MDD(%)": -14.62,
+        "N_days": 1230
+      }
+    ],
+    "net_after_tax": [
+      {
+        "Strategy": "Net After-Tax",
+        "AR(%)": 15.39,
+        "Risk(%)": 14.25,
+        "R/R": 1.08,
+        "MDD(%)": -14.62,
+        "N_days": 1230
+      }
+    ]
   }
 }

@@ -13,6 +13,8 @@ from juslag.capital_simulation import simulate_capital_paths
 from juslag.config import JP_CYCLICAL, JP_TICKERS, JP_TRADING_UNITS, US_CYCLICAL, US_TICKERS
 from juslag.data_loader import build_joint_cc, compute_returns, repair_known_bad_prices
 from juslag.manual_strategy import load_manual_config
+from juslag.judge import JudgeInput, judge_backtest
+from juslag.metrics import apply_tax_model, compute_performance
 from juslag.prior import build_prior_eigenvectors, build_prior_exposure
 from juslag.signal import generate_signals
 
@@ -915,6 +917,34 @@ def main() -> None:
             "trade_batches": len(fixed_long_trades),
             "strategy_config": str(args.strategy_config),
         }
+        dense_index = pd.bdate_range(capital_returns.index.min(), capital_returns.index.max())
+        net_daily = capital_returns.reindex(dense_index, fill_value=0.0)
+        gross_returns = pd.Series(
+            fixed_long_trades["gross_return"].to_numpy(),
+            index=pd.DatetimeIndex(fixed_long_trades["exit_date"]),
+        ).reindex(dense_index, fill_value=0.0)
+        after_tax_daily = apply_tax_model(net_daily)["net_after_tax_return"]
+        performance_sets = {
+            "gross": [compute_performance(gross_returns, "Gross")],
+            "net_pre_tax": [compute_performance(net_daily, "Net Pre-Tax")],
+            "net_after_tax": [compute_performance(after_tax_daily, "Net After-Tax")],
+        }
+        capital_simulation["judge"] = judge_backtest(
+            JudgeInput(
+                strategy_name=assumptions["strategy_id"],
+                performance_sets=performance_sets,
+                cost_breakdown={},
+                data_quality={
+                    "usable_us_tickers": len(US_TICKERS),
+                    "usable_jp_tickers": len(JP_TICKERS),
+                    "fill_policy": "strict",
+                    "cache_isolated_by_price_mode": True,
+                },
+                freshness={"freshness_ok": True, "stale_tickers": [], "missing_tickers": []},
+                cache_summary={"latest_dates_aligned": True, "daily_signal_ready": True},
+            )
+        )
+        capital_simulation["performance_sets"] = performance_sets
         output["capital_simulation"] = capital_simulation
         output["same_notional_sector_equal_weight_comparison"] = exposure_matched_sector_comparison(
             fixed_long_trades, jp_open, jp_close,

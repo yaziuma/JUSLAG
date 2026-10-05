@@ -249,6 +249,16 @@ def test_manual_strategy_capital_simulation_overrides_research_backtest_on_index
         "fixed_notional_yen": 1_000_000,
         "dates": ["2026-01-05"],
         "returns": [0.01],
+        "judge": {
+            "overall_score": 78,
+            "overall_decision": "pass",
+            "metrics_snapshot": {
+                "net_after_tax_ar_pct": 15.39,
+                "net_after_tax_rr": 1.08,
+                "net_after_tax_mdd_pct": -14.62,
+                "cost_drag_pct": 4.04,
+            },
+        },
     }
     out_dir = tmp_path / "site"
 
@@ -257,5 +267,7 @@ def test_manual_strategy_capital_simulation_overrides_research_backtest_on_index
     index_html = (out_dir / "index.html").read_text(encoding="utf-8")
     detail_html = (out_dir / "reports" / "2026-07-08.html").read_text(encoding="utf-8")
     assert "pca_sub_long_5d_manual_v2" in index_html
+    assert "78" in index_html
+    assert "15.39%" in index_html
     assert "売買コスト控除後・税引前リターン" in index_html
     assert "PCA SUB + rule_406_no_flip" in detail_html
