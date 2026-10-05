@@ -156,7 +156,7 @@ def test_production_v2_selects_top_20_percent_and_state_is_migrated() -> None:
         source_commit="a" * 40,
         valid_from=datetime(2026, 10, 2, 8, 50, tzinfo=ZoneInfo("Asia/Tokyo")),
     )
-    assert config["execution_intent"]["release_time_jst"] == "08:50"
+    assert config["execution_intent"]["release_time_jst"] == "08:42"
     assert intent["schema_version"] == 2
     assert "/" not in intent["intent_id"]
     assert intent["strategy_id"] == "pca_sub_long_5d_manual_v2"

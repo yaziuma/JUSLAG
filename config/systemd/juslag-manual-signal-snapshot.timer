@@ -2,9 +2,9 @@
 Description=Retry the lightweight JUSLAG signal snapshot before entry cutoff
 
 [Timer]
-OnCalendar=Mon..Fri *-*-* 08:35:00
-OnCalendar=Mon..Fri *-*-* 08:42:00
-OnCalendar=Mon..Fri *-*-* 08:48:00
+OnCalendar=Mon..Fri *-*-* 08:32:00
+OnCalendar=Mon..Fri *-*-* 08:36:00
+OnCalendar=Mon..Fri *-*-* 08:40:00
 AccuracySec=5s
 RandomizedDelaySec=0
 Persistent=false

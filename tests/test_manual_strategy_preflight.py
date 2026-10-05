@@ -119,7 +119,7 @@ def test_preflight_withholds_execution_intent_until_final_run(
 
     result = preflight.run_preflight(
         as_of="2026-10-02",
-        now=preflight.datetime.fromisoformat("2026-10-02T08:45:00+09:00"),
+        now=preflight.datetime.fromisoformat("2026-10-02T08:40:00+09:00"),
         ref="origin/main",
         config_path=config_path,
         state_path=state_path,
@@ -131,7 +131,7 @@ def test_preflight_withholds_execution_intent_until_final_run(
     )
 
     assert result["status"] == "READY"
-    assert result["execution_intent_pending_until_jst"] == "08:50"
+    assert result["execution_intent_pending_until_jst"] == "08:42"
     assert not intent_path.exists()
 
 

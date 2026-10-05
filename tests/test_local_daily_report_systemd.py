@@ -29,7 +29,7 @@ def test_lightweight_signal_snapshot_retries_close_to_cutoff() -> None:
     timer = (ROOT / "config/systemd/juslag-manual-signal-snapshot.timer").read_text(
         encoding="utf-8"
     )
-    for clock in ("08:35:00", "08:42:00", "08:48:00"):
+    for clock in ("08:32:00", "08:36:00", "08:40:00"):
         assert f"OnCalendar=Mon..Fri *-*-* {clock}" in timer
     service = (ROOT / "config/systemd/juslag-manual-signal-snapshot.service").read_text(
         encoding="utf-8"
