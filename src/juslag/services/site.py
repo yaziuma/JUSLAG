@@ -640,7 +640,7 @@ def _render_index(
         )
     else:
         order_gate_html = (
-            "<strong>本日の発注数量: 0口</strong><br>"
+            "<strong>本日の実発注: 0件</strong><br>"
             f'<span class="small">{_esc(decision_reason)}。以下は実行されなかった注文票です。</span>'
         )
 
