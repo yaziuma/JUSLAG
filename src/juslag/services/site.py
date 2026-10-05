@@ -515,31 +515,69 @@ def _render_index(
     history: list[dict],
     reports: list[dict],
     capital_simulation: dict | None = None,
+    operational: dict | None = None,
 ) -> str:
     rows = _index_rows(reports)
     latest_report = max(reports, key=lambda r: r.get("date") or "") if reports else {}
     latest_ds = latest_report.get("daily_signal") or {}
+    preflight = (operational or {}).get("preflight") or {}
+    operational_order = (operational or {}).get("order") or {}
+    operational_signal = ((operational or {}).get("signal") or {}).get("daily_signal") or {}
+    operational_intent = (operational or {}).get("intent") or {}
     manual_judge = (capital_simulation or {}).get("judge") or {}
     latest_judge = manual_judge or (latest_report.get("backtest") or {}).get("judge") or {}
     latest_plan = latest_ds.get("execution_plan") or {}
+    if operational_order:
+        latest_plan = {
+            "long": [
+                {
+                    "ticker": row.get("ticker"), "sector": row.get("sector"),
+                    "normalized_lots": row.get("quantity"),
+                    "normalized_purchase_jpy": row.get("estimated_notional_yen"),
+                }
+                for row in operational_order.get("orders", [])
+            ],
+            "short": [],
+        }
     latest_history = history[-1] if history else {}
     tradeable = bool(latest_ds.get("tradeable"))
     final_actionable = _final_actionable(latest_report)
     judge_decision = latest_judge.get("overall_decision")
-    legacy_decision_text = "候補あり" if final_actionable else "候補なし"
-    decision_text = "承認画面で確認"
-    decision_class = "execute"
-    operation_reason = "実運用v2の正本は08:50 preflight・注文票・承認画面"
-    if not tradeable:
-        decision_reason = _cls_label(latest_ds.get("no_trade_classification"))
-    elif judge_decision == "reject":
-        decision_reason = "注文候補は生成済み / モデル審査で却下"
-    elif _same_open_gap_assumption(latest_report):
-        decision_reason = "当日寄りgap判断後の同値約定が未検証 / 発注不可"
-    elif judge_decision == "pass":
-        decision_reason = "シグナル条件・モデル審査ともに通過"
+    if preflight:
+        expires_at = operational_intent.get("expires_at")
+        rendered_at = (operational or {}).get("rendered_at")
+        expired = bool(expires_at and rendered_at and rendered_at > expires_at)
+        final_actionable = (
+            preflight.get("status") == "READY"
+            and preflight.get("action") == "ENTRY"
+            and judge_decision == "pass"
+            and not expired
+        )
+        tradeable = preflight.get("status") == "READY"
+        if expired:
+            decision_text = "期限切れ"
+            decision_reason = "注文準備は完了したが08:55までに発注されず失効"
+        elif final_actionable:
+            decision_text = "発注準備完了"
+            decision_reason = "現行v2の審査とプリフライトを通過"
+        else:
+            decision_text = "停止"
+            decision_reason = f"プリフライト {preflight.get('status') or '-'}"
     else:
-        decision_reason = "注文候補は生成済み / モデル審査は要確認"
+        expired = False
+        decision_text = "発注候補" if final_actionable else "見送り"
+    decision_class = "execute" if final_actionable else "blocked"
+    if not preflight:
+        if not tradeable:
+            decision_reason = _cls_label(latest_ds.get("no_trade_classification"))
+        elif judge_decision == "reject":
+            decision_reason = "注文候補は生成済み / モデル審査で却下"
+        elif _same_open_gap_assumption(latest_report):
+            decision_reason = "当日寄りgap判断後の同値約定が未検証 / 発注不可"
+        elif judge_decision == "pass":
+            decision_reason = "シグナル条件・モデル審査ともに通過"
+        else:
+            decision_reason = "注文候補は生成済み / モデル審査は要確認"
     score = latest_judge.get("overall_score")
     score_pct = max(0, min(100, score)) if isinstance(score, (int, float)) else 0
     backtest = latest_report.get("backtest") or {}
@@ -549,10 +587,17 @@ def _render_index(
         else backtest.get("judge_strategy_name") or "PCA SUB"
     )
     params = backtest.get("params") or {}
+    if operational_signal:
+        params = operational_signal.get("signal_model") or params
+        params = {
+            **params,
+            "sample_start": (operational_signal.get("data_quality") or {}).get("sample_start"),
+            "sample_end": (operational_signal.get("data_quality") or {}).get("effective_end"),
+        }
     metrics = latest_judge.get("metrics_snapshot") or {}
     strategy = latest_ds.get("strategy_decision") or {}
     context = latest_ds.get("strategy_context") or {}
-    comparison_html = _backtest_comparison(latest_report)
+    comparison_html = "" if preflight else _backtest_comparison(latest_report)
     capital_report = (
         {"capital_simulation": capital_simulation}
         if capital_simulation
@@ -596,11 +641,20 @@ def _render_index(
     else:
         order_gate_html = (
             "<strong>本日の発注数量: 0口</strong><br>"
-            f'<span class="small">{_esc(decision_reason)}のため、以下は発注しない参考値です。</span>'
+            f'<span class="small">{_esc(decision_reason)}。以下は実行されなかった注文票です。</span>'
         )
 
     data_json = _json_embed({"rows": rows})
-    summary = latest_history.get("summary") or latest_report.get("slack_fallback_text") or "サマリーはありません。"
+    if preflight:
+        order_total = sum(row.get("estimated_notional_yen") or 0 for row in operational_order.get("orders", []))
+        summary = (
+            f"{preflight.get('as_of')} {preflight.get('strategy_id')}\n"
+            f"Judge {score}/100 {str(judge_decision).upper()} / Preflight {preflight.get('status')}\n"
+            f"注文票 {len(operational_order.get('orders', []))}銘柄・{order_total:,}円\n"
+            f"運用結果: {decision_text} — {decision_reason}"
+        )
+    else:
+        summary = latest_history.get("summary") or latest_report.get("slack_fallback_text") or "サマリーはありません。"
     report_href = f'reports/{_esc(latest_report.get("date"))}.html' if latest_report else "#"
 
     body = f"""
@@ -648,19 +702,19 @@ function dashboard() {{
     <div class="surface-card decision-band {decision_class} p-3 p-md-4 mb-3">
       <div class="row align-items-center g-3">
         <div class="col-md-5">
-          <div class="section-label mb-2">実運用判断</div>
+          <div class="section-label mb-2">最終運用判断</div>
           <div class="d-flex align-items-center gap-3">
             <div class="decision-word">{decision_text}</div>
-            <span class="text-muted-soft">{_esc(operation_reason)}</span>
+            <span class="text-muted-soft">{_esc(decision_reason)}</span>
           </div>
         </div>
         <div class="col-6 col-md-2">
-          <div class="section-label mb-1">運用戦略</div>
-          <div class="metric-value fs-6">v2</div>
+          <div class="section-label mb-1">Judge</div>
+          <div class="metric-value">{_esc(score if score is not None else "-")}<small class="fs-6 text-muted-soft"> / 100</small></div>
         </div>
         <div class="col-6 col-md-2">
-          <div class="section-label mb-1">旧日次方式</div>
-          <div class="metric-value fs-6">{_esc(legacy_decision_text)}</div>
+          <div class="section-label mb-1">モデル審査</div>
+          <div class="metric-value fs-5">{_esc((judge_decision or "-").upper())}</div>
         </div>
         <div class="col-md-3 text-md-end">
           <a class="btn btn-sm btn-outline-light" href="{report_href}">詳細レポート</a>
@@ -670,41 +724,41 @@ function dashboard() {{
 
     <div class="explain-grid mb-3">
       <div class="explain-panel">
-        <div class="section-label mb-3">1. 旧方式の算定条件（発注には不使用）</div>
+        <div class="section-label mb-3">1. モデル作成条件</div>
         <div class="fact-list small">
           <div class="fact-row"><span class="text-muted-soft">モデル</span><strong>部分空間正則化PCA</strong></div>
           <div class="fact-row"><span class="text-muted-soft">標本期間</span><strong>{_esc(params.get("sample_start") or "-")} ～ { _esc(params.get("sample_end") or "-")}</strong></div>
           <div class="fact-row"><span class="text-muted-soft">学習窓</span><strong>{_esc(params.get("window_l") or "-")}営業日</strong></div>
           <div class="fact-row"><span class="text-muted-soft">因子数 / 正則化</span><strong>{_esc(params.get("k_factors") or "-")} / {_esc(params.get("lambda_reg") or "-")}</strong></div>
-          <div class="fact-row"><span class="text-muted-soft">選別</span><strong>上下{_percent((params.get("quantile_q") or 0) * 100, 0)}</strong></div>
+          <div class="fact-row"><span class="text-muted-soft">選別</span><strong>上位{_percent((params.get("selection_quantile", params.get("quantile_q", 0))) * 100, 0)}・現物ロング</strong></div>
         </div>
       </div>
       <div class="explain-panel">
-        <div class="section-label mb-3">2. 旧方式の当日判定（発注には不使用）</div>
+        <div class="section-label mb-3">2. 当日シグナル判定</div>
         <div class="fact-list small">
-          <div class="fact-row"><span class="text-muted-soft">適用ルール</span><strong>{_esc(strategy.get("rule_id") or "-")}</strong></div>
-          <div class="fact-row"><span class="text-muted-soft">寄りgap</span><strong>{_percent(context["open_gap"] * 100) if context.get("open_gap") is not None else "未観測"} / 上限1.50%</strong></div>
-          <div class="fact-row"><span class="text-muted-soft">Rotation</span><strong>{_esc(context.get("rotation_regime") or "-")} / weak以外</strong></div>
-          <div class="fact-row"><span class="text-muted-soft">ルール結果</span><strong>{_esc((strategy.get("action") or "-").upper())}</strong></div>
-          <div class="fact-row"><span class="text-muted-soft">対象日</span><strong>{_esc(latest_ds.get("execution_target_jp_date") or "-")}</strong></div>
+          <div class="fact-row"><span class="text-muted-soft">戦略</span><strong>{_esc(preflight.get("strategy_id") or strategy.get("rule_id") or "-")}</strong></div>
+          <div class="fact-row"><span class="text-muted-soft">プリフライト</span><strong>{_esc(preflight.get("status") or "-")}</strong></div>
+          <div class="fact-row"><span class="text-muted-soft">注文</span><strong>{_esc(operational_order.get("action") or (strategy.get("action") or "-").upper())}</strong></div>
+          <div class="fact-row"><span class="text-muted-soft">保有期限</span><strong>{_esc(operational_order.get("planned_exit_date") or "-")}</strong></div>
+          <div class="fact-row"><span class="text-muted-soft">対象日</span><strong>{_esc(preflight.get("as_of") or latest_ds.get("execution_target_jp_date") or "-")}</strong></div>
         </div>
       </div>
       <div class="explain-panel">
-        <div class="section-label mb-3">3. 旧方式の評価（発注には不使用）</div>
+        <div class="section-label mb-3">3. モデル審査基準</div>
         <div class="fact-list small">
           <div class="fact-row"><span class="text-muted-soft">審査対象</span><strong>{_esc(judge_strategy_name)}</strong></div>
           <div class="fact-row"><span class="text-muted-soft">税引後年率 ≥ 3%</span><strong>{_percent(metrics.get("net_after_tax_ar_pct"))}</strong></div>
           <div class="fact-row"><span class="text-muted-soft">R/R ≥ 0.30</span><strong>{_esc(metrics.get("net_after_tax_rr") if metrics.get("net_after_tax_rr") is not None else "-")}</strong></div>
           <div class="fact-row"><span class="text-muted-soft">MDD ≥ -25%</span><strong>{_percent(metrics.get("net_after_tax_mdd_pct"))}</strong></div>
           <div class="fact-row"><span class="text-muted-soft">コスト低下幅 &lt; 3%</span><strong>{_percent(metrics.get("cost_drag_pct"))}</strong></div>
-          <div class="fact-row"><span class="text-muted-soft">旧評価結果</span><strong>{_esc((judge_decision or "-").upper())}</strong></div>
+          <div class="fact-row"><span class="text-muted-soft">審査結果</span><strong>{_esc((judge_decision or "-").upper())}</strong></div>
         </div>
       </div>
     </div>
 
     <div class="surface-card p-3 p-md-4 mb-3">
       <div class="d-flex justify-content-between align-items-end mb-3 gap-3">
-        <div><div class="section-label mb-1">旧方式の参考値</div><h2 class="h6 text-heading mb-0">実運用v2の発注には使用しません</h2></div>
+        <div><div class="section-label mb-1">当日注文票</div><h2 class="h6 text-heading mb-0">現行v2の発注内容</h2></div>
         <span class="text-muted-soft small">基準価格ベース</span>
       </div>
       <div class="warning-note mb-3">{order_gate_html}</div>
@@ -1026,11 +1080,12 @@ def render_site(
     out_dir: Path,
     *,
     capital_simulation: dict | None = None,
+    operational: dict | None = None,
 ) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "reports").mkdir(exist_ok=True)
     (out_dir / "index.html").write_text(
-        _render_index(history, reports, capital_simulation), encoding="utf-8"
+        _render_index(history, reports, capital_simulation, operational), encoding="utf-8"
     )
     for report in reports:
         date = report.get("date")

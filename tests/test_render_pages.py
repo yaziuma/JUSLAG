@@ -179,15 +179,12 @@ def test_render_site_produces_index_and_report_pages(tmp_path: Path) -> None:
     assert "候補なし" in index_html
 
     # 運用ダッシュボード（本日・履歴・分析）と履歴の段階表示
-    assert "実運用判断" in index_html
-    assert "承認画面で確認" in index_html
-    assert "実運用v2の正本は08:50 preflight・注文票・承認画面" in index_html
-    assert "旧方式の算定条件（発注には不使用）" in index_html
-    assert "旧方式の当日判定（発注には不使用）" in index_html
-    assert "旧方式の評価（発注には不使用）" in index_html
+    assert "最終運用判断" in index_html
+    assert "モデル作成条件" in index_html
+    assert "当日シグナル判定" in index_html
+    assert "モデル審査基準" in index_html
     assert "PCA SUB + rule_406_no_flip" in index_html
-    assert "旧方式の参考値" in index_html
-    assert "実運用v2の発注には使用しません" in index_html
+    assert "当日注文票" in index_html
     assert "tab === 'today'" in index_html
     assert "tab === 'history'" in index_html
     assert "tab === 'analysis'" in index_html
@@ -271,3 +268,29 @@ def test_manual_strategy_capital_simulation_overrides_research_backtest_on_index
     assert "15.39%" in index_html
     assert "売買コスト控除後・税引前リターン" in index_html
     assert "PCA SUB + rule_406_no_flip" in detail_html
+
+
+def test_operational_snapshot_replaces_legacy_decision_on_index(tmp_path: Path) -> None:
+    reports_dir = tmp_path / "reports"
+    reports_dir.mkdir()
+    _write_report(reports_dir, "2026-10-05", False)
+    capital = {
+        "strategy_name": "pca_sub_long_5d_manual_v2",
+        "dates": ["2026-10-05"], "returns": [0.01],
+        "judge": {"overall_score": 78, "overall_decision": "pass", "metrics_snapshot": {}},
+    }
+    operational = {
+        "rendered_at": "2026-10-05T16:00:00+09:00",
+        "preflight": {"strategy_id": "pca_sub_long_5d_manual_v2", "as_of": "2026-10-05", "status": "READY", "action": "ENTRY"},
+        "intent": {"expires_at": "2026-10-05T08:55:00+09:00"},
+        "signal": {"daily_signal": {"signal_model": {"window_l": 60, "k_factors": 3, "lambda_reg": 0.9, "selection_quantile": 0.2}}},
+        "order": {"action": "ENTRY", "planned_exit_date": "2026-10-09", "orders": [{"ticker": "1621.T", "sector": "医薬品", "quantity": 7, "estimated_notional_yen": 206360}]},
+    }
+    out = tmp_path / "site"
+    render_site([], load_reports(reports_dir), out, capital_simulation=capital, operational=operational)
+    html = (out / "index.html").read_text()
+    assert "期限切れ" in html
+    assert "注文準備は完了したが08:55までに発注されず失効" in html
+    assert "上位20%・現物ロング" in html
+    assert "1621.T 医薬品" in html
+    assert "戦略ルール見送り（候補あり）のため" not in html
