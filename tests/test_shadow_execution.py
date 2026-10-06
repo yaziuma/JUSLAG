@@ -51,3 +51,48 @@ def test_evaluates_only_fully_settled_order_sheets(tmp_path: Path) -> None:
         "net_pnl_yen": 989.5,
         "win_rate_pct": 100.0,
     }
+    assert len(result["open_batches"]) == 1
+    assert result["open_batches"][0]["valued_at"] == "2026-10-02"
+
+
+def test_marks_open_sheet_at_latest_common_close(tmp_path: Path) -> None:
+    raw = tmp_path / "raw" / "2026-10-06"
+    orders = tmp_path / "manual_strategy" / "orders"
+    raw.mkdir(parents=True)
+    orders.mkdir(parents=True)
+    (raw / "prices_tail_raw.csv").write_text(
+        "ticker,date,open,close\n"
+        "1301.T,2026-10-02,100,101\n"
+        "1302.T,2026-10-02,200,201\n"
+        "1301.T,2026-10-05,105,106\n"
+        "1302.T,2026-10-05,202,203\n"
+        "1301.T,2026-10-06,106,110\n",
+        encoding="utf-8",
+    )
+    (orders / "2026-10-02-entry.json").write_text(
+        json.dumps(
+            {
+                "strategy_id": "current-v2",
+                "entry_date": "2026-10-02",
+                "planned_exit_date": "2026-10-08",
+                "orders": [
+                    {"ticker": "1301.T", "quantity": 10},
+                    {"ticker": "1302.T", "quantity": 5},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = evaluate_shadow_orders(tmp_path)
+
+    assert result["batches"] == []
+    assert len(result["open_batches"]) == 1
+    batch = result["open_batches"][0]
+    assert batch["valued_at"] == "2026-10-05"
+    assert batch["unrealized_net_pnl_yen"] == 72.96
+    assert result["open_by_strategy"]["current-v2"] == {
+        "open_batches": 1,
+        "unrealized_net_pnl_yen": 72.96,
+        "latest_valued_at": "2026-10-05",
+    }

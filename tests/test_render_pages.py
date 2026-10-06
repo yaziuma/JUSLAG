@@ -303,6 +303,13 @@ def test_operational_snapshot_replaces_legacy_decision_on_index(tmp_path: Path) 
                     "win_rate_pct": 50.0,
                 }
             },
+            "open_by_strategy": {
+                "pca_sub_long_5d_manual_v2": {
+                    "open_batches": 1,
+                    "unrealized_net_pnl_yen": -321.0,
+                    "latest_valued_at": "2026-10-06",
+                }
+            },
             "disclaimer": "実発注・実約定ではない。",
         },
     )
@@ -313,5 +320,6 @@ def test_operational_snapshot_replaces_legacy_decision_on_index(tmp_path: Path) 
     assert "1621.T 医薬品" in html
     assert "実運用シャドー実績" in html
     assert "¥1,234" in html
+    assert "未決済shadow（2026-10-06終値）: 1バッチ / 含み損益 ¥-321" in html
     assert "実発注・実約定ではない。" in html
     assert "戦略ルール見送り（候補あり）のため" not in html

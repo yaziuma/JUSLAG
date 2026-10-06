@@ -615,11 +615,18 @@ def _render_index(
     )
     settled = shadow_summary.get("settled_batches") or 0
     shadow_pnl = shadow_summary.get("net_pnl_yen") or 0
+    open_shadow_summary = (shadow.get("open_by_strategy") or {}).get(
+        preflight.get("strategy_id") or judge_strategy_name, {}
+    )
+    open_count = open_shadow_summary.get("open_batches") or 0
+    unrealized_pnl = open_shadow_summary.get("unrealized_net_pnl_yen") or 0
+    valued_at = open_shadow_summary.get("latest_valued_at") or "-"
     shadow_card = f"""
     <div class="surface-card p-3 p-md-4 mb-3">
       <div class="section-label mb-2">実運用シャドー実績</div>
       <div class="metric-value mb-2">{_money(shadow_pnl)}</div>
       <p class="mb-1">現行戦略の確定済み注文票: {settled}バッチ / 勝率 {_percent(shadow_summary.get('win_rate_pct'))}</p>
+      <p class="mb-1">未決済shadow（{_esc(valued_at)}終値）: {open_count}バッチ / 含み損益 {_money(unrealized_pnl)}</p>
       <p class="small text-muted-soft mb-0">{_esc(shadow.get('disclaimer') or '確定データなし')}</p>
     </div>
     """
