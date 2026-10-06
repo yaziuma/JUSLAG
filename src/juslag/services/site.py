@@ -517,6 +517,7 @@ def _render_index(
     reports: list[dict],
     capital_simulation: dict | None = None,
     operational: dict | None = None,
+    shadow_execution: dict | None = None,
 ) -> str:
     rows = _index_rows(reports)
     latest_report = max(reports, key=lambda r: r.get("date") or "") if reports else {}
@@ -608,6 +609,20 @@ def _render_index(
         else latest_report
     )
     capital_simulation_html = _capital_simulation_card(capital_report)
+    shadow = shadow_execution or {}
+    shadow_summary = (shadow.get("by_strategy") or {}).get(
+        preflight.get("strategy_id") or judge_strategy_name, {}
+    )
+    settled = shadow_summary.get("settled_batches") or 0
+    shadow_pnl = shadow_summary.get("net_pnl_yen") or 0
+    shadow_card = f"""
+    <div class="surface-card p-3 p-md-4 mb-3">
+      <div class="section-label mb-2">実運用シャドー実績</div>
+      <div class="metric-value mb-2">{_money(shadow_pnl)}</div>
+      <p class="mb-1">現行戦略の確定済み注文票: {settled}バッチ / 勝率 {_percent(shadow_summary.get('win_rate_pct'))}</p>
+      <p class="small text-muted-soft mb-0">{_esc(shadow.get('disclaimer') or '確定データなし')}</p>
+    </div>
+    """
 
     def order_items(entries: list[dict] | None, side: str) -> str:
         if not entries:
@@ -769,6 +784,8 @@ function dashboard() {{
       <div class="order-list">{orders_html or '<p class="text-muted-soft py-3 mb-0">注文候補はありません。</p>'}</div>
       <p class="small text-muted-soft mt-3 mb-0">数量は均等化した参考口数、金額は直近価格 × 口数の概算です。実注文前に売買単位、価格、信用売建可否、余力を証券会社画面で確認してください。</p>
     </div>
+
+    {shadow_card}
 
     <div class="surface-card p-3 p-md-4">
       <div class="d-flex justify-content-between align-items-center mb-3">
@@ -1085,11 +1102,12 @@ def render_site(
     *,
     capital_simulation: dict | None = None,
     operational: dict | None = None,
+    shadow_execution: dict | None = None,
 ) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "reports").mkdir(exist_ok=True)
     (out_dir / "index.html").write_text(
-        _render_index(history, reports, capital_simulation, operational), encoding="utf-8"
+        _render_index(history, reports, capital_simulation, operational, shadow_execution), encoding="utf-8"
     )
     for report in reports:
         date = report.get("date")

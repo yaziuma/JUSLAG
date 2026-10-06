@@ -288,10 +288,30 @@ def test_operational_snapshot_replaces_legacy_decision_on_index(tmp_path: Path) 
         "order": {"action": "ENTRY", "planned_exit_date": "2026-10-09", "orders": [{"ticker": "1621.T", "sector": "医薬品", "quantity": 7, "estimated_notional_yen": 206360}]},
     }
     out = tmp_path / "site"
-    render_site([], load_reports(reports_dir), out, capital_simulation=capital, operational=operational)
+    render_site(
+        [],
+        load_reports(reports_dir),
+        out,
+        capital_simulation=capital,
+        operational=operational,
+        shadow_execution={
+            "by_strategy": {
+                "pca_sub_long_5d_manual_v2": {
+                    "settled_batches": 2,
+                    "wins": 1,
+                    "net_pnl_yen": 1234.5,
+                    "win_rate_pct": 50.0,
+                }
+            },
+            "disclaimer": "実発注・実約定ではない。",
+        },
+    )
     html = (out / "index.html").read_text()
     assert "期限切れ" in html
     assert "注文準備は完了したが08:55までに発注されず失効" in html
     assert "上位20%・現物ロング" in html
     assert "1621.T 医薬品" in html
+    assert "実運用シャドー実績" in html
+    assert "¥1,234" in html
+    assert "実発注・実約定ではない。" in html
     assert "戦略ルール見送り（候補あり）のため" not in html

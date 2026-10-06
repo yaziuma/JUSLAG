@@ -147,7 +147,7 @@ def run_preflight(
     status_path: Path,
     intent_output_path: Path | None = None,
     local_reports_dir: Path = Path("data/reports"),
-    signal_reports_dir: Path = Path("data/manual_strategy/signals"),
+    signal_reports_dir: Path | None = None,
 ) -> dict:
     config = load_manual_config(config_path)
     intent_release = time.fromisoformat(config["execution_intent"]["release_time_jst"])
@@ -171,10 +171,14 @@ def run_preflight(
             (*row, "local")
             for row in _candidate_local_reports(local_reports_dir, as_of, deadline)
         ]
-        signal_candidates = [
-            (*row, "local_signal")
-            for row in _candidate_local_reports(signal_reports_dir, as_of, deadline)
-        ]
+        signal_candidates = (
+            [
+                (*row, "local_signal")
+                for row in _candidate_local_reports(signal_reports_dir, as_of, deadline)
+            ]
+            if signal_reports_dir is not None
+            else []
+        )
         candidates = remote_candidates + local_candidates + signal_candidates
         candidates = [row for row in candidates if _matches_signal_model(row[2], config)]
         if not candidates:

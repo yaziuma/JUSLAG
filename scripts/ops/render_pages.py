@@ -12,6 +12,7 @@ from datetime import datetime
 from pathlib import Path
 
 from juslag.services.site import load_history, load_reports, render_site
+from juslag.shadow_execution import evaluate_shadow_orders
 
 
 def main() -> None:
@@ -46,6 +47,7 @@ def main() -> None:
         history, reports, args.out,
         capital_simulation=capital_simulation,
         operational=operational,
+        shadow_execution=evaluate_shadow_orders(args.data_dir),
     )
     print(f"rendered {len(reports)} report(s) -> {args.out}")
 
