@@ -596,7 +596,6 @@ def _render_index(
         }
     metrics = latest_judge.get("metrics_snapshot") or {}
     strategy = latest_ds.get("strategy_decision") or {}
-    context = latest_ds.get("strategy_context") or {}
     comparison_html = "" if preflight else _backtest_comparison(latest_report)
     capital_report = (
         {"capital_simulation": capital_simulation}
