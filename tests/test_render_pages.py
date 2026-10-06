@@ -280,7 +280,8 @@ def test_operational_snapshot_replaces_legacy_decision_on_index(tmp_path: Path) 
         "judge": {"overall_score": 78, "overall_decision": "pass", "metrics_snapshot": {}},
     }
     operational = {
-        "rendered_at": "2026-10-05T16:00:00+09:00",
+        # GitHub Actions renders in UTC; compare instants rather than ISO strings.
+        "rendered_at": "2026-10-05T07:00:00+00:00",
         "preflight": {"strategy_id": "pca_sub_long_5d_manual_v2", "as_of": "2026-10-05", "status": "READY", "action": "ENTRY"},
         "intent": {"expires_at": "2026-10-05T08:55:00+09:00"},
         "signal": {"daily_signal": {"signal_model": {"window_l": 60, "k_factors": 3, "lambda_reg": 0.9, "selection_quantile": 0.2}}},

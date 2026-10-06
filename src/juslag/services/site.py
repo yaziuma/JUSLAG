@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import html
 import json
+from datetime import datetime
 from pathlib import Path
 
 _CLS_LABELS = {
@@ -546,7 +547,11 @@ def _render_index(
     if preflight:
         expires_at = operational_intent.get("expires_at")
         rendered_at = (operational or {}).get("rendered_at")
-        expired = bool(expires_at and rendered_at and rendered_at > expires_at)
+        expired = bool(
+            expires_at
+            and rendered_at
+            and datetime.fromisoformat(rendered_at) > datetime.fromisoformat(expires_at)
+        )
         final_actionable = (
             preflight.get("status") == "READY"
             and preflight.get("action") == "ENTRY"
