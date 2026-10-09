@@ -270,6 +270,22 @@ def test_manual_strategy_capital_simulation_overrides_research_backtest_on_index
     assert "PCA SUB + rule_406_no_flip" in detail_html
 
 
+def test_old_operational_snapshot_cannot_override_new_report(tmp_path: Path) -> None:
+    reports_dir = tmp_path / "reports"
+    reports_dir.mkdir()
+    _write_report(reports_dir, "2026-10-09", False)
+    out = tmp_path / "site"
+    render_site([], load_reports(reports_dir), out, operational={
+        "preflight": {"as_of": "2026-10-06", "status": "READY", "action": "ENTRY"},
+        "order": {"orders": [{"ticker": "STALE-TICKER", "quantity": 100}]},
+    })
+    html = (out / "index.html").read_text()
+    assert "運用データ未更新" in html
+    assert "最新レポート 2026-10-09 / 運用データは 2026-10-06 で停止" in html
+    assert "STALE-TICKER" not in html
+    assert "reports/2026-10-09.html" in html
+
+
 def test_operational_snapshot_replaces_legacy_decision_on_index(tmp_path: Path) -> None:
     reports_dir = tmp_path / "reports"
     reports_dir.mkdir()

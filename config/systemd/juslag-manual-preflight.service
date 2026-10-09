@@ -8,6 +8,7 @@ Type=oneshot
 WorkingDirectory=%h/projects/JUSLAG
 Environment=PYTHONPATH=src
 ExecStart=%h/projects/JUSLAG/.venv/bin/python scripts/ops/manual_strategy_preflight.py --fetch
+ExecStartPost=%h/projects/JUSLAG/.venv/bin/python scripts/ops/publish_operational_pages.py
 TimeoutStartSec=10min
 
 [Install]

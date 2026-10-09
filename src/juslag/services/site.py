@@ -526,6 +526,13 @@ def _render_index(
     operational_order = (operational or {}).get("order") or {}
     operational_signal = ((operational or {}).get("signal") or {}).get("daily_signal") or {}
     operational_intent = (operational or {}).get("intent") or {}
+    stale_operational = bool(
+        preflight.get("as_of") and latest_report.get("date")
+        and preflight["as_of"] < latest_report["date"]
+    )
+    stale_date = preflight.get("as_of")
+    if stale_operational:
+        preflight, operational_order, operational_signal, operational_intent = {}, {}, {}, {}
     manual_judge = (capital_simulation or {}).get("judge") or {}
     latest_judge = manual_judge or (latest_report.get("backtest") or {}).get("judge") or {}
     latest_plan = latest_ds.get("execution_plan") or {}
@@ -585,6 +592,12 @@ def _render_index(
         else:
             decision_reason = "注文候補は生成済み / モデル審査は要確認"
     score = latest_judge.get("overall_score")
+    if stale_operational:
+        final_actionable = False
+        decision_class = "blocked"
+        decision_text = "運用データ未更新"
+        decision_reason = f"最新レポート {latest_report['date']} / 運用データは {stale_date} で停止"
+        latest_plan = {}
     score_pct = max(0, min(100, score)) if isinstance(score, (int, float)) else 0
     backtest = latest_report.get("backtest") or {}
     judge_strategy_name = (
@@ -714,7 +727,7 @@ function dashboard() {{
       <h1 class="h4 text-heading mb-0">日次運用</h1>
     </div>
     <div class="text-end small text-muted-soft">
-      <div>最終更新</div><strong class="text-heading">{_esc(latest_report.get("date") or "-")}</strong>
+      <div>対象日</div><strong class="text-heading">{_esc(preflight.get("as_of") or latest_report.get("date") or "-")}</strong>
     </div>
   </div>
 
