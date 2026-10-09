@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "strategy_id": "pca_sub_long_5d_manual_v2",
+  "as_of": "2026-10-09",
+  "action": "ENTRY",
+  "signal_reference_us_date": "2026-10-08 00:00:00",
+  "entry_date": "2026-10-09",
+  "planned_exit_date": "2026-10-16",
+  "capital_yen": 1000000,
+  "deployment_fraction": 0.9,
+  "entry_order_deadline_jst": "08:55",
+  "exit_order_deadline_jst": "15:20",
+  "orders": [
+    {
+      "stock_code": "1625",
+      "ticker": "1625.T",
+      "sector": "電機・精密",
+      "signal": 0.2506668338400812,
+      "quantity": 3,
+      "sizing_price_yen": 68040.0,
+      "estimated_notional_yen": 204120,
+      "order_kind": "genbutsu_buy",
+      "condition": "寄成"
+    },
+    {
+      "stock_code": "1631",
+      "ticker": "1631.T",
+      "sector": "銀行",
+      "signal": 0.2203616716429252,
+      "quantity": 5,
+      "sizing_price_yen": 40890.0,
+      "estimated_notional_yen": 204450,
+      "order_kind": "genbutsu_buy",
+      "condition": "寄成"
+    },
+    {
+      "stock_code": "1618",
+      "ticker": "1618.T",
+      "sector": "エネルギー資源",
+      "signal": 0.20119881529642655,
+      "quantity": 6,
+      "sizing_price_yen": 34930.0,
+      "estimated_notional_yen": 209580,
+      "order_kind": "genbutsu_buy",
+      "condition": "寄成"
+    },
+    {
+      "stock_code": "1629",
+      "ticker": "1629.T",
+      "sector": "商社・卸売",
+      "signal": 0.19830823265633846,
+      "quantity": 840,
+      "sizing_price_yen": 267.5,
+      "estimated_notional_yen": 224700,
+      "order_kind": "genbutsu_buy",
+      "condition": "寄成"
+    }
+  ],
+  "manual_checks": [
+    "SBI画面で銘柄・数量・寄成を照合",
+    "全注文の受付番号と受付時刻を保存",
+    "約定後に実数量・価格を台帳へ記録",
+    "planned_exit_dateの引成注文を当日手動発注"
+  ],
+  "preflight": {
+    "status": "READY",
+    "checked_at_jst": "2026-10-09T08:42:02.409905+09:00",
+    "source_kind": "local_signal",
+    "source_ref": "local",
+    "source_commit": "7a9862c860b35e3538bfed8029dd6a833ef335af",
+    "source_report": "data/manual_strategy/signals/2026-10-09.json",
+    "source_report_sha256": "c62d4e68fd68c6d830606d033362d7b32ab2d8f28adeb300e9233d9ac6964337",
+    "source_prices_sha256": "54794f94c069e68b3a281e92c2e67c1377b8e744363aff2eb951dbc192d3dc5b",
+    "source_report_generated_at_utc": "2026-10-08T23:40:19.568210+00:00"
+  },
+  "sheet_sha256": "14520828bf4bd6887ea6a1c8ca87dec9108e940ba5a769838e6e52d93cc17f12"
+}

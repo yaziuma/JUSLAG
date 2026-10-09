@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "strategy_id": "pca_sub_long_5d_manual_v1",
+  "as_of": "2026-09-29",
+  "checked_at_jst": "2026-09-29T08:50:07.973468+09:00",
+  "status": "BLOCKED",
+  "reason": "no fresh pre-open report targets this JPX session"
+}
