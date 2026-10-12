@@ -64,14 +64,14 @@
   ],
   "preflight": {
     "status": "READY",
-    "checked_at_jst": "2026-10-13T08:30:02.617136+09:00",
-    "source_kind": "local",
+    "checked_at_jst": "2026-10-13T08:42:02.254930+09:00",
+    "source_kind": "local_signal",
     "source_ref": "local",
     "source_commit": "046c5356db8544118262da1c23a92f1c7744fb6a",
-    "source_report": "data/reports/2026-10-13.json",
-    "source_report_sha256": "f3c33e701a44cfe9d348a3c473a7fd684dc4e8ae22627e9657f04dc7a5202cef",
-    "source_prices_sha256": null,
-    "source_report_generated_at_utc": "2026-10-12T23:03:40.430982+00:00"
+    "source_report": "data/manual_strategy/signals/2026-10-13.json",
+    "source_report_sha256": "bff9f10c8e4421cf81f1891fd0a21a0cc91f9dba5e5cc9996c3cff58d05168cc",
+    "source_prices_sha256": "2009bdc51f9a678072f04707198292c682b8eb909530c56039cdce14b828443f",
+    "source_report_generated_at_utc": "2026-10-12T23:40:22.110016+00:00"
   },
-  "sheet_sha256": "12ab171d81f335e2be409dd0259479b2d1f1ccb178529cbd1a0f7c2687a6d5c6"
+  "sheet_sha256": "7562c0f03659c6f925ad9d21044931a44b449db1b3e18f23e1c21e573f7cdec0"
 }
