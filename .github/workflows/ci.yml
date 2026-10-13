@@ -17,6 +17,8 @@ jobs:
   test:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/juslag-playwright
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
@@ -29,6 +31,9 @@ jobs:
 
       - name: Lint Python files
         run: uv run --frozen --extra dev ruff check src scripts tests
+
+      - name: Install browser for deadline UI test
+        run: uv run --frozen --extra dev playwright install --with-deps chromium
 
       - name: Run hermetic test suite
         env:

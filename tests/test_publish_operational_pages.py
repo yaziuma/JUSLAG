@@ -1,8 +1,12 @@
 import json
+import runpy
+from pathlib import Path
 
 import pytest
 
-from scripts.ops.publish_operational_pages import snapshots
+snapshots = runpy.run_path(
+    str(Path(__file__).resolve().parents[1] / "scripts/ops/publish_operational_pages.py")
+)["snapshots"]
 
 
 def test_publication_bundle_requires_matching_ready_dependencies(tmp_path):
