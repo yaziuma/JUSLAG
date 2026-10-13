@@ -331,7 +331,7 @@ def test_operational_snapshot_replaces_legacy_decision_on_index(tmp_path: Path) 
     )
     html = (out / "index.html").read_text()
     assert "期限切れ" in html
-    assert "注文準備は完了したが08:55までに発注されず失効" in html
+    assert "注文intentの有効期限を過ぎているため、新規発注には使用できません" in html
     assert "上位20%・現物ロング" in html
     assert "1621.T 医薬品" in html
     assert "実運用シャドー実績" in html

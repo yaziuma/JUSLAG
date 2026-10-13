@@ -552,6 +552,7 @@ def _render_index(
     tradeable = bool(latest_ds.get("tradeable"))
     final_actionable = _final_actionable(latest_report)
     judge_decision = latest_judge.get("overall_decision")
+    expiry_reason = "注文intentの有効期限を過ぎているため、新規発注には使用できません"
     if preflight:
         expires_at = operational_intent.get("expires_at")
         rendered_at = (operational or {}).get("rendered_at")
@@ -564,12 +565,13 @@ def _render_index(
             preflight.get("status") == "READY"
             and preflight.get("action") == "ENTRY"
             and judge_decision == "pass"
+            and bool(expires_at)
             and not expired
         )
         tradeable = preflight.get("status") == "READY"
         if expired:
             decision_text = "期限切れ"
-            decision_reason = "注文準備は完了したが08:55までに発注されず失効"
+            decision_reason = expiry_reason
         elif final_actionable:
             decision_text = "発注準備完了"
             decision_reason = "現行v2の審査とプリフライトを通過"
@@ -677,13 +679,25 @@ def _render_index(
             f"<strong>発注候補: 合計{candidate_quantity:,}口</strong><br>"
             '<span class="small">モデル審査まで通過。執行前チェック後に注文します。</span>'
         )
+    elif expired:
+        order_gate_html = (
+            "<strong>この注文intentは期限切れです</strong><br>"
+            f'<span class="small">{_esc(expiry_reason)}。注文票は参照用です。</span>'
+        )
     else:
         order_gate_html = (
             "<strong>本日の実発注: 0件</strong><br>"
             f'<span class="small">{_esc(decision_reason)}。以下は実行されなかった注文票です。</span>'
         )
 
-    data_json = _json_embed({"rows": rows})
+    data_json = _json_embed({
+        "rows": rows,
+        "watch_order_expiry": bool(preflight.get("status") == "READY"
+                                   and preflight.get("action") == "ENTRY"
+                                   and judge_decision == "pass"),
+        "order_expires_at": operational_intent.get("expires_at"),
+        "expiry_reason": expiry_reason,
+    })
     if preflight:
         order_total = sum(row.get("estimated_notional_yen") or 0 for row in operational_order.get("orders", []))
         summary = (
@@ -738,13 +752,13 @@ function dashboard() {{
   </div>
 
   <section x-show="tab === 'today'" x-cloak>
-    <div class="surface-card decision-band {decision_class} p-3 p-md-4 mb-3">
+    <div id="operation-decision" class="surface-card decision-band {decision_class} p-3 p-md-4 mb-3">
       <div class="row align-items-center g-3">
         <div class="col-md-5">
           <div class="section-label mb-2">最終運用判断</div>
           <div class="d-flex align-items-center gap-3">
-            <div class="decision-word">{decision_text}</div>
-            <span class="text-muted-soft">{_esc(decision_reason)}</span>
+            <div id="operation-decision-word" class="decision-word">{decision_text}</div>
+            <span id="operation-decision-reason" class="text-muted-soft">{_esc(decision_reason)}</span>
           </div>
         </div>
         <div class="col-6 col-md-2">
@@ -800,7 +814,7 @@ function dashboard() {{
         <div><div class="section-label mb-1">当日注文票</div><h2 class="h6 text-heading mb-0">現行v2の発注内容</h2></div>
         <span class="text-muted-soft small">基準価格ベース</span>
       </div>
-      <div class="warning-note mb-3">{order_gate_html}</div>
+      <div id="operation-order-gate" class="warning-note mb-3">{order_gate_html}</div>
       <div class="order-list">{orders_html or '<p class="text-muted-soft py-3 mb-0">注文候補はありません。</p>'}</div>
       <p class="small text-muted-soft mt-3 mb-0">数量は均等化した参考口数、金額は直近価格 × 口数の概算です。実注文前に売買単位、価格、信用売建可否、余力を証券会社画面で確認してください。</p>
     </div>
@@ -812,7 +826,7 @@ function dashboard() {{
         <div class="section-label">Latest summary</div>
         <span class="small text-muted-soft">LLM: {_esc(latest_history.get("llm_status") or "-")}</span>
       </div>
-      <div class="summary-viewport"><pre class="summary">{_esc(summary)}</pre></div>
+      <div class="summary-viewport"><pre id="operation-summary" class="summary">{_esc(summary)}</pre></div>
     </div>
   </section>
 
@@ -874,6 +888,40 @@ function dashboard() {{
 </div>
 """
 
+    body += r"""
+<script>
+(() => {
+  const data = window.__DATA__ || {};
+  const deadline = Date.parse(data.order_expires_at);
+  if (!data.watch_order_expiry || !Number.isFinite(deadline)) return;
+  let applied = false;
+  function refreshOrderExpiry() {
+    if (applied || Date.now() <= deadline) return;
+    const band = document.getElementById('operation-decision');
+    if (!band) return;
+    band.classList.remove('execute');
+    band.classList.add('blocked');
+    document.getElementById('operation-decision-word').textContent = '期限切れ';
+    document.getElementById('operation-decision-reason').textContent = data.expiry_reason;
+    const gate = document.getElementById('operation-order-gate');
+    const title = document.createElement('strong');
+    title.textContent = 'この注文intentは期限切れです';
+    const explanation = document.createElement('span');
+    explanation.className = 'small';
+    explanation.textContent = data.expiry_reason + '。注文票は参照用です。';
+    gate.replaceChildren(title, document.createElement('br'), explanation);
+    const summary = document.getElementById('operation-summary');
+    summary.textContent = summary.textContent.replace(/^運用結果:.*$/m,
+      '運用結果: 期限切れ — ' + data.expiry_reason);
+    applied = true;
+  }
+  refreshOrderExpiry();
+  window.setInterval(refreshOrderExpiry, 1000);
+  window.addEventListener('pageshow', refreshOrderExpiry);
+  document.addEventListener('visibilitychange', refreshOrderExpiry);
+})();
+</script>
+"""
     return _page("JUSLAG 日次運用", body, "index.html")
 
 
