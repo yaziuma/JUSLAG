@@ -15,7 +15,7 @@
       "stock_code": "1630",
       "ticker": "1630.T",
       "sector": "小売",
-      "signal": 0.3238749124254282,
+      "signal": 0.3326100789216269,
       "quantity": 6,
       "sizing_price_yen": 37150.0,
       "estimated_notional_yen": 222900,
@@ -26,7 +26,7 @@
       "stock_code": "1621",
       "ticker": "1621.T",
       "sector": "医薬品",
-      "signal": 0.31569737186067565,
+      "signal": 0.32468228623282,
       "quantity": 7,
       "sizing_price_yen": 29760.0,
       "estimated_notional_yen": 208320,
@@ -37,7 +37,7 @@
       "stock_code": "1617",
       "ticker": "1617.T",
       "sector": "食品",
-      "signal": 0.29670231172546657,
+      "signal": 0.30495491330701885,
       "quantity": 4,
       "sizing_price_yen": 49240.0,
       "estimated_notional_yen": 196960,
@@ -48,7 +48,7 @@
       "stock_code": "1627",
       "ticker": "1627.T",
       "sector": "電力・ガス",
-      "signal": 0.24847281806185567,
+      "signal": 0.25538181960092937,
       "quantity": 18,
       "sizing_price_yen": 12220.0,
       "estimated_notional_yen": 219960,
@@ -64,14 +64,14 @@
   ],
   "preflight": {
     "status": "READY",
-    "checked_at_jst": "2026-10-15T08:15:01.674206+09:00",
-    "source_kind": "local",
-    "source_ref": "local",
-    "source_commit": "90b9ad0692f95ecd3f4bb299653d5b1452b8914b",
+    "checked_at_jst": "2026-10-15T08:30:01.381891+09:00",
+    "source_kind": "git",
+    "source_ref": "origin/main",
+    "source_commit": "167ad6062ace60af63fe73a2ae9dd6fda713c51b",
     "source_report": "data/reports/2026-10-15.json",
-    "source_report_sha256": "ee4f2d18691560584b8ec99e45fedd0bf0947011e1deb747beb786a26c54f7e2",
+    "source_report_sha256": null,
     "source_prices_sha256": null,
-    "source_report_generated_at_utc": "2026-10-14T23:01:51.603396+00:00"
+    "source_report_generated_at_utc": "2026-10-14T23:28:03.592978+00:00"
   },
-  "sheet_sha256": "72ba121a831eede573390720f4ac8d44507f41be795cfc7b855560eeac09fd21"
+  "sheet_sha256": "fe6a64991b4a4ce58e59618bcb722592e64043e564c5f440c334d5eeee405475"
 }
