@@ -64,7 +64,7 @@
   ],
   "preflight": {
     "status": "READY",
-    "checked_at_jst": "2026-10-19T08:15:02.635157+09:00",
+    "checked_at_jst": "2026-10-19T08:30:02.512823+09:00",
     "source_kind": "local",
     "source_ref": "local",
     "source_commit": "90b9ad0692f95ecd3f4bb299653d5b1452b8914b",
@@ -73,5 +73,5 @@
     "source_prices_sha256": null,
     "source_report_generated_at_utc": "2026-10-18T23:01:52.919093+00:00"
   },
-  "sheet_sha256": "a2a0ad606769f3e930cb94eb94e156ba7e8c0f45c8e9f72f85b564b5eb578e8e"
+  "sheet_sha256": "a9bae1df6a7c7bb76b54f88edbdc34840cae00fcc5768f76f21e5682380876e3"
 }
