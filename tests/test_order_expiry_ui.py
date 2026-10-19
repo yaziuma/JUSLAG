@@ -11,9 +11,12 @@ def test_order_expiry_uses_viewing_time_and_updates_all_live_labels(tmp_path: Pa
     playwright = pytest.importorskip("playwright.sync_api")
     render_site([], [{"date": "2026-10-13", "backtest": {"judge": {
         "overall_score": 78, "overall_decision": "pass",
-    }}}], tmp_path, operational={
+    }}}], tmp_path, capital_simulation={
+        "strategy_name": "pca_sub_long_5d_manual_v2",
+        "judge": {"overall_score": 78, "overall_decision": "pass"},
+    }, operational={
         "rendered_at": "2026-10-13T08:42:00+09:00",
-        "preflight": {"as_of": "2026-10-13", "status": "READY", "action": "ENTRY"},
+        "preflight": {"strategy_id": "pca_sub_long_5d_manual_v2", "as_of": "2026-10-13", "status": "READY", "action": "ENTRY"},
         "intent": {"expires_at": "2026-10-13T08:55:00+09:00"},
     })
     html = (tmp_path / "index.html").read_text()
