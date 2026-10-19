@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from juslag.decision_scope import build_decision_scopes
 from juslag.cache import PriceCache
 from juslag.config import AppConfig, JP_TICKERS, US_TICKERS
 from juslag.data_loader import fetch_data
@@ -89,6 +90,7 @@ def main() -> None:
         "schema_version": 1,
         "date": target_date,
         "snapshot_kind": "manual_strategy_preflight_signal",
+        "decision_scopes": build_decision_scopes(manual_cfg, signal),
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "run_provenance": {
             "source_commit": _source_commit(),

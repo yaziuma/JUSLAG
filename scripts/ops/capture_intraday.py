@@ -4,14 +4,16 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import sqlite3
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pandas as pd
 import yfinance as yf
+from yfinance.exceptions import YFPricesMissingError, YFRateLimitError
 
 from juslag.config import JP_TICKERS
 
@@ -145,9 +147,12 @@ def missing_tickers(counts: dict[str, int]) -> list[str]:
     return sorted(ticker for ticker in JP_TICKERS if counts.get(ticker, 0) <= 0)
 
 
-def _tickers_with_valid_rows(bars: pd.DataFrame) -> set[str]:
+def _tickers_with_valid_rows(bars: pd.DataFrame, target_day: str | None = None) -> set[str]:
     if bars.empty or not isinstance(bars.columns, pd.MultiIndex):
         return set()
+    if target_day is not None:
+        local = pd.DatetimeIndex(bars.index).tz_convert("Asia/Tokyo")
+        bars = bars.loc[local.strftime("%Y-%m-%d") == target_day]
     available = set(bars.columns.get_level_values(0))
     return {
         ticker
@@ -157,21 +162,29 @@ def _tickers_with_valid_rows(bars: pd.DataFrame) -> set[str]:
     }
 
 
-def download_with_retries(period: str, attempts: int = 3) -> pd.DataFrame:
+def download_with_retries(
+    period: str, attempts: int = 3, *, target_day: str | None = None
+) -> pd.DataFrame:
+    """Fetch serially so provider throttling stops the batch before another request."""
     bars = pd.DataFrame()
     missing = list(JP_TICKERS)
     for attempt in range(attempts):
-        fetched = yf.download(
-            missing,
-            period=period,
-            interval="5m",
-            auto_adjust=False,
-            group_by="ticker",
-            progress=False,
-            threads=len(missing) > 1,
-        )
-        bars = fetched if bars.empty else bars.combine_first(fetched)
-        missing = sorted(set(JP_TICKERS) - _tickers_with_valid_rows(bars))
+        for ticker in missing:
+            try:
+                frame = yf.Ticker(ticker).history(
+                    period=period, interval="5m", auto_adjust=False,
+                    raise_errors=True,
+                )
+            except YFRateLimitError:
+                bars.attrs["provider_rate_limited"] = True
+                return bars
+            except YFPricesMissingError:
+                continue
+            if frame.empty:
+                continue
+            fetched = pd.concat({ticker: frame}, axis=1)
+            bars = fetched if bars.empty else bars.combine_first(fetched)
+        missing = sorted(set(JP_TICKERS) - _tickers_with_valid_rows(bars, target_day))
         if not missing:
             break
         if attempt + 1 < attempts:
@@ -179,15 +192,44 @@ def download_with_retries(period: str, attempts: int = 3) -> pd.DataFrame:
     return bars
 
 
+def provider_cooldown_active(path: Path, now: datetime) -> bool:
+    if not path.exists():
+        return False
+    state = json.loads(path.read_text())
+    until = datetime.fromisoformat(state["not_before_utc"])
+    if until.tzinfo is None:
+        raise ValueError("provider cooldown must be timezone-aware")
+    return now < until
+
+
+def record_provider_cooldown(path: Path, now: datetime) -> None:
+    # yfinance's typed 429 exception exposes no Retry-After. Stop for at least
+    # an hour rather than repeatedly retrying a provider-wide throttle.
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({
+        "reason": "provider_rate_limited", "observed_at_utc": now.isoformat(),
+        "not_before_utc": (now + timedelta(hours=1)).isoformat(),
+    }, indent=2) + "\n")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--db", type=Path, default=Path("data/intraday/prices.sqlite"))
     parser.add_argument("--period", default="5d")
     parser.add_argument("--snapshot-dir", type=Path, default=None)
+    parser.add_argument("--rate-limit-state", type=Path, default=None)
     args = parser.parse_args()
-    bars = download_with_retries(args.period)
+    state_path = args.rate_limit_state or args.db.with_suffix(".provider-cooldown.json")
+    if provider_cooldown_active(state_path, datetime.now(timezone.utc)):
+        raise SystemExit("Provider cooldown active; no request made")
+    target_day = datetime.now(ZoneInfo("Asia/Tokyo")).date().isoformat()
+    bars = download_with_retries(args.period, target_day=target_day)
     observed_at = datetime.now(timezone.utc)
+    if bars.attrs.get("provider_rate_limited"):
+        record_provider_cooldown(state_path, observed_at)
     if bars.empty:
+        if bars.attrs.get("provider_rate_limited"):
+            raise SystemExit("Provider rate limited; no further requests made; no data saved")
         raise SystemExit("No intraday bars returned; no data saved")
     counts = store_capture(args.db, bars, observed_at)
     if args.snapshot_dir is not None:
@@ -198,9 +240,12 @@ def main() -> None:
         raise SystemExit("No valid intraday bars returned; no data saved")
     print(
         f"observed_at_utc={observed_at.isoformat()} tickers={len(counts)} "
-        f"bars={sum(counts.values())} db={args.db}"
+        f"bars={sum(counts.values())} "
+        f"target_day_tickers={len(_tickers_with_valid_rows(bars, target_day))} db={args.db}"
     )
-    missing = missing_tickers(counts)
+    if bars.attrs.get("provider_rate_limited"):
+        raise SystemExit("Provider rate limited; partial data saved; no further requests made")
+    missing = sorted(set(JP_TICKERS) - _tickers_with_valid_rows(bars, target_day))
     if missing:
         raise SystemExit(f"Incomplete ticker coverage: {missing}")
 

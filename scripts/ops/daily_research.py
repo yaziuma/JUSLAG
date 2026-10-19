@@ -164,7 +164,7 @@ def main(argv: list[str] | None = None) -> None:
         f.write(json.dumps(history_entry_dict, ensure_ascii=False) + "\n")
 
     # --- 6. Slackフォールバック文面 ---
-    slack_text = build_slack_summary(bt, ds, now_jst)
+    slack_text = build_slack_summary(bt, ds, now_jst, manual_config=manual_cfg)
 
     # --- 7. 日次レポートJSON ---
     generated_at_utc = datetime.now(timezone.utc).isoformat()
@@ -188,6 +188,7 @@ def main(argv: list[str] | None = None) -> None:
         },
         paper_bt=paper_bt,
         paper_params=paper_params,
+        manual_config=manual_cfg,
     )
     report_path = out_dir / "reports" / f"{date_str}.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)

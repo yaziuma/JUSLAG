@@ -190,7 +190,7 @@ def test_render_site_produces_index_and_report_pages(tmp_path: Path) -> None:
     assert "tab === 'analysis'" in index_html
     assert "visibleCount: 20" in index_html
     assert "さらに表示" in index_html
-    assert "論文準拠 vs 現行運用" in index_html
+    assert "論文準拠 vs 旧日次研究" in index_html
     assert "この成績は執行可能性未検証" in index_html
     assert "共通コスト設定" in index_html
     assert "adjusted" in index_html
@@ -213,7 +213,7 @@ def test_render_site_produces_index_and_report_pages(tmp_path: Path) -> None:
     # Judgeスコアと戦略ルールの判定理由
     assert "80" in report_html
     assert "テスト判定理由テキスト" in report_html
-    assert "論文準拠 vs 現行運用" in report_html
+    assert "論文準拠 vs 旧日次研究" in report_html
     assert "シグナル候補" in report_html
     assert "複利運用 vs 固定額運用" in report_html
 
@@ -222,7 +222,7 @@ def test_render_site_produces_index_and_report_pages(tmp_path: Path) -> None:
 
 
 def test_same_open_gap_rule_cannot_be_final_actionable() -> None:
-    report = {
+    report: dict = {
         "daily_signal": {"tradeable": True},
         "backtest": {"judge": {"overall_decision": "pass"}},
         "backtest_comparison": {"current": {"strategy_rule_id": "rule_406_no_flip"}},

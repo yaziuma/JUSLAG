@@ -53,20 +53,26 @@ def test_download_retries_only_missing_tickers(monkeypatch) -> None:
         columns = pd.MultiIndex.from_product([tickers, ["Open", "High", "Low", "Close", "Volume"]])
         return pd.DataFrame([[100] * len(columns)], index=index, columns=columns)
 
-    first = list(MODULE.JP_TICKERS)[:-1]
     missing = list(MODULE.JP_TICKERS)[-1]
 
-    def fake_download(tickers, **kwargs):
-        calls.append(list(tickers))
-        return frame(first if len(calls) == 1 else [missing])
+    class FakeTicker:
+        def __init__(self, ticker):
+            self.ticker = ticker
 
-    monkeypatch.setattr(MODULE.yf, "download", fake_download)
-    sleeps = []
+        def history(self, **kwargs):
+            assert kwargs["raise_errors"] is True
+            calls.append([self.ticker])
+            if self.ticker == missing and calls.count([missing]) == 1:
+                return pd.DataFrame()
+            return frame([self.ticker])[self.ticker]
+
+    monkeypatch.setattr(MODULE.yf, "Ticker", FakeTicker)
+    sleeps: list[int] = []
     monkeypatch.setattr(MODULE.time, "sleep", sleeps.append)
 
     bars = MODULE.download_with_retries("1d")
 
-    assert calls == [list(MODULE.JP_TICKERS), [missing]]
+    assert calls == [[ticker] for ticker in MODULE.JP_TICKERS] + [[missing]]
     assert sleeps == [5]
     assert MODULE._tickers_with_valid_rows(bars) == set(MODULE.JP_TICKERS)
 

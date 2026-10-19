@@ -11,7 +11,7 @@ def _fmt_pct_raw(v: float | None, signed: bool = True) -> str:
     return f"{v:+.2f}%" if signed else f"{v:.2f}%"
 
 
-def build_slack_summary(bt: dict, ds: dict, now_jst: datetime) -> str:
+def build_slack_summary(bt: dict, ds: dict, now_jst: datetime, *, manual_config: dict | None = None) -> str:
     now = now_jst.strftime("%Y-%m-%d %H:%M JST")
     judge = bt.get("judge") or {}
     score = judge.get("overall_score", "-")
@@ -96,15 +96,24 @@ def build_slack_summary(bt: dict, ds: dict, now_jst: datetime) -> str:
     lines = [
         f"*JUSLAG 朝次実行完了* ({now})",
         "",
-        "*バックテスト（本番適用設定）*",
+        "*研究比較バックテスト（保存設定）*",
         f"  Judge: {score}点 / {decision}  |  Net After AR: {ar_str}  |  R/R: {rr_str}  |  MDD: {mdd_str}",
         "",
-        f"*本日シグナル* (執行日: {exec_date}{exec_date_note}  |  US参照: {us_ref_date})",
+        f"*研究用日次判定* (執行日: {exec_date}{exec_date_note}  |  US参照: {us_ref_date})",
         f"  {trade_str}",
         f"  LONG:  {long_sectors}",
         f"  SHORT: {short_sectors}",
         f"  {regime_line}",
     ]
+    scope_lines = [
+        "*実運用の判定先*",
+        "  当日の手動戦略preflightと照合結果を確認。以下の研究判定は代用しない。",
+    ]
+    if manual_config is not None:
+        scope_lines.append(f"  戦略: {manual_config['strategy_id']} / 寄成発注期限: {manual_config['execution']['entry_order_deadline_jst']} JST")
+        if manual_config['strategy_id'] in {'pca_sub_long_5d_manual_v1', 'pca_sub_long_5d_manual_v2'}:
+            scope_lines.append("  朝の入力判定に当日open_gapは不要。発注承認・執行状態はこの通知では判定しない。")
+    lines[2:2] = scope_lines + [""]
     if cls_str:
         lines.append(f"  見送り理由: {cls_str}")
 

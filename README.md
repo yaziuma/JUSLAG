@@ -28,7 +28,9 @@
 日次バッチの全体設計は `docs/daily_research_batch_architecture.md` を参照してください。
 GitHub Pagesの公開・簡易認証の運用は `docs/github_pages_operations.md` を参照してください。
 
-実運用戦略は2026-10-02から`pca_sub_long_5d_manual_v2`（上位20%、通常4銘柄）であり、日次`rule_406_no_flip`は旧方式の比較値としてのみ残す。発注判断の正本は`data/manual_strategy/preflight/<当日>.json`とSHA-256付き注文票である。GitHub Actions遅延を避けるため、quieter上のローカル日次timerが06:00、07:00、08:00、08:40 JSTに再試行する。さらに発注専用の軽量シグナルtimerが08:35、08:42、08:48に再取得し、preflightはGitHub版、ローカル日次版、軽量版のうち締切前の最新入力を採用する。終値のない場中・未確定行はfreshness判定から除外する。READY時には別プロジェクトのAndroid承認画面と互換な期限付き`OrderIntent`も生成するが、承認APIへの登録と実注文送信はまだ自動化していない。
+実運用戦略は2026-10-02から`pca_sub_long_5d_manual_v2`（上位20%、通常4銘柄）であり、日次`rule_406_no_flip`は旧方式の比較値としてのみ残す。発注判断の正本は`data/manual_strategy/preflight/<当日>.json`とSHA-256付き注文票である。GitHub Actions遅延を避けるため、quieter上のローカル日次timerが06:00、07:00、08:00、08:40 JSTに再試行する。さらに発注専用の軽量シグナルtimerが08:32、08:36、08:40に再取得し、preflightはGitHub版、ローカル日次版、軽量版のうち締切前の最新入力を採用する。終値のない場中・未確定行はfreshness判定から除外する。READY時には別プロジェクトのAndroid承認画面と互換な期限付き`OrderIntent`も生成するが、承認APIへの冪等登録と段階workerは別プロジェクト`juslag-execution`が担当する。利用者のSBI注文開始画面と二段階承認を必要とし、実口座での受入は未完了である。
+
+08:55は手動戦略の寄成発注・入力採用の期限であり、寄付価格を待つ期限ではない。手動戦略は寄付前に既知の米国シグナルと前JPX営業日のraw終値を使い、当日`open_gap`を新規条件にしない。旧日次メタ戦略の`tradeable=false / strategy_rule_skip`は研究判定であり、手動preflightの状態と同一視しない。仕様と履歴の根拠は`docs/reports/strategy_scope_contract_20261015.md`を参照。
 
 ローカル日次timerは、GitHub Variableと同一内容を管理する`config/production_backtest_settings.json`を`JUSLAG_BACKTEST_SETTINGS_FILE`として読み込む。設定変更時は両者を同時に更新する。
 

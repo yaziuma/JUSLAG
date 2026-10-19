@@ -358,7 +358,7 @@ def _backtest_comparison(report: dict) -> str:
 
     shared = comparison.get("shared_cost_assumptions") or {}
     gap_warning = (
-        '<p class="small text-warning-emphasis mb-2">現行メタ版は当日寄りgapで判断し、同じ寄り値で約定する前提です。'
+        '<p class="small text-warning-emphasis mb-2">旧日次メタ版は当日寄りgapで判断し、同じ寄り値で約定する前提です。'
         'この成績は執行可能性未検証のため、発注判断には使えません。</p>'
         if current.get("same_open_gap_assumption", bool(current.get("strategy_rule_id"))) else ""
     )
@@ -387,12 +387,12 @@ def _backtest_comparison(report: dict) -> str:
     return (
         '<div class="surface-card p-3 p-md-4 mb-3">'
         '<div class="section-label mb-1">Backtest comparison</div>'
-        '<h2 class="h6 text-heading mb-2">論文準拠 vs 現行運用</h2>'
+        '<h2 class="h6 text-heading mb-2">論文準拠 vs 旧日次研究</h2>'
         '<p class="small text-muted-soft mb-3">論文準拠は調整済み価格・PCA SUB単体・上下30%等ウェイト。'
         '掲載値の転載ではなく、現行と同じ期間・コスト実装で再計算した比較です。</p>'
         f'{gap_warning}'
         '<div class="table-responsive"><table class="table table-sm align-middle mb-2">'
-        '<thead><tr><th>比較項目</th><th>現行運用</th><th>論文準拠</th></tr></thead>'
+        '<thead><tr><th>比較項目</th><th>旧日次研究</th><th>論文準拠</th></tr></thead>'
         f'<tbody>{body}</tbody></table></div>'
         f'<p class="small text-muted-soft mb-0">共通コスト設定: {costs}</p>'
         '</div>'
@@ -534,7 +534,12 @@ def _render_index(
     if stale_operational:
         preflight, operational_order, operational_signal, operational_intent = {}, {}, {}, {}
     manual_judge = (capital_simulation or {}).get("judge") or {}
-    latest_judge = manual_judge or (latest_report.get("backtest") or {}).get("judge") or {}
+    if preflight:
+        if (capital_simulation or {}).get("strategy_name") != preflight.get("strategy_id"):
+            manual_judge = {}
+        latest_judge = manual_judge
+    else:
+        latest_judge = manual_judge or (latest_report.get("backtest") or {}).get("judge") or {}
     latest_plan = latest_ds.get("execution_plan") or {}
     if operational_order:
         latest_plan = {
@@ -549,8 +554,6 @@ def _render_index(
             "short": [],
         }
     latest_history = history[-1] if history else {}
-    tradeable = bool(latest_ds.get("tradeable"))
-    final_actionable = _final_actionable(latest_report)
     judge_decision = latest_judge.get("overall_decision")
     expiry_reason = "注文intentの有効期限を過ぎているため、新規発注には使用できません"
     if preflight:
@@ -568,7 +571,6 @@ def _render_index(
             and bool(expires_at)
             and not expired
         )
-        tradeable = preflight.get("status") == "READY"
         if expired:
             decision_text = "期限切れ"
             decision_reason = expiry_reason
@@ -577,22 +579,16 @@ def _render_index(
             decision_reason = "現行v2の審査とプリフライトを通過"
         else:
             decision_text = "停止"
-            decision_reason = f"プリフライト {preflight.get('status') or '-'}"
+            decision_reason = (
+                "手動戦略のモデル審査情報未確認" if not manual_judge
+                else f"プリフライト {preflight.get('status') or '-'}"
+            )
     else:
         expired = False
-        decision_text = "発注候補" if final_actionable else "見送り"
+        final_actionable = False
+        decision_text = "運用プリフライト未確認"
+        decision_reason = "手動戦略の当日プリフライトがありません。研究用の日次判定は代用しません。"
     decision_class = "execute" if final_actionable else "blocked"
-    if not preflight:
-        if not tradeable:
-            decision_reason = _cls_label(latest_ds.get("no_trade_classification"))
-        elif judge_decision == "reject":
-            decision_reason = "注文候補は生成済み / モデル審査で却下"
-        elif _same_open_gap_assumption(latest_report):
-            decision_reason = "当日寄りgap判断後の同値約定が未検証 / 発注不可"
-        elif judge_decision == "pass":
-            decision_reason = "シグナル条件・モデル審査ともに通過"
-        else:
-            decision_reason = "注文候補は生成済み / モデル審査は要確認"
     score = latest_judge.get("overall_score")
     if stale_operational:
         final_actionable = False
@@ -943,6 +939,7 @@ def _summary_table(report: dict) -> str:
         )
 
     rows: list[tuple[str, str]] = [
+        ("判定の適用対象", "日次研究比較。手動5日戦略の可否は当日preflightで判定"),
         ("執行対象日 (JP)", _esc(ds.get("execution_target_jp_date")) or "-"),
         ("参照日 (US)", _esc(ds.get("signal_reference_us_date")) or "-"),
         ("シグナル候補", exec_cell),

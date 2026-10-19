@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -47,6 +48,24 @@ def _ols(y: pd.Series, x: pd.DataFrame) -> RegressionSummary:
     return RegressionSummary(alpha=float(beta[0]), betas=betas, t_stats=t_stats, r_squared=r2, n_obs=n)
 
 
+def _factor_column_name(name: str) -> str:
+    key = name.strip().upper().replace("-", "_").replace(" ", "_")
+    aliases = {"DATE": "date", "MKT_RF": "MKT_RF", "SMB": "SMB", "HML": "HML",
+               "RF": "RF", "WML": "MOM", "MOM": "MOM"}
+    return aliases.get(key, name)
+
+
+def _validate_factor_header(path: Path) -> list[str]:
+    # Read before pandas can mangle duplicate headers (e.g. mkt_rf.1).
+    with path.open(newline="", encoding="utf-8-sig") as source:
+        original = next((row for row in csv.reader(source)
+                         if row and not (len(row) == 1 and not row[0].strip())), [])
+    columns = [_factor_column_name(name) for name in original]
+    if len(set(columns)) != len(columns):
+        raise ValueError("Ambiguous duplicate factor columns after normalization")
+    return columns
+
+
 def load_factor_frame(base: Path) -> tuple[pd.DataFrame, dict[str, Any]]:
     meta_path = base / "factors" / "normalized" / "ff3_metadata.json"
     if not meta_path.exists():
@@ -57,7 +76,9 @@ def load_factor_frame(base: Path) -> tuple[pd.DataFrame, dict[str, Any]]:
     path = carhart_path if carhart_path.exists() else ff3_path
     if not path.exists():
         return pd.DataFrame(), {"available": False}
+    columns = _validate_factor_header(path)
     f = pd.read_csv(path)
+    f.columns = columns
     date_col = "date" if "date" in f.columns else f.columns[0]
     f[date_col] = pd.to_datetime(f[date_col])
     f = f.rename(columns={date_col: "date"}).set_index("date").sort_index()

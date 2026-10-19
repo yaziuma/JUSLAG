@@ -4,12 +4,51 @@ from __future__ import annotations
 import argparse
 import fcntl
 import json
+import hashlib
 import subprocess
 from pathlib import Path
 
 
 def git(checkout: Path, *args: str) -> str:
     return subprocess.check_output(["git", "-C", str(checkout), *args], text=True).strip()
+
+
+def referenced_source_evidence(source: Path, preflight: dict, sheet_metadata: dict) -> dict[str, bytes]:
+    """Publish the exact locally attested input, without rebuilding orders."""
+    kind = sheet_metadata.get("source_kind") or preflight.get("source_kind")
+    if kind not in {"local", "local_signal"}:
+        return {}
+    name = sheet_metadata.get("source_report") or preflight.get("source_report") or ""
+    relative = Path(name)
+    allowed = (relative.parts[:2] == ("data", "reports")
+               or relative.parts[:3] == ("data", "manual_strategy", "signals"))
+    if relative.is_absolute() or ".." in relative.parts or not allowed or relative.suffix != ".json":
+        raise ValueError("attested source report is outside allowed data directories")
+    resolved = (source / relative).resolve()
+    expected_parent = source.resolve() / relative.parent
+    if resolved != source.resolve() / relative or resolved.parent != expected_parent:
+        raise ValueError("attested source report escapes its data directory")
+    payload = resolved.read_bytes()
+    expected = sheet_metadata.get("source_report_sha256")
+    if not expected or hashlib.sha256(payload).hexdigest() != expected:
+        raise ValueError("attested source report checksum mismatch")
+    report = json.loads(payload)
+    if (report.get("daily_signal") or {}).get("execution_target_jp_date") != preflight["as_of"]:
+        raise ValueError("attested source report targets a different JP session")
+    result = {relative.as_posix(): payload}
+    expected_prices = sheet_metadata.get("source_prices_sha256")
+    if expected_prices:
+        if kind != "local_signal":
+            raise ValueError("unsupported attested sizing-price source")
+        prices = relative.with_suffix(".prices.csv")
+        resolved_prices = (source / prices).resolve()
+        if resolved_prices != source.resolve() / prices or resolved_prices.parent != expected_parent:
+            raise ValueError("attested sizing prices escape their data directory")
+        raw = resolved_prices.read_bytes()
+        if hashlib.sha256(raw).hexdigest() != expected_prices:
+            raise ValueError("attested sizing prices checksum mismatch")
+        result[prices.as_posix()] = raw
+    return result
 
 
 def snapshots(source: Path) -> dict[str, bytes]:
@@ -20,11 +59,14 @@ def snapshots(source: Path) -> dict[str, bytes]:
             data = path.read_bytes()
             json.loads(data)
             result[path.relative_to(source).as_posix()] = data
+    current_sources = []
+    latest_preflight_date = ""
     for name, data in result.items():
         if "/preflight/" not in name:
             continue
         preflight = json.loads(data)
         date = preflight["as_of"]
+        latest_preflight_date = max(latest_preflight_date, date)
         if Path(name).stem != date:
             raise ValueError("preflight date does not match filename")
         if preflight.get("status") != "READY":
@@ -41,6 +83,13 @@ def snapshots(source: Path) -> dict[str, bytes]:
         intent_path = preflight.get("execution_intent")
         if intent_path and intent_path not in result:
             raise ValueError("preflight is missing its execution intent")
+        current_sources.append((date, preflight, sheet.get("preflight") or {}))
+    # Historic attestations can refer to input versions no longer present.
+    # Bind the newest READY snapshot to its exact input; do not rewrite history.
+    if current_sources:
+        current_date, current, metadata = max(current_sources, key=lambda row: row[0])
+        if current_date == latest_preflight_date:
+            result.update(referenced_source_evidence(source, current, metadata))
     return result
 
 

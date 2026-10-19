@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import cast
 
 import pandas as pd
 
@@ -39,7 +40,7 @@ def evaluate_adjusted_series_verification(
         reason_code = "actions_data_unavailable"
     elif not has_date_range:
         reason_code = "missing_date_range"
-    elif required_range_specified and not (actions_start <= required_start and actions_end >= required_end):
+    elif required_range_specified and not (cast(str, actions_start) <= cast(str, required_start) and cast(str, actions_end) >= cast(str, required_end)):
         covers_required_range = False
         reason_code = "required_range_not_covered"
     elif not enough_coverage:
@@ -84,7 +85,7 @@ def build_data_status(
         end = factor_df.index.max()
         return {
             "available": True,
-            "model": "Carhart4" if "WML" in factor_df.columns else "FF3",
+            "model": "Carhart4" if "MOM" in factor_df.columns else "FF3",
             "rows": int(len(factor_df)),
             "start": start.date().isoformat() if pd.notna(start) else None,
             "end": end.date().isoformat() if pd.notna(end) else None,
@@ -124,7 +125,7 @@ def build_data_status(
         required_start=required_start,
         required_end=required_end,
     )
-    actions_cov = float(adjusted_detail.get("coverage_ratio") or 0.0)
+    actions_cov = float(cast(float, adjusted_detail.get("coverage_ratio") or 0.0))
     report_available = report_path.exists()
     strategy_returns = pd.Series(dtype=float)
     if report_available:
