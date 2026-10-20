@@ -15,7 +15,7 @@
       "stock_code": "1621",
       "ticker": "1621.T",
       "sector": "医薬品",
-      "signal": 0.028411696770258205,
+      "signal": 0.025443101458524242,
       "quantity": 7,
       "sizing_price_yen": 31750.0,
       "estimated_notional_yen": 222250,
@@ -26,7 +26,7 @@
       "stock_code": "1617",
       "ticker": "1617.T",
       "sector": "食品",
-      "signal": 0.01919953704885949,
+      "signal": 0.01692559050916223,
       "quantity": 4,
       "sizing_price_yen": 50130.0,
       "estimated_notional_yen": 200520,
@@ -37,7 +37,7 @@
       "stock_code": "1630",
       "ticker": "1630.T",
       "sector": "小売",
-      "signal": 0.018365528351605653,
+      "signal": 0.016677063767730343,
       "quantity": 5,
       "sizing_price_yen": 38460.0,
       "estimated_notional_yen": 192300,
@@ -48,7 +48,7 @@
       "stock_code": "1628",
       "ticker": "1628.T",
       "sector": "運輸・物流",
-      "signal": 0.00927023761400736,
+      "signal": 0.00922147008969984,
       "quantity": 10,
       "sizing_price_yen": 22175.0,
       "estimated_notional_yen": 221750,
@@ -64,14 +64,14 @@
   ],
   "preflight": {
     "status": "READY",
-    "checked_at_jst": "2026-10-21T08:15:02.348727+09:00",
-    "source_kind": "local",
-    "source_ref": "local",
-    "source_commit": "8561f87ce28ec500c9ec4268b765a4a3f9934ddb",
+    "checked_at_jst": "2026-10-21T08:30:02.739374+09:00",
+    "source_kind": "git",
+    "source_ref": "origin/main",
+    "source_commit": "de28b8e129fad7c8f15d32b067812d703efeded9",
     "source_report": "data/reports/2026-10-21.json",
-    "source_report_sha256": "e3c3b222c108346f78dd98adbf4ba64d34a442a258c6ca2ccf341a1c4b142087",
+    "source_report_sha256": null,
     "source_prices_sha256": null,
-    "source_report_generated_at_utc": "2026-10-20T23:01:56.259614+00:00"
+    "source_report_generated_at_utc": "2026-10-20T23:26:09.594666+00:00"
   },
-  "sheet_sha256": "51a7699a1d84d2e1f946d4b37af1bf6812cd019512a2f058650fa35988664bf7"
+  "sheet_sha256": "2eb00067f784b39f17c0165ef8bd905061c7b4122013ad55d2f50e8bf9c1b84b"
 }
