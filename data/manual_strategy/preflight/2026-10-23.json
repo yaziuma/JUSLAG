@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "strategy_id": "pca_sub_long_5d_manual_v2",
+  "as_of": "2026-10-23",
+  "checked_at_jst": "2026-10-23T08:15:04.022515+09:00",
+  "status": "READY",
+  "action": "ENTRY",
+  "order_sheet": "data/manual_strategy/orders/2026-10-23-entry.json",
+  "sheet_sha256": "5128a06d017af2357dd2b2ed73eed0337b20bab1ed5ece5abd27fd6c7be98473",
+  "source_commit": "8561f87ce28ec500c9ec4268b765a4a3f9934ddb",
+  "source_report": "data/reports/2026-10-23.json",
+  "source_kind": "local",
+  "execution_intent_pending_until_jst": "08:42"
+}
