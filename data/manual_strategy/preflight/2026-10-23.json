@@ -2,13 +2,14 @@
   "schema_version": 1,
   "strategy_id": "pca_sub_long_5d_manual_v2",
   "as_of": "2026-10-23",
-  "checked_at_jst": "2026-10-23T08:15:04.022515+09:00",
+  "checked_at_jst": "2026-10-23T08:42:02.047076+09:00",
   "status": "READY",
   "action": "ENTRY",
   "order_sheet": "data/manual_strategy/orders/2026-10-23-entry.json",
-  "sheet_sha256": "5128a06d017af2357dd2b2ed73eed0337b20bab1ed5ece5abd27fd6c7be98473",
+  "sheet_sha256": "1b695bc9a4e220167826d6317634dbae9132c0d6c8a972b2c5bb5eb3d2658093",
   "source_commit": "8561f87ce28ec500c9ec4268b765a4a3f9934ddb",
-  "source_report": "data/reports/2026-10-23.json",
-  "source_kind": "local",
-  "execution_intent_pending_until_jst": "08:42"
+  "source_report": "data/manual_strategy/signals/2026-10-23.json",
+  "source_kind": "local_signal",
+  "execution_intent": "data/manual_strategy/intents/2026-10-23-intent.json",
+  "execution_intent_sha256": "9b2e0f1d40669ded579b83fd4f8209343bc000466431985c2b065f4a2bcfe33f"
 }
