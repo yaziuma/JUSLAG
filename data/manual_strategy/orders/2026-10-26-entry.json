@@ -64,14 +64,14 @@
   ],
   "preflight": {
     "status": "READY",
-    "checked_at_jst": "2026-10-26T08:30:02.581761+09:00",
-    "source_kind": "git",
-    "source_ref": "origin/main",
-    "source_commit": "36881f2e6b3a39efd05901b790d9b6b358f21970",
-    "source_report": "data/reports/2026-10-26.json",
-    "source_report_sha256": null,
-    "source_prices_sha256": null,
-    "source_report_generated_at_utc": "2026-10-25T23:01:56.891796+00:00"
+    "checked_at_jst": "2026-10-26T08:42:02.166892+09:00",
+    "source_kind": "local_signal",
+    "source_ref": "local",
+    "source_commit": "8561f87ce28ec500c9ec4268b765a4a3f9934ddb",
+    "source_report": "data/manual_strategy/signals/2026-10-26.json",
+    "source_report_sha256": "4b61e33a05c782b51ab24167fcf10733336af40c41f59d7770d89ebbc7a449e0",
+    "source_prices_sha256": "6167abbeecd61410105630634625b73ad8a1c73b7625d86f62909630eaebc5f7",
+    "source_report_generated_at_utc": "2026-10-25T23:40:22.778450+00:00"
   },
-  "sheet_sha256": "bc72846c8169cb9bfbfb6069ebf800988e139d77763705dd0435f923db6fef06"
+  "sheet_sha256": "b2f5fffa376ff587100a43133f7b986aef0e9bea58c8a53c60c7758289570dea"
 }
