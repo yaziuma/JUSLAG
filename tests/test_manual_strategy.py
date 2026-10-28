@@ -12,6 +12,7 @@ from juslag.manual_strategy import (
     build_execution_intent,
     build_order_sheet,
     fifth_session,
+    fingerprint,
     initial_state,
     load_manual_config,
     record_entry,
@@ -20,6 +21,19 @@ from juslag.manual_strategy import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_record_entry_rejects_tampered_sheet_without_mutating_state() -> None:
+    config = _config()
+    state = initial_state(config)
+    sheet = build_order_sheet(_report(), state, config, {f"{c}.T": 1000.0 for c in range(1617, 1634)}, "2026-09-24")
+    sheet["preflight"] = {"status": "READY", "source_commit": "a" * 40}
+    sheet["sheet_sha256"] = fingerprint({k: v for k, v in sheet.items() if k != "sheet_sha256"})
+    sheet["orders"][0]["quantity"] += 1
+    before = copy.deepcopy(state)
+    with pytest.raises(ValueError, match="sheet.*hash"):
+        record_entry(state, sheet, [_fill(order) for order in sheet["orders"]])
+    assert state == before
 
 
 def _config() -> dict:
@@ -88,6 +102,7 @@ def test_record_round_trip_includes_fees_and_exit_is_never_blocked_by_drawdown()
     prices = {f"{code}.T": 1000.0 for code in range(1617, 1634)}
     sheet = build_order_sheet(_report(), state, config, prices, "2026-09-24")
     sheet["preflight"] = {"status": "READY", "source_commit": "a" * 40}
+    sheet["sheet_sha256"] = fingerprint({k: v for k, v in sheet.items() if k != "sheet_sha256"})
     entry_fills = [_fill(order) for order in sheet["orders"]]
     entry_fills[0]["fee_yen"] = 10
     record_entry(state, sheet, entry_fills)
@@ -115,6 +130,7 @@ def test_entry_rejects_missing_broker_evidence_and_drawdown_blocks_new_batch() -
     with pytest.raises(ValueError, match="READY preflight"):
         record_entry(state, sheet, valid_fills)
     sheet["preflight"] = {"status": "READY", "source_commit": "a" * 40}
+    sheet["sheet_sha256"] = fingerprint({k: v for k, v in sheet.items() if k != "sheet_sha256"})
     bad_fills = [
         {"ticker": row["ticker"], "quantity": row["quantity"], "fill_price": 1000}
         for row in sheet["orders"]

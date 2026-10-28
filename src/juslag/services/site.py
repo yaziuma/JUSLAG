@@ -562,13 +562,14 @@ def _render_index(
         expired = bool(
             expires_at
             and rendered_at
-            and datetime.fromisoformat(rendered_at) > datetime.fromisoformat(expires_at)
+            and datetime.fromisoformat(rendered_at) >= datetime.fromisoformat(expires_at)
         )
         final_actionable = (
             preflight.get("status") == "READY"
             and preflight.get("action") == "ENTRY"
             and judge_decision == "pass"
             and bool(expires_at)
+            and bool(rendered_at)
             and not expired
         )
         if expired:
@@ -580,7 +581,8 @@ def _render_index(
         else:
             decision_text = "停止"
             decision_reason = (
-                "手動戦略のモデル審査情報未確認" if not manual_judge
+                "描画時刻未確認のため注文期限を判定できません" if not rendered_at
+                else "手動戦略のモデル審査情報未確認" if not manual_judge
                 else f"プリフライト {preflight.get('status') or '-'}"
             )
     else:
@@ -892,7 +894,7 @@ function dashboard() {{
   if (!data.watch_order_expiry || !Number.isFinite(deadline)) return;
   let applied = false;
   function refreshOrderExpiry() {
-    if (applied || Date.now() <= deadline) return;
+    if (applied || Date.now() < deadline) return;
     const band = document.getElementById('operation-decision');
     if (!band) return;
     band.classList.remove('execute');

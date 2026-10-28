@@ -220,6 +220,11 @@ def record_entry(
     preflight = sheet.get("preflight", {})
     if preflight.get("status") != "READY" or not preflight.get("source_commit"):
         raise ValueError("entry sheet lacks a READY preflight attestation")
+    supplied_hash = sheet.get("sheet_sha256")
+    if not isinstance(supplied_hash, str) or supplied_hash != fingerprint(
+        {key: value for key, value in sheet.items() if key != "sheet_sha256"}
+    ):
+        raise ValueError("entry sheet hash mismatch")
     planned = {row["ticker"]: int(row["quantity"]) for row in sheet["orders"]}
     if len({row["ticker"] for row in fills}) != len(fills):
         raise ValueError("duplicate entry fill ticker")

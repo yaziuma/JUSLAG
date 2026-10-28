@@ -25,6 +25,15 @@ def _write(path: Path, value: object) -> None:
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def verify_preflight_sheet(preflight: dict, sheet: dict) -> None:
+    if (preflight.get("status") != "READY" or preflight.get("action") != "ENTRY"
+            or preflight.get("as_of") != sheet.get("as_of")
+            or preflight.get("strategy_id") != sheet.get("strategy_id")
+            or not preflight.get("sheet_sha256")
+            or preflight.get("sheet_sha256") != sheet.get("sheet_sha256")):
+        raise ValueError("independent preflight does not match entry sheet")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("init", "plan", "record-entry", "record-exit"))
@@ -34,6 +43,7 @@ def main() -> None:
     parser.add_argument("--prices", type=Path)
     parser.add_argument("--as-of")
     parser.add_argument("--sheet", type=Path)
+    parser.add_argument("--preflight", type=Path)
     parser.add_argument("--fills", type=Path)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
@@ -58,7 +68,11 @@ def main() -> None:
         parser.error("record commands require --fills")
     if args.command == "record-entry" and not args.sheet:
         parser.error("record-entry requires --sheet")
+    if args.command == "record-entry" and not args.preflight:
+        parser.error("record-entry requires --preflight")
     fills = json.loads(args.fills.read_text(encoding="utf-8"))
+    if args.command == "record-entry":
+        verify_preflight_sheet(_read(args.preflight), _read(args.sheet))
     updated = (
         record_entry(state, _read(args.sheet), fills)
         if args.command == "record-entry"

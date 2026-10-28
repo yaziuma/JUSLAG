@@ -23,6 +23,7 @@ from juslag.manual_strategy import (
 )
 
 JST = ZoneInfo("Asia/Tokyo")
+SOURCE_FETCH_TIMEOUT_SECONDS = 30
 
 
 def _git(*args: str) -> str:
@@ -148,6 +149,7 @@ def run_preflight(
     intent_output_path: Path | None = None,
     local_reports_dir: Path = Path("data/reports"),
     signal_reports_dir: Path | None = None,
+    fetch_source: bool = False,
 ) -> dict:
     config = load_manual_config(config_path)
     intent_release = time.fromisoformat(config["execution_intent"]["release_time_jst"])
@@ -159,8 +161,58 @@ def run_preflight(
         "status": "BLOCKED",
     }
     try:
+        state = json.loads(state_path.read_text(encoding="utf-8")) if state_path.is_file() else None
+        open_batch = (state or {}).get("open_batch")
+        if fetch_source and not (open_batch and as_of >= open_batch["exit_date"]):
+            try:
+                subprocess.run(
+                    ["git", "fetch", "origin", "main"],
+                    check=True,
+                    timeout=SOURCE_FETCH_TIMEOUT_SECONDS,
+                    capture_output=True,
+                    text=True,
+                )
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as exc:
+                status.update(reason="source_fetch_failed", reason_code="source_fetch_failed")
+                if isinstance(exc, subprocess.CalledProcessError):
+                    status.update(fetch_error="nonzero_exit", fetch_returncode=exc.returncode)
+                elif isinstance(exc, subprocess.TimeoutExpired):
+                    status["fetch_error"] = "timeout"
+                else:
+                    status["fetch_error"] = "unavailable"
+                return status
         if not _is_jpx_session(as_of):
             status.update(status="SKIP", reason="not_a_jpx_session")
+            return status
+        if open_batch and as_of >= open_batch["exit_date"]:
+            exit_deadline = datetime.combine(
+                datetime.fromisoformat(as_of).date(),
+                time.fromisoformat(config["execution"]["exit_order_deadline_jst"]), JST,
+            )
+            if now.astimezone(JST) >= exit_deadline:
+                raise ValueError("exit deadline has passed")
+            source_commit = _git("rev-parse", "HEAD").strip()
+            if len(source_commit) != 40:
+                raise ValueError("local code lacks source commit provenance")
+            sheet = build_order_sheet({}, state, config, {}, as_of)
+            sheet["preflight"] = {
+                "status": "READY", "checked_at_jst": status["checked_at_jst"],
+                "source_kind": "local_state", "source_commit": source_commit,
+                "source_state_sha256": _file_sha256(str(state_path)),
+            }
+            sheet["sheet_sha256"] = fingerprint(sheet)
+            _write_atomic(output_path, sheet)
+            release_intent = intent_output_path is not None and now.astimezone(JST).timetz().replace(tzinfo=None) >= intent_release
+            if release_intent:
+                intent = build_execution_intent(sheet, config, source_commit=source_commit, valid_from=now.astimezone(JST))
+                _write_atomic(intent_output_path, intent)
+            status.update(status="READY", action="EXIT", order_sheet=str(output_path),
+                          sheet_sha256=sheet["sheet_sha256"], source_commit=source_commit,
+                          source_kind="local_state")
+            if release_intent:
+                status.update(execution_intent=str(intent_output_path), execution_intent_sha256=_file_sha256(str(intent_output_path)))
+            elif intent_output_path is not None:
+                status["execution_intent_pending_until_jst"] = intent_release.isoformat(timespec="minutes")
             return status
         deadline_clock = time.fromisoformat(config["execution"]["entry_order_deadline_jst"])
         deadline = datetime.combine(datetime.fromisoformat(as_of).date(), deadline_clock, JST)
@@ -198,7 +250,8 @@ def run_preflight(
             source_commit = str((report.get("run_provenance") or {}).get("source_commit") or "")
             if len(source_commit) != 40:
                 raise ValueError("local report lacks source commit provenance")
-        state = json.loads(state_path.read_text(encoding="utf-8"))
+        if state is None:
+            state = json.loads(state_path.read_text(encoding="utf-8"))
         prices = (
             _prices_from_ref(ref, report_path, as_of)
             if source_kind == "git"
@@ -287,8 +340,6 @@ def main() -> None:
     intent_output = args.intent_output or Path(
         f"data/manual_strategy/intents/{args.as_of}-intent.json"
     )
-    if args.fetch:
-        subprocess.run(["git", "fetch", "origin", "main"], check=True)
     status = run_preflight(
         as_of=args.as_of,
         now=now,
@@ -299,6 +350,7 @@ def main() -> None:
         status_path=status_path,
         intent_output_path=intent_output,
         signal_reports_dir=args.signal_reports_dir,
+        fetch_source=args.fetch,
     )
     print(json.dumps(status, ensure_ascii=False))
     if status["status"] == "BLOCKED":

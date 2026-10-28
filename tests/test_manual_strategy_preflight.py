@@ -13,6 +13,48 @@ preflight = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(preflight)
 
 
+def test_due_or_overdue_exit_does_not_require_entry_inputs(tmp_path, monkeypatch) -> None:
+    config_path = Path("config/manual_strategy.yaml")
+    state = initial_state(load_manual_config(config_path))
+    state["drawdown_pct"] = -30
+    state["open_batch"] = {"exit_date": "2026-10-02", "positions": [{"ticker": "1617.T", "quantity": 1}]}
+    state_path = tmp_path / "state.json"
+    state_path.write_text(json.dumps(state), encoding="utf-8")
+    monkeypatch.setattr(preflight, "_git", lambda *args: "a" * 40 if args == ("rev-parse", "HEAD") else (_ for _ in ()).throw(AssertionError(args)))
+    for day in ("2026-10-02", "2026-10-05"):
+        result = preflight.run_preflight(
+            as_of=day, now=preflight.datetime.fromisoformat(f"{day}T10:00:00+09:00"),
+            ref="origin/main", config_path=config_path, state_path=state_path,
+            output_path=tmp_path / f"{day}-sheet.json", status_path=tmp_path / f"{day}-status.json",
+            local_reports_dir=tmp_path / "missing", intent_output_path=None,
+        )
+        assert result["status"] == "READY"
+        assert result["action"] == "EXIT"
+        assert json.loads((tmp_path / f"{day}-sheet.json").read_text())["overdue"] == (day != "2026-10-02")
+    result = preflight.run_preflight(
+        as_of="2026-10-02", now=preflight.datetime.fromisoformat("2026-10-02T15:20:00+09:00"),
+        ref="origin/main", config_path=config_path, state_path=state_path,
+        output_path=tmp_path / "expired-sheet.json", status_path=tmp_path / "expired-status.json",
+        intent_output_path=None,
+    )
+    assert result["status"] == "BLOCKED"
+    assert result["reason"] == "exit deadline has passed"
+    assert not (tmp_path / "expired-sheet.json").exists()
+
+
+def test_exit_ignores_entry_fetch_failure(tmp_path, monkeypatch) -> None:
+    import subprocess
+    config_path = Path("config/manual_strategy.yaml")
+    state = initial_state(load_manual_config(config_path))
+    state["open_batch"] = {"exit_date": "2026-10-02", "positions": [{"ticker": "1617.T", "quantity": 1}]}
+    state_path = tmp_path / "state.json"
+    state_path.write_text(json.dumps(state))
+    monkeypatch.setattr(preflight.subprocess, "run", lambda *a, **kw: (_ for _ in ()).throw(subprocess.TimeoutExpired("git", 30)))
+    monkeypatch.setattr(preflight, "_git", lambda *a: "a" * 40)
+    result = preflight.run_preflight(as_of="2026-10-05", now=preflight.datetime.fromisoformat("2026-10-05T10:00:00+09:00"), ref="origin/main", config_path=config_path, state_path=state_path, output_path=tmp_path / "sheet.json", status_path=tmp_path / "status.json", fetch_source=True)
+    assert result["status"] == "READY" and result["action"] == "EXIT"
+
+
 def _report(report_date: str, generated: str, signal_day: str) -> dict:
     return {
         "date": report_date,

@@ -80,7 +80,7 @@ READY時は注文票を毎回更新し、最終preflight時刻の08:50以降に�
 3. `action=ENTRY`、v2では通常4銘柄、合計推定元本が台帳資金以下、`entry_date=<当日>`、決済予定日を確認する。どれか不一致なら発注しない。
 4. SBIで各銘柄を「現物買・寄成・数量指定」で入力し、08:55までに発注する。預り区分は実際に保有する口座区分を選ぶ。注文確認画面のコード・売買・数量・条件をJSONと一件ずつ照合する。
 5. 受付番号と受付時刻を保存する。寄り後、約定価格・約定数量・約定時刻・手数料を`data/manual_strategy/fills/2026-09-24-entry.template.json`へ記入する。`fill_price=0`や仮の受付番号のまま台帳へ登録してはならない。
-6. `PYTHONPATH=src .venv/bin/python scripts/ops/manual_strategy_orders.py record-entry --sheet data/manual_strategy/orders/2026-09-24-entry.json --fills <記入済み約定JSON>`を実行する。予定数量と完全一致しない場合は登録が拒否されるため、未約定・一部約定を先にSBI画面で解消する。
+6. `PYTHONPATH=src .venv/bin/python scripts/ops/manual_strategy_orders.py record-entry --sheet data/manual_strategy/orders/2026-09-24-entry.json --preflight data/manual_strategy/preflight/2026-09-24.json --fills <記入済み約定JSON>`を実行する。予定数量と完全一致しない場合は登録が拒否されるため、未約定・一部約定を先にSBI画面で解消する。
 7. 9月30日15:20までに同数量を「現物売・引成」で発注する。約定後、決済テンプレートへ実績を記入し、`record-exit --fills <記入済み決済JSON>`で損益・費用・DDを更新する。
 
 注文候補の順位はadjusted価格から計算し、数量だけをraw名目価格から算定する。シグナル生成条件も`manual_strategy.yaml`のPCA 60/3/0.9・上位20%を直接使用する。`daily_signal.signal_price_mode=adjusted`でない、または記録されたモデル条件が正本と一致しないレポートはpreflightが候補から除外する。これにより分配金・分割の見かけの変動や設定ドリフトをシグナルに混ぜず、同時に実際の購入可能数量をraw価格で求める。

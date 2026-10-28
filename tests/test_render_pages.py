@@ -3,7 +3,22 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from juslag.services.site import _final_actionable, load_history, load_reports, render_site
+from juslag.services.site import _final_actionable, _render_index, load_history, load_reports, render_site
+
+
+def test_operational_deadline_requires_known_render_time_and_expires_at_boundary() -> None:
+    capital = {"strategy_name": "pca_sub_long_5d_manual_v2", "judge": {"overall_decision": "pass"}}
+    operational = {
+        "preflight": {"strategy_id": "pca_sub_long_5d_manual_v2", "as_of": "2026-10-28", "status": "READY", "action": "ENTRY"},
+        "intent": {"expires_at": "2026-10-28T08:55:00+09:00"},
+    }
+    assert "発注準備完了" not in _render_index([], [], capital, operational)
+    operational["rendered_at"] = "2026-10-28T08:55:00+09:00"
+    boundary = _render_index([], [], capital, operational)
+    assert "期限切れ" in boundary
+    assert "発注準備完了" not in boundary
+    operational["rendered_at"] = "2026-10-28T08:54:59+09:00"
+    assert "発注準備完了" in _render_index([], [], capital, operational)
 
 
 def _write_report(reports_dir: Path, date: str, tradeable: bool) -> None:
