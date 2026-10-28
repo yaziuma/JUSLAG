@@ -581,8 +581,8 @@ def _render_index(
         else:
             decision_text = "停止"
             decision_reason = (
-                "描画時刻未確認のため注文期限を判定できません" if not rendered_at
-                else "手動戦略のモデル審査情報未確認" if not manual_judge
+                "手動戦略のモデル審査情報未確認" if not manual_judge
+                else "描画時刻未確認のため注文期限を判定できません" if not rendered_at
                 else f"プリフライト {preflight.get('status') or '-'}"
             )
     else:

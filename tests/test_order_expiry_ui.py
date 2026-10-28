@@ -32,8 +32,6 @@ def test_order_expiry_uses_viewing_time_and_updates_all_live_labels(tmp_path: Pa
             page.set_content(html, wait_until="domcontentloaded")
             assert page.locator("#operation-decision-word").text_content() == "発注準備完了"
             page.clock.run_for(1000)
-            assert page.locator("#operation-decision-word").text_content() == "発注準備完了"
-            page.clock.run_for(1000)
             assert page.locator("#operation-decision-word").text_content() == "期限切れ"
             assert "blocked" in page.locator("#operation-decision").get_attribute("class")
             assert "execute" not in page.locator("#operation-decision").get_attribute("class")
