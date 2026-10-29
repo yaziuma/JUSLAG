@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "date": "2026-10-29",
-  "generated_at_utc": "2026-10-28T23:01:59.289320+00:00",
+  "generated_at_utc": "2026-10-29T00:27:12.673399+00:00",
   "run_provenance": {
-    "run_started_at_utc": "2026-10-28T23:00:03.148105+00:00",
-    "analysis_as_of_jst": "2026-10-29T08:00:03.148105+09:00",
+    "run_started_at_utc": "2026-10-29T00:26:18.915939+00:00",
+    "analysis_as_of_jst": "2026-10-29T09:26:18.915939+09:00",
     "target_date": "2026-10-29",
     "run_kind": "live_date",
-    "input_snapshot_sha256": "08d29fb9a964cd2d53a6df914cd41592c4628ac02389700826512ba6bffc38cd",
-    "source_commit": "8561f87ce28ec500c9ec4268b765a4a3f9934ddb"
+    "input_snapshot_sha256": "7d173a7035f3841194b7741f738bbdea2dd6e74ef83756178242c576d256a4a9",
+    "source_commit": "fdaa63f72302d3e145929965dd509ffa99e19371"
   },
   "backtest": {
     "settings_name": "本番適用 SBIゼロ革命・日計り信用",
@@ -39,20 +39,20 @@
     },
     "judge": {
       "overall_decision": "reject",
-      "overall_score": 36,
+      "overall_score": 29,
       "summary": "PCA SUB + rule_406_no_flip はデータ品質または主要リスク条件に抵触し、却下です。",
       "category_scores": {
         "profitability": 8,
         "stability": 0,
         "cost_resilience": 3,
-        "executability": 10,
-        "data_reliability": 15
+        "executability": 5,
+        "data_reliability": 13
       },
       "category_decisions": {
         "profitability": "warn",
         "stability": "warn",
         "cost_resilience": "warn",
-        "executability": "pass",
+        "executability": "hold",
         "data_reliability": "pass"
       },
       "reasons": [
@@ -75,6 +75,16 @@
           "code": "HIGH_COST_DRAG",
           "severity": "warn",
           "message": "Gross から Net Pre-Tax への低下幅が大きく、コスト耐性が弱いです。"
+        },
+        {
+          "code": "DAILY_SIGNAL_NOT_READY",
+          "severity": "warn",
+          "message": "日次シグナル生成の前提データが揃っていません。"
+        },
+        {
+          "code": "CACHE_DATES_NOT_ALIGNED",
+          "severity": "warn",
+          "message": "US/JP の最新日付が揃っていません。"
         }
       ],
       "metrics_snapshot": {
@@ -106,7 +116,7 @@
         },
         "decision_gate_summary": {
           "has_critical_warn": false,
-          "warn_count": 4,
+          "warn_count": 6,
           "reject_reasons": []
         }
       },
@@ -114,7 +124,9 @@
         "シグナル閾値(quantile_q)を調整し、上位下位選別を強化してください。",
         "ボラティリティ抑制のために window_l や lambda_reg を再調整してください。",
         "損失が大きい局面のエクスポージャ制御を追加してください。",
-        "commission/slippage/borrow 前提を見直してください。"
+        "commission/slippage/borrow 前提を見直してください。",
+        "日次データ同期後に daily signal の再計算を実施してください。",
+        "キャッシュ日付を揃え、同一基準日で再評価してください。"
       ]
     },
     "performance_sets": {
@@ -3090,125 +3102,187 @@
       "lambda_reg": 0.9,
       "selection_quantile": 0.2
     },
-    "reference_date": "2026-10-28 00:00:00",
-    "signal_reference_us_date": "2026-10-28 00:00:00",
-    "execution_target_jp_date": "2026-10-29",
+    "reference_date": "2026-10-27 00:00:00",
+    "signal_reference_us_date": "2026-10-27 00:00:00",
+    "execution_target_jp_date": "2026-10-28",
     "execution_target_jp_date_source": "jpx_calendar",
     "operation_mode": "production",
-    "input_snapshot_sha256": "08d29fb9a964cd2d53a6df914cd41592c4628ac02389700826512ba6bffc38cd",
+    "input_snapshot_sha256": "7d173a7035f3841194b7741f738bbdea2dd6e74ef83756178242c576d256a4a9",
     "rows": [
       {
-        "ticker": "1625.T",
-        "sector": "電機・精密",
-        "signal": 0.06831219602450475,
-        "position": "neutral"
+        "ticker": "1630.T",
+        "sector": "小売",
+        "signal": 0.16026126421060174,
+        "position": "LONG"
       },
       {
-        "ticker": "1631.T",
-        "sector": "銀行",
-        "signal": 0.06020467051680956,
-        "position": "neutral"
-      },
-      {
-        "ticker": "1618.T",
-        "sector": "エネルギー資源",
-        "signal": 0.05125346272294464,
-        "position": "neutral"
-      },
-      {
-        "ticker": "1629.T",
-        "sector": "商社・卸売",
-        "signal": 0.050345190406968915,
-        "position": "neutral"
-      },
-      {
-        "ticker": "1623.T",
-        "sector": "鉄鋼・非鉄",
-        "signal": 0.016562343711601056,
-        "position": "neutral"
-      },
-      {
-        "ticker": "1624.T",
-        "sector": "機械",
-        "signal": 0.01289084161183547,
-        "position": "neutral"
-      },
-      {
-        "ticker": "1619.T",
-        "sector": "建設・資材",
-        "signal": 0.011925992314988249,
-        "position": "neutral"
-      },
-      {
-        "ticker": "1620.T",
-        "sector": "素材・化学",
-        "signal": 0.00969290742190916,
-        "position": "neutral"
-      },
-      {
-        "ticker": "1632.T",
-        "sector": "金融（除く銀行）",
-        "signal": -0.0011137486034973713,
-        "position": "neutral"
-      },
-      {
-        "ticker": "1626.T",
-        "sector": "情報通信・サービスその他",
-        "signal": -0.002235109360735229,
-        "position": "neutral"
-      },
-      {
-        "ticker": "1622.T",
-        "sector": "自動車・輸送機",
-        "signal": -0.006363793300715969,
-        "position": "neutral"
-      },
-      {
-        "ticker": "1628.T",
-        "sector": "運輸・物流",
-        "signal": -0.009943903725307724,
-        "position": "neutral"
-      },
-      {
-        "ticker": "1633.T",
-        "sector": "不動産",
-        "signal": -0.014009602822314638,
-        "position": "neutral"
-      },
-      {
-        "ticker": "1627.T",
-        "sector": "電力・ガス",
-        "signal": -0.05549504007484145,
+        "ticker": "1621.T",
+        "sector": "医薬品",
+        "signal": 0.15793968684621626,
         "position": "neutral"
       },
       {
         "ticker": "1617.T",
         "sector": "食品",
-        "signal": -0.06682596738719701,
+        "signal": 0.14845445851095393,
+        "position": "LONG"
+      },
+      {
+        "ticker": "1627.T",
+        "sector": "電力・ガス",
+        "signal": 0.12446742707830454,
+        "position": "LONG"
+      },
+      {
+        "ticker": "1633.T",
+        "sector": "不動産",
+        "signal": 0.026025861259452516,
         "position": "neutral"
       },
       {
-        "ticker": "1621.T",
-        "sector": "医薬品",
-        "signal": -0.07155772360163969,
+        "ticker": "1628.T",
+        "sector": "運輸・物流",
+        "signal": 0.016031177987725236,
         "position": "neutral"
       },
       {
-        "ticker": "1630.T",
-        "sector": "小売",
-        "signal": -0.07202198962003437,
+        "ticker": "1622.T",
+        "sector": "自動車・輸送機",
+        "signal": 0.011288468289873618,
         "position": "neutral"
+      },
+      {
+        "ticker": "1626.T",
+        "sector": "情報通信・サービスその他",
+        "signal": 0.0019079657365351963,
+        "position": "neutral"
+      },
+      {
+        "ticker": "1632.T",
+        "sector": "金融（除く銀行）",
+        "signal": -0.0014842751000603486,
+        "position": "neutral"
+      },
+      {
+        "ticker": "1620.T",
+        "sector": "素材・化学",
+        "signal": -0.02393032252427889,
+        "position": "neutral"
+      },
+      {
+        "ticker": "1619.T",
+        "sector": "建設・資材",
+        "signal": -0.027221513591140886,
+        "position": "neutral"
+      },
+      {
+        "ticker": "1624.T",
+        "sector": "機械",
+        "signal": -0.03183637319106104,
+        "position": "neutral"
+      },
+      {
+        "ticker": "1623.T",
+        "sector": "鉄鋼・非鉄",
+        "signal": -0.04133498988521705,
+        "position": "neutral"
+      },
+      {
+        "ticker": "1629.T",
+        "sector": "商社・卸売",
+        "signal": -0.12154526190380621,
+        "position": "SHORT"
+      },
+      {
+        "ticker": "1618.T",
+        "sector": "エネルギー資源",
+        "signal": -0.12543550190547878,
+        "position": "neutral"
+      },
+      {
+        "ticker": "1631.T",
+        "sector": "銀行",
+        "signal": -0.1416091182077301,
+        "position": "SHORT"
+      },
+      {
+        "ticker": "1625.T",
+        "sector": "電機・精密",
+        "signal": -0.16086401536657127,
+        "position": "SHORT"
       }
     ],
     "execution_plan": {
-      "long": [],
-      "short": [],
-      "n_long": 0,
-      "n_short": 0,
+      "long": [
+        {
+          "ticker": "1630.T",
+          "sector": "小売",
+          "weight": 33.3,
+          "latest_price_jpy": 37510,
+          "min_lot": 1,
+          "min_purchase_jpy": 37510,
+          "normalized_lots": 2,
+          "normalized_purchase_jpy": 75020
+        },
+        {
+          "ticker": "1617.T",
+          "sector": "食品",
+          "weight": 33.3,
+          "latest_price_jpy": 48840,
+          "min_lot": 1,
+          "min_purchase_jpy": 48840,
+          "normalized_lots": 1,
+          "normalized_purchase_jpy": 48840
+        },
+        {
+          "ticker": "1627.T",
+          "sector": "電力・ガス",
+          "weight": 33.3,
+          "latest_price_jpy": 12325,
+          "min_lot": 1,
+          "min_purchase_jpy": 12325,
+          "normalized_lots": 5,
+          "normalized_purchase_jpy": 61625
+        }
+      ],
+      "short": [
+        {
+          "ticker": "1629.T",
+          "sector": "商社・卸売",
+          "weight": 33.3,
+          "latest_price_jpy": 280,
+          "min_lot": 10,
+          "min_purchase_jpy": 2804,
+          "normalized_lots": 220,
+          "normalized_purchase_jpy": 61600
+        },
+        {
+          "ticker": "1631.T",
+          "sector": "銀行",
+          "weight": 33.3,
+          "latest_price_jpy": 38590,
+          "min_lot": 1,
+          "min_purchase_jpy": 38590,
+          "normalized_lots": 2,
+          "normalized_purchase_jpy": 77180
+        },
+        {
+          "ticker": "1625.T",
+          "sector": "電機・精密",
+          "weight": 33.3,
+          "latest_price_jpy": 62260,
+          "min_lot": 1,
+          "min_purchase_jpy": 62260,
+          "normalized_lots": 1,
+          "normalized_purchase_jpy": 62260
+        }
+      ],
+      "n_long": 3,
+      "n_short": 3,
       "candidate_long_count": 4,
       "candidate_short_count": 4,
-      "adopted_long_count": 0,
-      "adopted_short_count": 0,
+      "adopted_long_count": 3,
+      "adopted_short_count": 3,
       "excluded_long": [],
       "excluded_short": [],
       "min_long_signal": 0.0,
@@ -3226,50 +3300,50 @@
       "dropped_us_tickers": [],
       "dropped_jp_tickers": [],
       "effective_start": "2018-07-03",
-      "effective_end": "2026-10-28",
-      "joint_rows": 1961,
+      "effective_end": "2026-10-27",
+      "joint_rows": 1957,
       "effective_window_days": 60,
       "usable_us_tickers": 11,
       "usable_jp_tickers": 17,
       "cache_first_date": "2010-01-04",
-      "cache_last_date": "2026-10-28",
+      "cache_last_date": "2026-10-29",
       "cache_price_mode": "adjusted",
       "cache_isolated_by_price_mode": true,
-      "reference_date": "2026-10-28 00:00:00",
+      "reference_date": "2026-10-27 00:00:00",
       "freshness_ok": true,
-      "required_jp_date": "2026-10-28",
+      "required_jp_date": "2026-10-27",
       "jp_calendar_verified": true,
-      "latest_us_date": "2026-10-28",
-      "latest_jp_date": "2026-10-28",
+      "latest_us_date": "2026-10-27",
+      "latest_jp_date": "2026-10-29",
       "stale_tickers": [],
       "missing_tickers": []
     },
     "freshness": {
       "price_mode": "adjusted",
       "freshness_ok": true,
-      "required_jp_date": "2026-10-28",
+      "required_jp_date": "2026-10-27",
       "jp_calendar_verified": true,
-      "latest_us_date": "2026-10-28",
-      "latest_jp_date": "2026-10-28",
+      "latest_us_date": "2026-10-27",
+      "latest_jp_date": "2026-10-29",
       "stale_tickers": [],
       "missing_tickers": []
     },
     "cache_summary": {
       "price_mode": "adjusted",
-      "cache_rows_for_mode": 113189,
-      "us_latest_min": "2026-10-28",
-      "us_latest_max": "2026-10-28",
+      "cache_rows_for_mode": 113194,
+      "us_latest_min": "2026-10-27",
+      "us_latest_max": "2026-10-27",
       "jp_latest_min": "2026-10-28",
-      "jp_latest_max": "2026-10-28",
-      "latest_dates_aligned": true,
+      "jp_latest_max": "2026-10-29",
+      "latest_dates_aligned": false,
       "missing_tickers": [],
       "stale_tickers": [],
-      "daily_signal_ready": true
+      "daily_signal_ready": false
     },
     "execution_checks": [
       {
         "level": "ok",
-        "message": "データ新鮮度: OK (US最新=2026-10-28, JP最新=2026-10-28)"
+        "message": "データ新鮮度: OK (US最新=2026-10-27, JP最新=2026-10-29)"
       },
       {
         "level": "ok",
@@ -3277,14 +3351,14 @@
       },
       {
         "level": "ok",
-        "message": "LONG/SHORT 件数: 0 / 0（quantile候補: 4 / 4）"
+        "message": "LONG/SHORT 件数: 3 / 3（quantile候補: 4 / 4）"
       },
       {
         "level": "ok",
         "message": "signal閾値: LONG>=0.0, SHORT<=0.0"
       },
       {
-        "level": "ok",
+        "level": "warn",
         "message": "SHORT には制度信用または貸株対応が必要"
       },
       {
@@ -3292,9 +3366,9 @@
         "message": "価格基準: adjusted（寄付き成行 / 引け成行 前提）"
       }
     ],
-    "trade_signal_strength": 0.0,
+    "trade_signal_strength": 0.285734,
     "tradeable": false,
-    "trade_block_reason": "strategy_rule_skip",
+    "trade_block_reason": "assumed_open_fill_expired",
     "calendar_warning": false,
     "min_signal_spread_used": 0.0,
     "min_long_signal": 0.0,
@@ -3303,104 +3377,104 @@
     "min_adopted_short_count": 1,
     "candidate_long_count": 4,
     "candidate_short_count": 4,
-    "adopted_long_count": 0,
-    "adopted_short_count": 0,
+    "adopted_long_count": 3,
+    "adopted_short_count": 3,
     "pre_rule_adopted_long_count": 4,
     "pre_rule_adopted_short_count": 4,
-    "post_rule_adopted_long_count": 0,
-    "post_rule_adopted_short_count": 0,
+    "post_rule_adopted_long_count": 3,
+    "post_rule_adopted_short_count": 3,
     "excluded_long": [],
     "excluded_short": [],
     "candidate_signal_stats": {
-      "signal_max": 0.068312,
-      "signal_min": -0.072022,
-      "signal_p25": -0.01401,
-      "signal_p50": -0.001114,
-      "signal_p75": 0.016562,
+      "signal_max": 0.160261,
+      "signal_min": -0.160864,
+      "signal_p25": -0.041335,
+      "signal_p50": -0.001484,
+      "signal_p75": 0.026026,
       "long_threshold": 0.0,
       "short_threshold": 0.0,
       "top_long_candidates": [
         {
-          "ticker": "1625.T",
-          "sector": "電機・精密",
-          "signal": 0.068312,
-          "threshold": 0.0,
-          "gap_to_threshold": 0.068312,
-          "passes": true
-        },
-        {
-          "ticker": "1631.T",
-          "sector": "銀行",
-          "signal": 0.060205,
-          "threshold": 0.0,
-          "gap_to_threshold": 0.060205,
-          "passes": true
-        },
-        {
-          "ticker": "1618.T",
-          "sector": "エネルギー資源",
-          "signal": 0.051253,
-          "threshold": 0.0,
-          "gap_to_threshold": 0.051253,
-          "passes": true
-        },
-        {
-          "ticker": "1629.T",
-          "sector": "商社・卸売",
-          "signal": 0.050345,
-          "threshold": 0.0,
-          "gap_to_threshold": 0.050345,
-          "passes": true
-        }
-      ],
-      "top_short_candidates": [
-        {
           "ticker": "1630.T",
           "sector": "小売",
-          "signal": -0.072022,
+          "signal": 0.160261,
           "threshold": 0.0,
-          "gap_to_threshold": 0.072022,
+          "gap_to_threshold": 0.160261,
           "passes": true
         },
         {
           "ticker": "1621.T",
           "sector": "医薬品",
-          "signal": -0.071558,
+          "signal": 0.15794,
           "threshold": 0.0,
-          "gap_to_threshold": 0.071558,
+          "gap_to_threshold": 0.15794,
           "passes": true
         },
         {
           "ticker": "1617.T",
           "sector": "食品",
-          "signal": -0.066826,
+          "signal": 0.148454,
           "threshold": 0.0,
-          "gap_to_threshold": 0.066826,
+          "gap_to_threshold": 0.148454,
           "passes": true
         },
         {
           "ticker": "1627.T",
           "sector": "電力・ガス",
-          "signal": -0.055495,
+          "signal": 0.124467,
           "threshold": 0.0,
-          "gap_to_threshold": 0.055495,
+          "gap_to_threshold": 0.124467,
           "passes": true
         }
       ],
-      "long_threshold_gap_max": 0.068312,
-      "short_threshold_gap_max": 0.072022,
-      "candidate_signal_strength": 0.124004
+      "top_short_candidates": [
+        {
+          "ticker": "1625.T",
+          "sector": "電機・精密",
+          "signal": -0.160864,
+          "threshold": 0.0,
+          "gap_to_threshold": 0.160864,
+          "passes": true
+        },
+        {
+          "ticker": "1631.T",
+          "sector": "銀行",
+          "signal": -0.141609,
+          "threshold": 0.0,
+          "gap_to_threshold": 0.141609,
+          "passes": true
+        },
+        {
+          "ticker": "1618.T",
+          "sector": "エネルギー資源",
+          "signal": -0.125436,
+          "threshold": 0.0,
+          "gap_to_threshold": 0.125436,
+          "passes": true
+        },
+        {
+          "ticker": "1629.T",
+          "sector": "商社・卸売",
+          "signal": -0.121545,
+          "threshold": 0.0,
+          "gap_to_threshold": 0.121545,
+          "passes": true
+        }
+      ],
+      "long_threshold_gap_max": 0.160261,
+      "short_threshold_gap_max": 0.160864,
+      "candidate_signal_strength": 0.285144
     },
     "threshold_long_used": 0.0,
     "threshold_short_used": 0.0,
     "adaptive_threshold_active": false,
-    "candidate_signal_strength": 0.124004,
-    "adopted_signal_strength": 0.124004,
-    "threshold_gap_long_max": 0.068312,
-    "threshold_gap_short_max": 0.072022,
-    "no_trade_classification": "strategy_rule_skip_with_candidates",
+    "candidate_signal_strength": 0.285144,
+    "adopted_signal_strength": 0.285144,
+    "threshold_gap_long_max": 0.160261,
+    "threshold_gap_short_max": 0.160864,
+    "no_trade_classification": "assumed_open_fill_expired",
     "signal_no_trade_classification": null,
-    "strategy_rule_skip_has_candidates": true,
+    "strategy_rule_skip_has_candidates": false,
     "trend_regime": "sideways",
     "vol_regime": "mid_vol",
     "rotation_regime": "mid_rotation",
@@ -3412,8 +3486,8 @@
     "adjusted_series_warning": "adjusted verification failed: missing_date_range",
     "adjusted_series_verification_reason": "missing_date_range",
     "analysis_readiness": {
-      "price_cache_ready": true,
-      "daily_signal_ready": true,
+      "price_cache_ready": false,
+      "daily_signal_ready": false,
       "factor_data_ready": true,
       "actions_data_ready": true,
       "factor_regression_ready": false,
@@ -3422,36 +3496,36 @@
     },
     "factor_data_available": true,
     "strategy_decision": {
-      "selected_strategy": "skip",
+      "selected_strategy": "gap_ovht_oc",
       "rule_id": "rule_406_no_flip",
       "rule_name_ja": "GapOvht + 寄りgap制限 + 弱rotation除外（LONG反転なし）",
-      "action": "skip",
-      "reason_ja": "寄りgapが1.5%を超える、または欠損のため見送り",
+      "action": "execute",
+      "reason_ja": "フィルタ条件を満たすためGapOvht除外OCを実行",
       "default_strategy": "gap_ovht_oc",
       "override_strategy": null,
-      "matched_filter": "abs_open_gap <= 1.5%",
+      "matched_filter": null,
       "matched_override": null
     },
-    "selected_strategy": "skip",
+    "selected_strategy": "gap_ovht_oc",
     "strategy_context": {
-      "open_gap": null,
-      "long_gap": null,
-      "short_gap": null,
-      "candidate_signal_strength": 0.124004,
+      "open_gap": 0.007367036354021198,
+      "long_gap": 0.0029320167275153075,
+      "short_gap": 0.006095508066175481,
+      "candidate_signal_strength": 0.285144,
       "trend_regime": "sideways",
       "vol_regime": "mid_vol",
       "rotation_regime": "mid_rotation"
     },
     "shadow_decisions": {
       "rule_406": {
-        "selected_strategy": "skip",
+        "selected_strategy": "gap_ovht_oc",
         "rule_id": "rule_406",
         "rule_name_ja": "GapOvht + 寄りgap制限 + 弱rotation除外 + SHORT過熱時LONG反転",
-        "action": "skip",
-        "reason_ja": "寄りgapが1.5%を超える、または欠損のため見送り",
+        "action": "execute",
+        "reason_ja": "フィルタ条件を満たし、切替条件に該当しないためGapOvht除外OCを実行",
         "default_strategy": "gap_ovht_oc",
         "override_strategy": null,
-        "matched_filter": "abs_open_gap <= 1.5%",
+        "matched_filter": null,
         "matched_override": null
       },
       "rule_399": {
@@ -3499,14 +3573,14 @@
         "matched_override": null
       },
       "rolling3_selector": {
-        "selected_strategy": "skip",
+        "selected_strategy": "gap_ovht_oc",
         "rule_id": "rolling3_selector",
         "rule_name_ja": "rolling3 年次メタルール選択",
-        "action": "skip",
-        "reason_ja": "[2026年選択: rule_406] 寄りgapが1.5%を超える、または欠損のため見送り",
+        "action": "execute",
+        "reason_ja": "[2026年選択: rule_406] フィルタ条件を満たし、切替条件に該当しないためGapOvht除外OCを実行",
         "default_strategy": "gap_ovht_oc",
         "override_strategy": null,
-        "matched_filter": "abs_open_gap <= 1.5%",
+        "matched_filter": null,
         "matched_override": null
       }
     }
@@ -3518,167 +3592,183 @@
       "price_raw": {
         "name": "price_raw",
         "status": "ok",
-        "updated_at": 1793228411.0144043
+        "updated_at": 1793233582.4801223
       },
       "price_adjusted": {
         "name": "price_adjusted",
         "status": "ok",
-        "updated_at": 1793228413.7327259
+        "updated_at": 1793233584.6752448
       },
       "factors": {
         "name": "factors",
         "status": "ok",
-        "updated_at": 1793228417.3523438
+        "updated_at": 1793233585.6964087
       },
       "actions": {
         "name": "actions",
         "status": "ok",
-        "updated_at": 1793228439.4967601
+        "updated_at": 1793233602.1862454
       },
       "data_status_refresh": {
         "name": "data_status_refresh",
         "status": "ok",
-        "updated_at": 1793228439.575211
+        "updated_at": 1793233602.233976
       }
     }
   },
   "history_entry": {
-    "dedupe_key": "{\"signalDate\":\"2026-10-28 00:00:00\",\"execJpDate\":\"2026-10-29\",\"tradeable\":false,\"longTickers\":[],\"shortTickers\":[]}",
+    "dedupe_key": "{\"signalDate\":\"2026-10-27 00:00:00\",\"execJpDate\":\"2026-10-28\",\"tradeable\":false,\"longTickers\":[\"1617.T\",\"1627.T\",\"1630.T\"],\"shortTickers\":[\"1625.T\",\"1629.T\",\"1631.T\"]}",
     "cached_date": "2026-10-29",
-    "signal_date": "2026-10-28 00:00:00",
-    "exec_jp_date": "2026-10-29",
-    "recorded_at": "2026/10/29 08:01:59",
-    "recorded_at_utc": "2026-10-28T23:01:59.283596+00:00",
+    "signal_date": "2026-10-27 00:00:00",
+    "exec_jp_date": "2026-10-28",
+    "recorded_at": "2026/10/29 09:27:12",
+    "recorded_at_utc": "2026-10-29T00:27:12.672736+00:00",
     "operation_mode": "production",
     "exec_jp_date_source": "jpx_calendar",
     "tradeable": false,
-    "trade_block_reason": "strategy_rule_skip",
-    "trade_signal_strength": 0.0,
+    "trade_block_reason": "assumed_open_fill_expired",
+    "trade_signal_strength": 0.285734,
     "min_signal_spread_used": 0.0,
-    "n_long": 0,
-    "n_short": 0,
-    "long_tickers": [],
-    "long_sectors": [],
-    "short_tickers": [],
-    "short_sectors": [],
+    "n_long": 3,
+    "n_short": 3,
+    "long_tickers": [
+      "1617.T",
+      "1627.T",
+      "1630.T"
+    ],
+    "long_sectors": [
+      "小売",
+      "食品",
+      "電力・ガス"
+    ],
+    "short_tickers": [
+      "1625.T",
+      "1629.T",
+      "1631.T"
+    ],
+    "short_sectors": [
+      "商社・卸売",
+      "銀行",
+      "電機・精密"
+    ],
     "usable_us": 11,
     "usable_jp": 17,
     "freshness_ok": true,
-    "latest_dates_aligned": true,
+    "latest_dates_aligned": false,
     "trend_regime": "sideways",
     "vol_regime": "mid_vol",
     "rotation_regime": "mid_rotation",
     "regime_warning": false,
     "regime_warning_reason": [],
     "candidate_signal_stats": {
-      "signal_max": 0.068312,
-      "signal_min": -0.072022,
-      "signal_p25": -0.01401,
-      "signal_p50": -0.001114,
-      "signal_p75": 0.016562,
+      "signal_max": 0.160261,
+      "signal_min": -0.160864,
+      "signal_p25": -0.041335,
+      "signal_p50": -0.001484,
+      "signal_p75": 0.026026,
       "long_threshold": 0.0,
       "short_threshold": 0.0,
       "top_long_candidates": [
         {
-          "ticker": "1625.T",
-          "sector": "電機・精密",
-          "signal": 0.068312,
-          "threshold": 0.0,
-          "gap_to_threshold": 0.068312,
-          "passes": true
-        },
-        {
-          "ticker": "1631.T",
-          "sector": "銀行",
-          "signal": 0.060205,
-          "threshold": 0.0,
-          "gap_to_threshold": 0.060205,
-          "passes": true
-        },
-        {
-          "ticker": "1618.T",
-          "sector": "エネルギー資源",
-          "signal": 0.051253,
-          "threshold": 0.0,
-          "gap_to_threshold": 0.051253,
-          "passes": true
-        },
-        {
-          "ticker": "1629.T",
-          "sector": "商社・卸売",
-          "signal": 0.050345,
-          "threshold": 0.0,
-          "gap_to_threshold": 0.050345,
-          "passes": true
-        }
-      ],
-      "top_short_candidates": [
-        {
           "ticker": "1630.T",
           "sector": "小売",
-          "signal": -0.072022,
+          "signal": 0.160261,
           "threshold": 0.0,
-          "gap_to_threshold": 0.072022,
+          "gap_to_threshold": 0.160261,
           "passes": true
         },
         {
           "ticker": "1621.T",
           "sector": "医薬品",
-          "signal": -0.071558,
+          "signal": 0.15794,
           "threshold": 0.0,
-          "gap_to_threshold": 0.071558,
+          "gap_to_threshold": 0.15794,
           "passes": true
         },
         {
           "ticker": "1617.T",
           "sector": "食品",
-          "signal": -0.066826,
+          "signal": 0.148454,
           "threshold": 0.0,
-          "gap_to_threshold": 0.066826,
+          "gap_to_threshold": 0.148454,
           "passes": true
         },
         {
           "ticker": "1627.T",
           "sector": "電力・ガス",
-          "signal": -0.055495,
+          "signal": 0.124467,
           "threshold": 0.0,
-          "gap_to_threshold": 0.055495,
+          "gap_to_threshold": 0.124467,
           "passes": true
         }
       ],
-      "long_threshold_gap_max": 0.068312,
-      "short_threshold_gap_max": 0.072022,
-      "candidate_signal_strength": 0.124004
+      "top_short_candidates": [
+        {
+          "ticker": "1625.T",
+          "sector": "電機・精密",
+          "signal": -0.160864,
+          "threshold": 0.0,
+          "gap_to_threshold": 0.160864,
+          "passes": true
+        },
+        {
+          "ticker": "1631.T",
+          "sector": "銀行",
+          "signal": -0.141609,
+          "threshold": 0.0,
+          "gap_to_threshold": 0.141609,
+          "passes": true
+        },
+        {
+          "ticker": "1618.T",
+          "sector": "エネルギー資源",
+          "signal": -0.125436,
+          "threshold": 0.0,
+          "gap_to_threshold": 0.125436,
+          "passes": true
+        },
+        {
+          "ticker": "1629.T",
+          "sector": "商社・卸売",
+          "signal": -0.121545,
+          "threshold": 0.0,
+          "gap_to_threshold": 0.121545,
+          "passes": true
+        }
+      ],
+      "long_threshold_gap_max": 0.160261,
+      "short_threshold_gap_max": 0.160864,
+      "candidate_signal_strength": 0.285144
     },
-    "no_trade_classification": "strategy_rule_skip_with_candidates",
+    "no_trade_classification": "assumed_open_fill_expired",
     "strategy_rule_id": "rule_406_no_flip",
     "strategy_rule_name_ja": "GapOvht + 寄りgap制限 + 弱rotation除外（LONG反転なし）",
-    "selected_strategy": "skip",
-    "strategy_action": "skip",
-    "strategy_reason_ja": "寄りgapが1.5%を超える、または欠損のため見送り",
+    "selected_strategy": "gap_ovht_oc",
+    "strategy_action": "execute",
+    "strategy_reason_ja": "フィルタ条件を満たすためGapOvht除外OCを実行",
     "default_strategy": "gap_ovht_oc",
     "override_strategy": null,
-    "matched_filter": "abs_open_gap <= 1.5%",
+    "matched_filter": null,
     "matched_override": null,
     "strategy_context": {
-      "open_gap": null,
-      "long_gap": null,
-      "short_gap": null,
-      "candidate_signal_strength": 0.124004,
+      "open_gap": 0.007367036354021198,
+      "long_gap": 0.0029320167275153075,
+      "short_gap": 0.006095508066175481,
+      "candidate_signal_strength": 0.285144,
       "trend_regime": "sideways",
       "vol_regime": "mid_vol",
       "rotation_regime": "mid_rotation"
     },
     "shadow_decisions": {
       "rule_406": {
-        "selected_strategy": "skip",
+        "selected_strategy": "gap_ovht_oc",
         "rule_id": "rule_406",
         "rule_name_ja": "GapOvht + 寄りgap制限 + 弱rotation除外 + SHORT過熱時LONG反転",
-        "action": "skip",
-        "reason_ja": "寄りgapが1.5%を超える、または欠損のため見送り",
+        "action": "execute",
+        "reason_ja": "フィルタ条件を満たし、切替条件に該当しないためGapOvht除外OCを実行",
         "default_strategy": "gap_ovht_oc",
         "override_strategy": null,
-        "matched_filter": "abs_open_gap <= 1.5%",
+        "matched_filter": null,
         "matched_override": null
       },
       "rule_399": {
@@ -3726,20 +3816,20 @@
         "matched_override": null
       },
       "rolling3_selector": {
-        "selected_strategy": "skip",
+        "selected_strategy": "gap_ovht_oc",
         "rule_id": "rolling3_selector",
         "rule_name_ja": "rolling3 年次メタルール選択",
-        "action": "skip",
-        "reason_ja": "[2026年選択: rule_406] 寄りgapが1.5%を超える、または欠損のため見送り",
+        "action": "execute",
+        "reason_ja": "[2026年選択: rule_406] フィルタ条件を満たし、切替条件に該当しないためGapOvht除外OCを実行",
         "default_strategy": "gap_ovht_oc",
         "override_strategy": null,
-        "matched_filter": "abs_open_gap <= 1.5%",
+        "matched_filter": null,
         "matched_override": null
       }
     },
     "order_json": null
   },
-  "slack_fallback_text": "*JUSLAG 朝次実行完了* (2026-10-29 08:00 JST)\n\n*実運用の判定先*\n  当日の手動戦略preflightと照合結果を確認。以下の研究判定は代用しない。\n  戦略: pca_sub_long_5d_manual_v2 / 寄成発注期限: 08:55 JST\n  朝の入力判定に当日open_gapは不要。発注承認・執行状態はこの通知では判定しない。\n\n*研究比較バックテスト（保存設定）*\n  Judge: 36点 / reject  |  Net After AR: -41.39%  |  R/R: -3.172  |  MDD: -86.24%\n\n*研究用日次判定* (執行日: 2026-10-29  |  US参照: 2026-10-28)\n  ⏸ 見送り — strategy_rule_skip\n  LONG:  なし\n  SHORT: なし\n  Regime: sideways / mid_vol / rotation=mid_rotation\n  見送り理由: 戦略ルール見送り（候補あり）\n  ルール: GapOvht + 寄りgap制限 + 弱rotation除外（LONG反転なし）  フィルタ: abs_open_gap <= 1.5%\n  理由: 寄りgapが1.5%を超える、または欠損のため見送り\n  元シグナル: LONG 4件 / SHORT 4件  →  最終実行: LONG 0件 / SHORT 0件\n  open_gap: 欠損  rotation: mid_rotation\n\n*シグナル詳細*  候補強度: 0.1240  採用強度: 0.1240\n```\nLONG候補上位（閾値: ≥0.0）\n✅ 1. 1625.T  電機・精密  +0.0683  差:+0.0683\n✅ 2. 1631.T  銀行  +0.0602  差:+0.0602\n✅ 3. 1618.T  エネルギー資源  +0.0513  差:+0.0513\n✅ 4. 1629.T  商社・卸売  +0.0503  差:+0.0503\n最大LONG +0.0683 — 閾値まで +0.0683\n\nSHORT候補下位（閾値: ≤0.0）\n✅ 1. 1630.T  小売  -0.0720  差:+0.0720\n✅ 2. 1621.T  医薬品  -0.0716  差:+0.0716\n✅ 3. 1617.T  食品  -0.0668  差:+0.0668\n✅ 4. 1627.T  電力・ガス  -0.0555  差:+0.0555\n最小SHORT -0.0720 — 閾値まで +0.0720\n\n全17銘柄: 最大 +0.0683 / 中央値 -0.0011 / 最小 -0.0720\n```",
+  "slack_fallback_text": "*JUSLAG 朝次実行完了* (2026-10-29 09:26 JST)\n\n*実運用の判定先*\n  当日の手動戦略preflightと照合結果を確認。以下の研究判定は代用しない。\n  戦略: pca_sub_long_5d_manual_v2 / 寄成発注期限: 08:55 JST\n  朝の入力判定に当日open_gapは不要。発注承認・執行状態はこの通知では判定しない。\n\n*研究比較バックテスト（保存設定）*\n  Judge: 29点 / reject  |  Net After AR: -41.39%  |  R/R: -3.172  |  MDD: -86.24%\n\n*研究用日次判定* (執行日: 2026-10-28 ⚠️ 過去日  |  US参照: 2026-10-27)\n  ⏸ 見送り — assumed_open_fill_expired\n  LONG:  小売, 食品, 電力・ガス\n  SHORT: 商社・卸売, 銀行, 電機・精密\n  Regime: sideways / mid_vol / rotation=mid_rotation\n  見送り理由: assumed_open_fill_expired\n\n*シグナル詳細*  候補強度: 0.2851  採用強度: 0.2851\n```\nLONG候補上位（閾値: ≥0.0）\n✅ 1. 1630.T  小売  +0.1603  差:+0.1603\n✅ 2. 1621.T  医薬品  +0.1579  差:+0.1579\n✅ 3. 1617.T  食品  +0.1485  差:+0.1485\n✅ 4. 1627.T  電力・ガス  +0.1245  差:+0.1245\n最大LONG +0.1603 — 閾値まで +0.1603\n\nSHORT候補下位（閾値: ≤0.0）\n✅ 1. 1625.T  電機・精密  -0.1609  差:+0.1609\n✅ 2. 1631.T  銀行  -0.1416  差:+0.1416\n✅ 3. 1618.T  エネルギー資源  -0.1254  差:+0.1254\n✅ 4. 1629.T  商社・卸売  -0.1215  差:+0.1215\n最小SHORT -0.1609 — 閾値まで +0.1609\n\n全17銘柄: 最大 +0.1603 / 中央値 -0.0015 / 最小 -0.1609\n```",
   "decision_scopes": {
     "operational_manual": {
       "strategy_id": "pca_sub_long_5d_manual_v2",
@@ -3752,15 +3842,15 @@
         "lambda_reg": 0.9,
         "selection_quantile": 0.2
       },
-      "authoritative_preflight": "data/manual_strategy/preflight/2026-10-29.json",
+      "authoritative_preflight": "data/manual_strategy/preflight/2026-10-28.json",
       "authorization": "not_assessed_by_daily_research"
     },
     "research_daily": {
       "rule_id": "rule_406_no_flip",
       "role": "research_comparison_not_manual_entry_gate",
       "tradeable": false,
-      "trade_block_reason": "strategy_rule_skip",
-      "open_gap": null
+      "trade_block_reason": "assumed_open_fill_expired",
+      "open_gap": 0.007367036354021198
     }
   },
   "backtest_comparison": {
@@ -3775,7 +3865,7 @@
       "strategy_rule_id": "rule_406_no_flip",
       "same_open_gap_assumption": true,
       "judge": {
-        "overall_score": 36,
+        "overall_score": 29,
         "overall_decision": "reject"
       },
       "metrics": {
@@ -3807,7 +3897,7 @@
         },
         "decision_gate_summary": {
           "has_critical_warn": false,
-          "warn_count": 4,
+          "warn_count": 6,
           "reject_reasons": []
         }
       },
@@ -3829,22 +3919,22 @@
       "strategy_rule_id": null,
       "same_open_gap_assumption": false,
       "judge": {
-        "overall_score": 33,
+        "overall_score": 26,
         "overall_decision": "reject"
       },
       "metrics": {
-        "gross_ar_pct": 9.88,
-        "gross_risk_pct": 12.88,
-        "gross_rr": 0.767,
-        "gross_mdd_pct": -39.67,
-        "net_pre_tax_ar_pct": -40.52,
-        "net_pre_tax_rr": -3.146,
-        "net_pre_tax_mdd_pct": -85.73,
-        "net_after_tax_ar_pct": -40.52,
-        "net_after_tax_risk_pct": 12.88,
-        "net_after_tax_rr": -3.146,
-        "net_after_tax_mdd_pct": -85.73,
-        "n_days": 1130.0,
+        "gross_ar_pct": 11.23,
+        "gross_risk_pct": 12.83,
+        "gross_rr": 0.876,
+        "gross_mdd_pct": -36.91,
+        "net_pre_tax_ar_pct": -39.17,
+        "net_pre_tax_rr": -3.053,
+        "net_pre_tax_mdd_pct": -84.82,
+        "net_after_tax_ar_pct": -39.17,
+        "net_after_tax_risk_pct": 12.83,
+        "net_after_tax_rr": -3.053,
+        "net_after_tax_mdd_pct": -84.82,
+        "n_days": 1127.0,
         "cost_drag_pct": 50.400000000000006,
         "tax_drag_pct": 0.0,
         "profitability_components": {
@@ -3861,7 +3951,7 @@
         },
         "decision_gate_summary": {
           "has_critical_warn": false,
-          "warn_count": 4,
+          "warn_count": 6,
           "reject_reasons": [
             "SEVERELY_NEGATIVE_AFTER_TAX_RETURN"
           ]
@@ -3869,7 +3959,7 @@
       },
       "cost_breakdown": {
         "commission_total": 0.0,
-        "slippage_total": 2.2600000000000002,
+        "slippage_total": 2.2540000000000004,
         "borrow_total": 0.0,
         "tax_total": 0.0
       }
