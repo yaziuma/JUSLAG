@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "date": "2026-11-06",
-  "generated_at_utc": "2026-11-05T23:01:50.697240+00:00",
+  "generated_at_utc": "2026-11-05T23:41:50.156536+00:00",
   "run_provenance": {
-    "run_started_at_utc": "2026-11-05T23:00:03.931090+00:00",
-    "analysis_as_of_jst": "2026-11-06T08:00:03.931090+09:00",
+    "run_started_at_utc": "2026-11-05T23:40:03.169625+00:00",
+    "analysis_as_of_jst": "2026-11-06T08:40:03.169625+09:00",
     "target_date": "2026-11-06",
     "run_kind": "live_date",
     "input_snapshot_sha256": "3fff05fd94288b7d9fd4ff2314a0a59b49d04e77d8fc6de4ee29c3a2340ddb3f",
@@ -3608,27 +3608,27 @@
       "price_raw": {
         "name": "price_raw",
         "status": "ok",
-        "updated_at": 1793919608.6161385
+        "updated_at": 1793922007.4610026
       },
       "price_adjusted": {
         "name": "price_adjusted",
         "status": "ok",
-        "updated_at": 1793919611.4575489
+        "updated_at": 1793922009.6014395
       },
       "factors": {
         "name": "factors",
         "status": "ok",
-        "updated_at": 1793919615.058401
+        "updated_at": 1793922013.2976546
       },
       "actions": {
         "name": "actions",
         "status": "ok",
-        "updated_at": 1793919636.0661902
+        "updated_at": 1793922035.6475127
       },
       "data_status_refresh": {
         "name": "data_status_refresh",
         "status": "ok",
-        "updated_at": 1793919636.148907
+        "updated_at": 1793922035.7235668
       }
     }
   },
@@ -3637,8 +3637,8 @@
     "cached_date": "2026-11-06",
     "signal_date": "2026-11-05 00:00:00",
     "exec_jp_date": "2026-11-06",
-    "recorded_at": "2026/11/06 08:01:50",
-    "recorded_at_utc": "2026-11-05T23:01:50.695476+00:00",
+    "recorded_at": "2026/11/06 08:41:50",
+    "recorded_at_utc": "2026-11-05T23:41:50.153409+00:00",
     "operation_mode": "production",
     "exec_jp_date_source": "jpx_calendar",
     "tradeable": true,
@@ -3849,7 +3849,7 @@
     },
     "order_json": null
   },
-  "slack_fallback_text": "*JUSLAG 朝次実行完了* (2026-11-06 08:00 JST)\n\n*運用判断（当日preflight）*\n  この通知では当日preflightの状態は未確認。\n  当日の運用戦略preflightと照合結果を確認。以下の比較ライン判定は代用しない。\n  戦略: pca_sub_long_5d_manual_v2 / 寄成発注期限: 08:55 JST\n  朝の入力判定に当日open_gapは不要。発注承認・執行状態はこの通知では判定しない。\n\n*比較ラインのバックテスト（保存設定）*\n  Judge: 33点 / reject  |  Net After AR: -42.36%  |  R/R: -3.192  |  MDD: -86.84%\n\n*日次比較ライン判定* (執行日: 2026-11-06  |  US参照: 2026-11-05)\n  ✅ 売買あり\n  LONG:  小売, 食品, 電力・ガス, 医薬品\n  SHORT: エネルギー資源, 商社・卸売, 銀行, 電機・精密\n  Regime: sideways / mid_vol / rotation=mid_rotation\n\n*シグナル詳細*  候補強度: 0.3093  採用強度: 0.3093\n```\nLONG候補上位（閾値: ≥0.0）\n✅ 1. 1630.T  小売  +0.1643  差:+0.1643\n✅ 2. 1617.T  食品  +0.1630  差:+0.1630\n✅ 3. 1627.T  電力・ガス  +0.1394  差:+0.1394\n✅ 4. 1621.T  医薬品  +0.1392  差:+0.1392\n最大LONG +0.1643 — 閾値まで +0.1643\n\nSHORT候補下位（閾値: ≤0.0）\n✅ 1. 1625.T  電機・精密  -0.1773  差:+0.1773\n✅ 2. 1631.T  銀行  -0.1749  差:+0.1749\n✅ 3. 1629.T  商社・卸売  -0.1624  差:+0.1624\n✅ 4. 1618.T  エネルギー資源  -0.1165  差:+0.1165\n最小SHORT -0.1773 — 閾値まで +0.1773\n\n全17銘柄: 最大 +0.1643 / 中央値 +0.0012 / 最小 -0.1773\n```",
+  "slack_fallback_text": "*JUSLAG 朝次実行完了* (2026-11-06 08:40 JST)\n\n*運用判断（当日preflight）*\n  この通知では当日preflightの状態は未確認。\n  当日の運用戦略preflightと照合結果を確認。以下の比較ライン判定は代用しない。\n  戦略: pca_sub_long_5d_manual_v2 / 寄成発注期限: 08:55 JST\n  朝の入力判定に当日open_gapは不要。発注承認・執行状態はこの通知では判定しない。\n\n*比較ラインのバックテスト（保存設定）*\n  Judge: 33点 / reject  |  Net After AR: -42.36%  |  R/R: -3.192  |  MDD: -86.84%\n\n*日次比較ライン判定* (執行日: 2026-11-06  |  US参照: 2026-11-05)\n  ✅ 売買あり\n  LONG:  小売, 食品, 電力・ガス, 医薬品\n  SHORT: エネルギー資源, 商社・卸売, 銀行, 電機・精密\n  Regime: sideways / mid_vol / rotation=mid_rotation\n\n*シグナル詳細*  候補強度: 0.3093  採用強度: 0.3093\n```\nLONG候補上位（閾値: ≥0.0）\n✅ 1. 1630.T  小売  +0.1643  差:+0.1643\n✅ 2. 1617.T  食品  +0.1630  差:+0.1630\n✅ 3. 1627.T  電力・ガス  +0.1394  差:+0.1394\n✅ 4. 1621.T  医薬品  +0.1392  差:+0.1392\n最大LONG +0.1643 — 閾値まで +0.1643\n\nSHORT候補下位（閾値: ≤0.0）\n✅ 1. 1625.T  電機・精密  -0.1773  差:+0.1773\n✅ 2. 1631.T  銀行  -0.1749  差:+0.1749\n✅ 3. 1629.T  商社・卸売  -0.1624  差:+0.1624\n✅ 4. 1618.T  エネルギー資源  -0.1165  差:+0.1165\n最小SHORT -0.1773 — 閾値まで +0.1773\n\n全17銘柄: 最大 +0.1643 / 中央値 +0.0012 / 最小 -0.1773\n```",
   "decision_scopes": {
     "operational_manual": {
       "strategy_id": "pca_sub_long_5d_manual_v2",
