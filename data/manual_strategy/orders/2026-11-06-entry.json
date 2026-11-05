@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "strategy_id": "pca_sub_long_5d_manual_v2",
+  "as_of": "2026-11-06",
+  "action": "ENTRY",
+  "signal_reference_us_date": "2026-11-05 00:00:00",
+  "entry_date": "2026-11-06",
+  "planned_exit_date": "2026-11-12",
+  "capital_yen": 1000000,
+  "deployment_fraction": 0.9,
+  "entry_order_deadline_jst": "08:55",
+  "exit_order_deadline_jst": "15:20",
+  "orders": [
+    {
+      "stock_code": "1630",
+      "ticker": "1630.T",
+      "sector": "小売",
+      "signal": 0.164323230384969,
+      "quantity": 5,
+      "sizing_price_yen": 41350.0,
+      "estimated_notional_yen": 206750,
+      "order_kind": "genbutsu_buy",
+      "condition": "寄成"
+    },
+    {
+      "stock_code": "1617",
+      "ticker": "1617.T",
+      "sector": "食品",
+      "signal": 0.16300561463051932,
+      "quantity": 4,
+      "sizing_price_yen": 51930.0,
+      "estimated_notional_yen": 207720,
+      "order_kind": "genbutsu_buy",
+      "condition": "寄成"
+    },
+    {
+      "stock_code": "1627",
+      "ticker": "1627.T",
+      "sector": "電力・ガス",
+      "signal": 0.13940300257801863,
+      "quantity": 18,
+      "sizing_price_yen": 12235.0,
+      "estimated_notional_yen": 220230,
+      "order_kind": "genbutsu_buy",
+      "condition": "寄成"
+    },
+    {
+      "stock_code": "1621",
+      "ticker": "1621.T",
+      "sector": "医薬品",
+      "signal": 0.13919673148938605,
+      "quantity": 6,
+      "sizing_price_yen": 34100.0,
+      "estimated_notional_yen": 204600,
+      "order_kind": "genbutsu_buy",
+      "condition": "寄成"
+    }
+  ],
+  "manual_checks": [
+    "SBI画面で銘柄・数量・寄成を照合",
+    "全注文の受付番号と受付時刻を保存",
+    "約定後に実数量・価格を台帳へ記録",
+    "planned_exit_dateの引成注文を機械が準備し、本人承認後に送信・照合"
+  ],
+  "preflight": {
+    "status": "READY",
+    "checked_at_jst": "2026-11-06T08:15:02.626759+09:00",
+    "source_kind": "local",
+    "source_ref": "local",
+    "source_commit": "620119a17934a6e7de72e64adb28a4eddb2e7598",
+    "source_report": "data/reports/2026-11-06.json",
+    "source_report_sha256": "25ed55726d9cf8018dd4a3ec5ad17073be63f42c70d2db4c52b2bd451a1b4671",
+    "source_prices_sha256": null,
+    "source_report_generated_at_utc": "2026-11-05T23:01:50.697240+00:00"
+  },
+  "sheet_sha256": "4190e10f25796216145129bc5f11e5d3ea1289d9aecadb38ee377bfbd1c0a109"
+}
