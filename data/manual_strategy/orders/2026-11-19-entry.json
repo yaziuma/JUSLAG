@@ -64,14 +64,14 @@
   ],
   "preflight": {
     "status": "READY",
-    "checked_at_jst": "2026-11-19T08:15:02.872789+09:00",
+    "checked_at_jst": "2026-11-19T08:42:03.498163+09:00",
     "source_kind": "local",
     "source_ref": "local",
     "source_commit": "a9d73b1a6545ea7214d972a7b8a1b49d17c42d14",
     "source_report": "data/reports/2026-11-19.json",
-    "source_report_sha256": "47491d9e1781d164d9ed990609bfc8f28590847ce931c7d3f120b6cec19a92ad",
+    "source_report_sha256": "5fa351cff7e19376a89b28a19f86833d4e7dfee5fb2ad1bc0714a8bc697942ad",
     "source_prices_sha256": null,
-    "source_report_generated_at_utc": "2026-11-18T23:02:09.760707+00:00"
+    "source_report_generated_at_utc": "2026-11-18T23:41:59.468620+00:00"
   },
-  "sheet_sha256": "78af92363f40500395066b54003b7670963d015ebe30eed94daaa3100ff2ba9f"
+  "sheet_sha256": "6786af592f48f359f1806c421048eea948c08fa1a0143189c0928241c29f8d4a"
 }
